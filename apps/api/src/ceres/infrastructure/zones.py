@@ -120,7 +120,7 @@ def _load_zone(data_dir: Path, zone_id: str) -> ZoneRuntime:
     data = json.loads((base / "zona.json").read_text())
     if data.get("id") != zone_id:
         raise ValueError(f"zona.json de {zone_id} declara otro id: {data.get('id')}")
-    catalog = load_catalog(base / data["catalog_file"])
+    catalog = load_catalog(base / data["catalog_file"], data_dir / "precios")
     nasa_rel = f"zonas/{zone_id}/{data['nasa']['file']}"
     source_id = data["nasa"]["source_id"]
     snapshot, nasa_error = None, None

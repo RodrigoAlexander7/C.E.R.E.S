@@ -56,6 +56,11 @@ class Economics:
     price_label: str
     note: str
     source_ids: tuple[str, ...] = ()
+    # Precio mayorista observado (MIDAGRI-SISAP) del que sale el precio en chacra: mediana, rango,
+    # fechas y factor chacra/mayorista (supuesto). None si el cultivo no tiene precio SISAP.
+    market: dict | None = None
+    # Volatilidad del precio (σ de un log-normal) para el análisis de riesgo; supuesto de demostración.
+    price_sigma: float | None = None
 
 
 @dataclass(frozen=True)

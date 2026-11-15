@@ -20,6 +20,8 @@ from ceres.domain.model import InvalidInput
 from ceres.infrastructure.db import models as m
 from ceres.infrastructure.db.repositories import ParcelRepo, PublicRepo, SessionRepo, UserRepo
 from ceres.infrastructure.geometry import GeometryError, centroid, geodesic_area_ha, validate_polygon
+from ceres.infrastructure.prices import SOURCE_ID as SISAP_ID
+from ceres.infrastructure.prices import load_prices
 from ceres.infrastructure.regions import RegionsUnavailable
 from ceres.infrastructure.zones import ZoneRuntime
 from ceres.infrastructure.security import hash_password, new_token, token_hash, verify_password
@@ -161,6 +163,44 @@ def geometry_area(body: AreaRequest, c: Container = Depends(container)):
 @public.get("/public/zones")
 def public_zones(c: Container = Depends(container)):
     return {"default": c.zones.default_id, "version": c.zones.version, "items": [z.public() for z in c.zones.zones.values()]}
+
+
+NEARBY_MARKETS = ("Moquegua", "Tacna", "Lima")
+
+
+@public.get("/public/prices")
+def public_prices(zone: str | None = None, c: Container = Depends(container)):
+    """Precios mayoristas SISAP de los cultivos del catálogo: mercado de la zona y 3 mercados cercanos."""
+    z = _zone(c, zone)
+    prices = load_prices(c.settings.data_dir / "precios")
+    items = []
+    for crop in z.catalog.crops.values():
+        e = crop.economics
+        product = (e.market or {}).get("product")
+        home = (e.market or {}).get("market")
+        markets = []
+        if product:
+            for mk in (home, *[x for x in NEARBY_MARKETS if x != home]):
+                st = prices.get((mk, product))
+                if st:
+                    markets.append(st.public())
+        items.append({
+            "crop_id": crop.id,
+            "crop_name": crop.short_name,
+            "product": product,
+            "farmgate_soles_kg": e.price_soles_kg,
+            "farmgate_factor": (e.market or {}).get("farmgate_factor"),
+            "factor_status": (e.market or {}).get("factor_status"),
+            "economics_status": e.status,
+            "markets": markets,
+            "note": None if product else "SISAP no publica este producto en el período: el precio en chacra es un supuesto.",
+        })
+    return {
+        "zone_id": z.id,
+        "source_id": SISAP_ID,
+        "items": items,
+        "caveat": "Precio mayorista del día (MIDAGRI-SISAP). En chacra suele ser menor y a la cosecha puede cambiar.",
+    }
 
 
 @public.get("/public/context")

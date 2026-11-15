@@ -1,6 +1,7 @@
 {
-  "version": "catalogo-majes-2026-11-15.1",
-  "review_note": "Kc, duración de etapas y tolerancia a sales comprobados contra FAO-56 (tablas 11 y 12) y FAO 29 (tabla 4) el 14-nov-2026. Ventanas de siembra, preparación, costos, rendimientos y precios son supuestos de demostración sin revisión agronómica local. Ver data/zonas/majes/REVISION.md. 15-nov-2026: solo cambia el formato (nombre corto y secuencias explícitas), no los valores.",
+  "version": "catalogo-majes-2026-11-15.2",
+  "review_note": "Kc, duración de etapas y tolerancia a sales comprobados contra FAO-56 (tablas 11 y 12) y FAO 29 (tabla 4) el 14-nov-2026. Ventanas de siembra, preparación, costos, rendimientos y precios son supuestos de demostración sin revisión agronómica local. Ver data/zonas/majes/REVISION.md. 15-nov-2026: solo cambia el formato (nombre corto y secuencias explícitas), no los valores. 15-nov-2026 (.2): el precio en chacra de frejol y cebolla se deriva del mayorista MIDAGRI-SISAP de Arequipa (1–14 nov) × un factor chacra supuesto que conserva los valores previos.",
+  "market_region": "Arequipa",
   "horizon_months": 24,
   "prep_days": 15,
   "prep_status": "supuesto_demo",
@@ -53,8 +54,9 @@
         "variable_cost_soles_ha": 7500,
         "status": "supuesto_demo",
         "price_label": "Precio en chacra supuesto",
-        "note": "Valores de demostración; reemplazar con SIEA y costos del productor/asesor.",
-        "source_ids": ["DEMO-ECONOMIA"]
+        "note": "Valores de demostración; reemplazar con SIEA y costos del productor/asesor. SISAP (1–14 nov 2026) no publica maíz amarillo duro: el precio sigue siendo un supuesto.",
+        "source_ids": ["DEMO-ECONOMIA"],
+        "price_sigma": 0.15
       },
       "residue_note": "Rastrojo abundante: incorporarlo aporta materia orgánica; retirarlo para forraje se lleva nutrientes.",
       "nutrition_note": "Cultivo exigente en nitrógeno; la dosis requiere análisis de suelo."
@@ -107,8 +109,15 @@
         "variable_cost_soles_ha": 6500,
         "status": "supuesto_demo",
         "price_label": "Precio en chacra supuesto",
-        "note": "Valores de demostración; reemplazar con SIEA y costos del productor/asesor.",
-        "source_ids": ["DEMO-ECONOMIA"]
+        "note": "Rendimiento y costos de demostración; reemplazar con SIEA y costos del productor/asesor.",
+        "source_ids": ["DEMO-ECONOMIA"],
+        "market": {
+          "sisap_product": "Frijol canario",
+          "farmgate_factor": 0.712,
+          "factor_status": "supuesto_demo",
+          "factor_note": "Factor elegido para conservar el precio en chacra de la demo (S/ 5,50/kg); reemplazar con lo que paga el acopiador en Majes.",
+          "price_sigma": 0.20
+        }
       },
       "residue_note": "Residuos de leguminosa se descomponen rápido; si se retira todo el material, el aporte al suelo es menor.",
       "nutrition_note": "Leguminosa: fijación biológica con rizobios adecuados; no implica crédito fijo de N para el siguiente cultivo."
@@ -150,8 +159,15 @@
         "variable_cost_soles_ha": 16000,
         "status": "supuesto_demo",
         "price_label": "Precio en chacra supuesto",
-        "note": "Valores de demostración; precio muy variable; reemplazar con SIEA, comprador y costos del asesor.",
-        "source_ids": ["DEMO-ECONOMIA"]
+        "note": "Rendimiento y costos de demostración; precio muy variable; reemplazar con SIEA, comprador y costos del asesor.",
+        "source_ids": ["DEMO-ECONOMIA"],
+        "market": {
+          "sisap_product": "Cebolla cabeza roja",
+          "farmgate_factor": 0.378,
+          "factor_status": "supuesto_demo",
+          "factor_note": "Factor elegido para conservar el precio en chacra de la demo (S/ 0,70/kg); la cebolla en chacra suele pagarse muy por debajo del mayorista.",
+          "price_sigma": 0.40
+        }
       },
       "residue_note": "Deja poco residuo; el suelo queda descubierto tras la cosecha si no se cubre.",
       "nutrition_note": "Sensible a sales; el plan de fertilización requiere análisis de suelo."

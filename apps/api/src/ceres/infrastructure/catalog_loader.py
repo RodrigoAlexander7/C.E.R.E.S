@@ -15,6 +15,8 @@ from ceres.domain.catalog import (
     ThermalRule,
     Window,
 )
+from ceres.infrastructure.prices import SOURCE_ID as SISAP_ID
+from ceres.infrastructure.prices import MarketStat, load_prices
 
 
 def _md(s: str) -> tuple[int, int]:
@@ -22,8 +24,43 @@ def _md(s: str) -> tuple[int, int]:
     return int(m), int(d)
 
 
-def parse_catalog(data: dict) -> Catalog:
+def _economics(e: dict, region: str | None, prices: dict[tuple[str, str], MarketStat] | None) -> Economics:
+    """Si el cultivo declara un producto SISAP y hay precios, el precio en chacra = mayorista × factor."""
+    price = e.get("price_soles_kg")
+    note = e["note"]
+    sources = tuple(e.get("source_ids", ()))
+    market = None
+    m = e.get("market")
+    stat = prices.get((region, m["sisap_product"])) if (m and region and prices) else None
+    if m and stat:
+        price = round(stat.median * m["farmgate_factor"], 2)
+        market = stat.public() | {
+            "farmgate_factor": m["farmgate_factor"],
+            "factor_status": m.get("factor_status", "supuesto_demo"),
+            "factor_note": m.get("factor_note", ""),
+        }
+        market.pop("series", None)
+        note = (
+            f"Precio en chacra = mayorista {stat.market} (MIDAGRI-SISAP, mediana {stat.first:%d/%m}–{stat.last:%d/%m/%Y}: "
+            f"S/ {stat.median:.2f}/kg) × factor chacra {m['farmgate_factor']} (supuesto). {note}"
+        )
+        sources = sources + (SISAP_ID,)
+    return Economics(
+        yield_t_ha=e.get("yield_t_ha"),
+        price_soles_kg=price,
+        variable_cost_soles_ha=e.get("variable_cost_soles_ha"),
+        status=e["status"],
+        price_label=e["price_label"],
+        note=note,
+        source_ids=sources,
+        market=market,
+        price_sigma=(m or {}).get("price_sigma", e.get("price_sigma")),
+    )
+
+
+def parse_catalog(data: dict, prices: dict[tuple[str, str], MarketStat] | None = None) -> Catalog:
     crops = {}
+    region = data.get("market_region")
     for c in data["crops"]:
         e = c["economics"]
         crops[c["id"]] = CropProfile(
@@ -59,15 +96,7 @@ def parse_catalog(data: dict) -> Catalog:
                 )
                 for r in c["thermal_rules"]
             ),
-            economics=Economics(
-                yield_t_ha=e.get("yield_t_ha"),
-                price_soles_kg=e.get("price_soles_kg"),
-                variable_cost_soles_ha=e.get("variable_cost_soles_ha"),
-                status=e["status"],
-                price_label=e["price_label"],
-                note=e["note"],
-                source_ids=tuple(e.get("source_ids", ())),
-            ),
+            economics=_economics(e, region, prices),
             residue_note=c["residue_note"],
             nutrition_note=c["nutrition_note"],
             kc_note=c.get("kc_note", ""),
@@ -123,8 +152,8 @@ def parse_catalog(data: dict) -> Catalog:
 
 
 @lru_cache
-def load_catalog(path: Path) -> Catalog:
-    return parse_catalog(json.loads(path.read_text()))
+def load_catalog(path: Path, prices_dir: Path | None = None) -> Catalog:
+    return parse_catalog(json.loads(path.read_text()), load_prices(prices_dir) if prices_dir else None)
 
 
 @lru_cache
