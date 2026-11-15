@@ -89,6 +89,21 @@ def test_parcel_and_run_freeze_their_zone(make_client):
     assert bad.status_code == 422
 
 
+def test_draw_outline_keeps_zone_and_old_runs(make_client):
+    c = make_client()
+    register(c)
+    r = c.post("/api/v1/parcels", json={"name": "Por punto", "point": {"lat": -16.362, "lon": -71.535}, "area_ha": 1, "profile": UNKNOWN})
+    assert r.status_code == 201 and r.json()["zone_id"] == "chilina"
+    pid = r.json()["id"]
+    run1 = c.post(f"/api/v1/parcels/{pid}/recommendations", json={}).json()
+    p = c.patch(f"/api/v1/parcels/{pid}", json={"geometry": CHILINA_POLYGON})
+    assert p.status_code == 200, p.text
+    assert p.json()["area_origin"] == "geodesica" and p.json()["area_ha"] != 1 and p.json()["name"] == "Por punto"
+    assert c.get(f"/api/v1/recommendations/{run1['id']}").json()["inputs"]["area_ha"] == 1  # el run anterior no cambia
+    bad = c.patch(f"/api/v1/parcels/{pid}", json={"geometry": MAJES_POLYGON})
+    assert bad.status_code == 422 and bad.json()["error"]["code"] == "otra_zona"
+
+
 def test_district_lookup_reports_zone(make_client):
     c = make_client()
     d = c.get("/api/v1/regions/locate", params={"lat": -16.3650, "lon": -71.5296}).json()

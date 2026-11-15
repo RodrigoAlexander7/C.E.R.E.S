@@ -89,6 +89,7 @@ class ParcelCreate(Strict):
 
 class ParcelPatch(Strict):
     name: str | None = Field(None, max_length=120)
+    geometry: dict | None = None  # dibujar o corregir el contorno del lote (misma zona piloto)
 
 
 class RevisionCreate(Strict):

@@ -11,6 +11,14 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   // El asistente puede tardar más de 30 s si el proveedor IA está saturado (solo afecta al rewrite de desarrollo).
   experimental: { proxyTimeout: 120_000 },
+  // El modo avanzado se retiró (15-nov-2026): todo vive en /app, con «Ver más» cuando hace falta.
+  async redirects() {
+    return [
+      { source: "/avanzado", destination: "/app", permanent: false },
+      { source: "/parcelas", destination: "/app/chacra", permanent: false },
+      { source: "/parcelas/:id", destination: "/app/chacra", permanent: false },
+    ];
+  },
   async rewrites() {
     return [
       { source: "/api/v1/:path*", destination: `${apiOrigin}/api/v1/:path*` },
@@ -26,7 +34,7 @@ const nextConfig: NextConfig = {
           { key: "X-Content-Type-Options", value: "nosniff" },
           // OSM bloquea teselas pedidas sin Referer; solo se envía el origen, nunca la ruta (IDs de parcela).
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-          { key: "Permissions-Policy", value: "geolocation=(self), camera=(), microphone=()" },
+          { key: "Permissions-Policy", value: "geolocation=(self), camera=(), microphone=(self)" },
         ],
       },
     ];

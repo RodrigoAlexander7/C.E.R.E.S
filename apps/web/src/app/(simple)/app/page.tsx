@@ -3,11 +3,11 @@
 // Modo sencillo (R15/R16): 3 preguntas → 3 opciones en palabras simples → «¿Por qué?» en capas.
 // Sin cuenta: comparación pública que no guarda nada. Con cuenta: parcela, revisiones y runs (R03, R06).
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { useSession } from "@/components/SessionProvider";
 import { HelpProvider, Sheet, Term } from "@/components/simple/help";
+import { MoreDetails } from "@/components/simple/more";
 import { GlobalQuestions, OptionCard, WhySheet } from "@/components/simple/results";
 import { PRIORITY_NAME, Wizard, cropName, type Answers } from "@/components/simple/wizard";
 import s from "@/components/simple/simple.module.css";
@@ -79,6 +79,7 @@ export default function SimpleApp() {
   const [err, setErr] = useState<string | null>(null);
   const [why, setWhy] = useState<Strategy | null>(null);
   const [areaOpen, setAreaOpen] = useState(false);
+  const [detailOpen, setDetailOpen] = useState(false);
   const [areaDraft, setAreaDraft] = useState("5");
 
   const showRun = useCallback((run: Run, parcelId: string) => {
@@ -267,13 +268,29 @@ export default function SimpleApp() {
             </section>
           )}
 
+          {result.blocking.length === 0 && (
+            <MoreDetails
+              result={result}
+              saved={saved}
+              zone={zone}
+              profile={view.profile}
+              busy={busy}
+              detailOpen={detailOpen}
+              onDetailToggle={setDetailOpen}
+              onRecompute={(p) => compute(p, areaHa)}
+              onOpenRun={async (id) => { if (saved) showRun(await api<Run>(`/recommendations/${id}`), saved.parcelId); window.scrollTo({ top: 0 }); }}
+            />
+          )}
+
           <div className={s.footerActions}>
-            <Link href={saved ? `/parcelas/${saved.parcelId}` : "/avanzado"} className={`${s.btn} ${s.btnGhost}`}>Ver detalle en modo avanzado</Link>
             <button className={`${s.btn} ${s.btnGhost}`} onClick={restart}>Nueva consulta</button>
           </div>
           <p className={s.sub} style={{ textAlign: "center" }}>Fechas orientativas. El clima es histórico, no un pronóstico. La decisión es tuya.</p>
 
-          <WhySheet st={why} profile={view.profile} assumed={view.assumed} area={view.area} zone={zone} onClose={() => setWhy(null)} advancedHref={saved ? `/parcelas/${saved.parcelId}` : "/avanzado"} />
+          <WhySheet
+            st={why} profile={view.profile} assumed={view.assumed} area={view.area} zone={zone} onClose={() => setWhy(null)}
+            onMore={() => { setWhy(null); setDetailOpen(true); setTimeout(() => document.getElementById("detalle")?.scrollIntoView({ behavior: "smooth" }), 50); }}
+          />
           <Sheet open={areaOpen} onClose={() => setAreaOpen(false)} title="¿Cuántas hectáreas tiene tu lote?">
             <form onSubmit={(e) => { e.preventDefault(); const v = Number(areaDraft.replace(",", ".")); if (v > 0 && v <= 10000) { setArea(v); setAreaOpen(false); compute(view.profile, v); } }}>
               <label htmlFor="area" className={s.sub} style={{ display: "block", marginTop: 0 }}>Cambia márgenes y volúmenes; no la viabilidad por hectárea.</label>

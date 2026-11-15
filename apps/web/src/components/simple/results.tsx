@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { SourceChips } from "@/components/Sources";
 import { fmtDate, fmtNumber } from "@/lib/api";
 import type { ComparisonResult, Decisive, Profile, Strategy } from "@/lib/types";
@@ -108,7 +107,7 @@ export function GlobalQuestions({ result, onAnswer, busy }: { result: Comparison
 const MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
 
 /** «¿Por qué?» en tres capas: frase → lo que usamos → detalle técnico con fuentes. */
-export function WhySheet({ st, profile, assumed, area, zone, onClose, advancedHref }: { st: Strategy | null; profile: Profile | null; assumed: string[]; area: number; zone: Zone | null; onClose: () => void; advancedHref: string }) {
+export function WhySheet({ st, profile, assumed, area, zone, onClose, onMore }: { st: Strategy | null; profile: Profile | null; assumed: string[]; area: number; zone: Zone | null; onClose: () => void; onMore: () => void }) {
   const w = profile?.water;
   const used: { text: React.ReactNode; kind: "tuyo" | "zona" | "nasa" | "demo"; label: string }[] = [];
   const typical = zone?.water_m3_ha_year?.value ?? null;
@@ -171,7 +170,7 @@ export function WhySheet({ st, profile, assumed, area, zone, onClose, advancedHr
                 </table>
               </details>
             )}
-            <Link href={advancedHref} className={s.linkBtn}>Abrir en modo avanzado</Link>
+            <button className={s.linkBtn} onClick={onMore}>Ver todo el detalle técnico</button>
           </section>
         </>
       )}

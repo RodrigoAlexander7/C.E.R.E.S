@@ -408,7 +408,7 @@ export default function Landing() {
                 { icon: I.cards, bg: "#dfe9d6", fg: "#1f4d2b", t: "Comparación de 3 ciclos", d: "Tu plan y dos alternativas con calendario, agua mes a mes y margen.", live: true },
                 { icon: I.scale, bg: "#d9e8f2", fg: "#2f6f9f", t: "Evidencia y fuentes", d: "Cada cifra enlaza a su fuente: NASA, FAO, SERFOR/INEI o tu propio dato.", live: true },
                 { icon: I.spark, bg: "#f3e6c8", fg: "#8a5a00", t: "Asistente IA con citas", d: "Explica en lenguaje sencillo; una respuesta con cifras sin respaldo se rechaza.", live: true },
-                { icon: I.map, bg: "#ece3d0", fg: "#3d4b40", t: "Modo avanzado", d: "Mapa del Perú, perfil completo, simulación de escenarios e historial para asesores.", live: true },
+                { icon: I.map, bg: "#ece3d0", fg: "#3d4b40", t: "Cuándo sembrar", d: "Agua y riesgo de helada o calor según el mes de siembra, con años El Niño comparados (NOAA).", live: true },
                 { icon: I.book, bg: "#dfe9d6", fg: "#1f4d2b", t: "Cuaderno de campo", d: "Campañas, ventas, costos y ganancias: tus números reemplazan los supuestos.", live: false },
                 { icon: I.mic, bg: "#f8ddd6", fg: "#9b2f1f", t: "Registro por voz", d: "Manda un audio: «vendí 40 toneladas a un sol diez». CERES propone y tú confirmas.", live: false },
                 { icon: I.chat, bg: "#ebe4f6", fg: "#5d4189", t: "Conversa con Ceres", d: "Un asistente que recuerda tus campañas y simula escenarios contigo.", live: false },
@@ -508,7 +508,7 @@ export default function Landing() {
             </div>
             <div>
               <h5>Producto</h5>
-              <ul><li><Link href="/demo">Caso demo</Link></li><li><Link href="/avanzado">Modo avanzado</Link></li><li><Link href="/ingresar">Ingresar</Link></li></ul>
+              <ul><li><Link href="/demo">Caso demo</Link></li><li><Link href="/app">Abrir CERES</Link></li><li><Link href="/ingresar">Ingresar</Link></li></ul>
             </div>
             <div>
               <h5>Datos</h5>

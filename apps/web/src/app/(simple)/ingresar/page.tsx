@@ -15,7 +15,7 @@ function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const back = params.get("volver");
-  const safeBack = back && back.startsWith("/") && !back.startsWith("//") ? back : "/parcelas";
+  const safeBack = back && back.startsWith("/") && !back.startsWith("//") ? back : "/app";
   let hasDraft = false;
   try {
     hasDraft = typeof window !== "undefined" && !!sessionStorage.getItem(DRAFT_KEY);

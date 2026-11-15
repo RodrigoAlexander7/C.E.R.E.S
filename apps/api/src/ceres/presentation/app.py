@@ -444,9 +444,26 @@ def get_parcel(parcel_id: str, repo: ParcelRepo = Depends(parcel_repo), auth: Au
 
 
 @private.patch("/parcels/{parcel_id}")
-def patch_parcel(parcel_id: str, body: ParcelPatch, repo: ParcelRepo = Depends(parcel_repo)):
+def patch_parcel(parcel_id: str, body: ParcelPatch, repo: ParcelRepo = Depends(parcel_repo), c: Container = Depends(container)):
     p = _get_parcel(repo, parcel_id)
-    p.name = body.name
+    if "name" in body.model_fields_set:
+        p.name = body.name
+    if body.geometry is not None:
+        try:
+            validate_polygon(body.geometry)
+            area = geodesic_area_ha(body.geometry)
+        except GeometryError as exc:
+            raise ApiError(422, "geometria_invalida", str(exc))
+        pt = centroid(body.geometry)
+        d = c.regions.locate_point(pt["lat"], pt["lon"])
+        z = c.zones.zone_of_district(d["code"]) if d else None
+        if (z.id if z else None) != p.zone_id:
+            # Cambiar de zona cambiaría catálogo y clima del perfil guardado: mejor crear otra parcela.
+            raise ApiError(422, "otra_zona", "El dibujo cae fuera de la zona de esta parcela; crea otra parcela para ese terreno")
+        # Los resultados anteriores conservan su área congelada; los nuevos usan la del dibujo.
+        p.geometry, p.point, p.area_ha, p.area_origin = body.geometry, pt, round(area, 4), "geodesica"
+        if d:
+            p.region_codes = {**p.region_codes, "district_code": d["code"], "district_name": d["name"]}
     return ser.parcel(p)
 
 
