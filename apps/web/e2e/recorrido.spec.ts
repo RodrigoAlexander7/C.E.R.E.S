@@ -33,7 +33,7 @@ test("recorrido sencillo, historial inmutable y aislamiento", async ({ page, bro
   const original = await (await page.request.get(`/api/v1/recommendations/${firstId}`)).json();
   expect(original.inputs.profile.water.allocation_max_m3).toBeFalsy();
   await page.getByText("Detalle técnico de la comparación", { exact: true }).click();
-  expect(await page.locator(".strategy-card").count()).toBeGreaterThanOrEqual(3);
+  await expect(page.locator(".strategy-card").nth(2)).toBeVisible(); // ≥ 3 opciones (espera a que abra el detalle)
   await page.getByText("¿Por qué este estado? Reglas, datos faltantes y fuentes", { exact: true }).click();
   await page.getByRole("button", { name: "NASA-POWER", exact: true }).first().click();
   await expect(page.locator("dialog[open]")).toContainText("NASA Langley Research Center");
