@@ -5,15 +5,24 @@ name: Deploy
 on:
   push:
     branches: [main]
+    paths-ignore: ["**.md"]   # cambios solo de documentación no redespliegan
   workflow_dispatch:
     inputs:
       action:
-        description: "deploy = construir y publicar este commit (o re-desplegar 'tag'); rollback = volver a la versión anterior (o a 'tag')"
+        description: "deploy = construir y publicar este commit (o re-desplegar 'tag'); rollback = versión anterior (o 'tag'); backup / verify-backup / restore / status = operación de datos"
         type: choice
-        options: [deploy, rollback]
+        options: [deploy, rollback, backup, verify-backup, restore, status]
         default: deploy
       tag:
-        description: "SHA de una imagen ya publicada (opcional)"
+        description: "SHA de una imagen ya publicada (deploy/rollback, opcional)"
+        type: string
+        required: false
+      backup_file:
+        description: "restore: nombre del archivo en /opt/ceres/backups (p. ej. ceres-20261115T001500Z-manual.dump)"
+        type: string
+        required: false
+      confirm:
+        description: "restore: escribe RESTAURAR para confirmar (reemplaza la base actual; antes se respalda)"
         type: string
         required: false
 
@@ -104,7 +113,14 @@ jobs:
           for v in RG VM LOCATION CERES_DOMAIN; do [[ -n "${!v}" ]] || { echo "::error::Falta la variable de entorno de GitHub para $v"; exit 1; }; done
           if [[ "$ACTION" == deploy && -z "$TAG" ]]; then echo "::error::No hay etiqueta para desplegar"; exit 1; fi
           if [[ -n "$TAG" && ! "$TAG" =~ ^[0-9a-f]{40}$ ]]; then echo "::error::'tag' debe ser un SHA completo de 40 caracteres"; exit 1; fi
-          echo "Acción: $ACTION · etiqueta: ${TAG:-<anterior registrada en la VM>}"
+          if [[ "$ACTION" == restore ]]; then
+            [[ "$CONFIRM" == RESTAURAR ]] || { echo "::error::Confirma la restauración escribiendo RESTAURAR"; exit 1; }
+            [[ "$BACKUP_FILE" =~ ^ceres-[0-9TZ]+-[A-Za-z0-9._-]+\.dump$ ]] || { echo "::error::Nombre de respaldo no válido"; exit 1; }
+          fi
+          echo "Acción: $ACTION · etiqueta: ${TAG:-<la registrada en la VM>}"
+        env:
+          CONFIRM: ${{ inputs.confirm }}
+          BACKUP_FILE: ${{ inputs.backup_file }}
       - name: Azure login (OIDC, sin secretos de larga duración)
         uses: azure/login@v2
         with:
@@ -118,6 +134,10 @@ jobs:
           case "$ACTION" in
             deploy) op="deploy \"\$CERES_TAG\"" ;;
             rollback) op="rollback \${CERES_TAG:-}" ;;
+            backup) op="backup manual" ;;
+            verify-backup) op="verify-backup" ;;
+            restore) op="restore \"/opt/ceres/backups/\$BACKUP_FILE\"" ;;
+            status) op="status" ;;
           esac
           cat > /tmp/runcmd.sh <<EOF
           #!/usr/bin/env bash
@@ -134,6 +154,7 @@ jobs:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}
+          BACKUP_FILE: ${{ inputs.backup_file }}
         run: |
           set -euo pipefail
           name="ceres-${ACTION}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
@@ -142,7 +163,7 @@ jobs:
           [[ -n "$OPENAI_API_KEY" ]] && prot+=(OPENAI_API_KEY="$OPENAI_API_KEY")
           az vm run-command create -g "$RG" --vm-name "$VM" -l "$LOCATION" --name "$name" \
             --script @/tmp/runcmd.sh --timeout-in-seconds 1500 \
-            --parameters CERES_TAG="$TAG" CERES_DOMAIN="$CERES_DOMAIN" \
+            --parameters CERES_TAG="$TAG" CERES_DOMAIN="$CERES_DOMAIN" BACKUP_FILE="$BACKUP_FILE" \
               CERES_REGISTRY="${REGISTRY}/${GITHUB_REPOSITORY_OWNER,,}" GHCR_USER="$GITHUB_ACTOR" OPENAI_MODEL="$OPENAI_MODEL" \
             --protected-parameters "${prot[@]}" \
             --only-show-errors -o none || true
@@ -154,17 +175,19 @@ jobs:
           echo "Estado: $state · código: $code"
           [[ "$state" == "Succeeded" && "$code" == "0" ]]
       - name: Verificación pública HTTPS desde GitHub
-        if: env.ACTION == 'deploy'
+        if: env.ACTION != 'status' && env.ACTION != 'backup' && env.ACTION != 'verify-backup'
         run: |
           set -euo pipefail
+          # En rollback sin 'tag' la revisión esperada es la que la VM tenía como anterior: solo se exige salud.
+          want="$TAG"; [[ "$ACTION" == restore ]] && want=""
           for i in $(seq 1 30); do
             if body=$(curl -fsS --max-time 10 "https://$CERES_DOMAIN/api/v1/health"); then
               echo "$body"
-              echo "$body" | jq -e --arg t "$TAG" '.status == "ok" and .revision == $t and .database == true' && break
+              echo "$body" | jq -e --arg t "$want" '.status == "ok" and .database == true and ($t == "" or .revision == $t)' && break
             fi
             sleep 10
           done
-          echo "$body" | jq -e --arg t "$TAG" '.revision == $t'
+          echo "$body" | jq -e --arg t "$want" '.status == "ok" and ($t == "" or .revision == $t)'
           curl -fsS --max-time 10 -o /dev/null -w "web %{http_code}\n" "https://$CERES_DOMAIN/"
           curl -fsS --max-time 10 -o /dev/null -w "demo %{http_code}\n" "https://$CERES_DOMAIN/api/v1/public/demo"
           # Puertos internos no expuestos
