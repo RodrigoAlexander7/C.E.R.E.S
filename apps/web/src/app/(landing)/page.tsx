@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { SatIcon } from "@/components/NasaBadge";
 import { SowingWindow } from "@/components/SowingWindow";
 import { api } from "@/lib/api";
-import type { Strategy, Status } from "@/lib/types";
+import { NASA } from "@/lib/nasa";
+import type { PriceItem, Strategy, Status } from "@/lib/types";
 import { useZones } from "@/lib/zones";
 import s from "./landing.module.css";
 
@@ -206,11 +208,17 @@ export default function Landing() {
   const [r5, c5] = useReveal<HTMLDivElement>();
   const [r6, c6] = useReveal<HTMLDivElement>();
 
+  const [ctxState, setCtxState] = useState<"loading" | "ok" | "error">("loading");
+  const [prices, setPrices] = useState<PriceItem[]>([]);
   const zid = zone?.id;
   useEffect(() => {
     if (!zid) return;
     setStrategies(null);
-    api<PublicContext>(`/public/context?zone=${zid}`).then(setCtx).catch(() => setCtx(null));
+    setCtxState("loading");
+    api<PublicContext>(`/public/context?zone=${zid}`)
+      .then((c) => { setCtx(c); setCtxState("ok"); })
+      .catch(() => { setCtx(null); setCtxState("error"); });
+    api<{ items: PriceItem[] }>(`/public/prices?zone=${zid}`).then((r) => setPrices(r.items.filter((i) => i.markets.length))).catch(() => setPrices([]));
     api<{ run: { result: { strategies: Strategy[] } } | null }>(`/public/demo?zone=${zid}`).then((d) => setStrategies(d.run?.result.strategies ?? [])).catch(() => setStrategies([]));
   }, [zid]);
   const zoneTabs = zones.length > 1 && (
@@ -233,7 +241,6 @@ export default function Landing() {
   const reasonB = strategies?.find((x) => x.strategy_id === "B");
   const layerReason = reasonB ? plainReason(reasonB, shortName) : null;
   const zoneName = zone?.name ?? "Majes I";
-  const layerSources = Array.from(new Set(reasonB?.reasons.flatMap((r) => r.source_ids) ?? [])).slice(0, 5);
 
   return (
     <div className={s.page}>
@@ -242,7 +249,7 @@ export default function Landing() {
           <Link href="/" className={s.brand} aria-label="CERES, inicio"><BrandMark /> CERES <span>Arequipa</span></Link>
           <nav className={s.navLinks} aria-label="Secciones">
             <a href="#como">Cómo funciona</a>
-            <a href="#nasa">Datos NASA</a>
+            <a href="#datos-nasa">Datos NASA</a>
             <a href="#viene">Lo que viene</a>
             <Link href="/fuentes">Fuentes</Link>
           </nav>
@@ -264,10 +271,10 @@ export default function Landing() {
                 CERES compara tu siguiente siembra con dos alternativas según el agua del canal, el clima de los últimos 11 años y lo que te importa más. Primero ves opciones claras; después, el porqué. La decisión es tuya.
               </p>
               <div className={s.heroCtas}>
-                <Link href={`/demo?zona=${zone?.id ?? "majes"}`} className={`${s.btn} ${s.btnPrimary}`}>Ver el caso de {zoneName}</Link>
-                <Link href="/app" className={`${s.btn} ${s.btnGhost}`}>Probar con mi chacra</Link>
+                <Link href="/app" className={`${s.btn} ${s.btnPrimary}`}>Qué sembrar</Link>
+                <Link href="/app/chacra" className={`${s.btn} ${s.btnGhost}`}>Mi chacra</Link>
               </div>
-              {zoneTabs}
+              <p className={s.heroLink}><Link href={`/demo?zona=${zone?.id ?? "majes"}`}>Ver el caso de {zoneName} →</Link></p>
               <div className={s.trust}>
                 <span><Check />Clima NASA POWER 2015–2025</span>
                 <span><Check />Método FAO-56 verificado</span>
@@ -292,24 +299,25 @@ export default function Landing() {
           </div>
         </section>
 
-        {/* DATOS NASA */}
+        {/* EL PROBLEMA (cifras NASA de la API; si no cargan, no se muestran guiones) */}
+        {ctxState !== "error" && (
         <section className={s.sectionTight}>
           <div className={s.container}>
-            <div ref={r1} className={`${s.dataBand} ${c1}`}>
+            <div ref={r1} className={`${s.dataBand} ${c1}`} aria-busy={!yearly}>
               <p className={s.kicker}>El problema</p>
               <h2 className={`${s.display} ${s.h2}`}>En la pampa, casi toda el agua viene del canal.</h2>
               <p className={s.sub}>Elegir solo por el precio de una cosecha deja fuera cuánta agua pedirá el cultivo, en qué meses y qué viene después. CERES lo pone sobre la mesa con datos.</p>
               <div className={s.stats}>
                 <div className={s.stat}>
-                  <div className={s.statValue}>{yearly ? fmt(yearly.et0) : "—"}<small>mm/año</small></div>
+                  <div className={s.statValue}>{yearly ? fmt(yearly.et0) : <span className={s.skel} />}<small>mm/año</small></div>
                   <div className={s.statLabel}>de agua que pide la atmósfera (evapotranspiración de referencia)</div>
                 </div>
                 <div className={s.stat}>
-                  <div className={s.statValue}>{yearly ? fmt(yearly.rain) : "—"}<small>mm/año</small></div>
+                  <div className={s.statValue}>{yearly ? fmt(yearly.rain) : <span className={s.skel} />}<small>mm/año</small></div>
                   <div className={s.statLabel}>de lluvia promedio en la misma zona</div>
                 </div>
                 <div className={s.stat}>
-                  <div className={s.statValue}>{yearly ? fmt(yearly.pct) : "—"}<small>%</small></div>
+                  <div className={s.statValue}>{yearly ? fmt(yearly.pct) : <span className={s.skel} />}<small>%</small></div>
                   <div className={s.statLabel}>de esa demanda que cubre la lluvia; el resto, riego</div>
                 </div>
               </div>
@@ -317,6 +325,39 @@ export default function Landing() {
                 Promedios 2015–2025 de NASA POWER{ctx?.nasa ? ` (${fmt(ctx.nasa.days)} días, sin datos faltantes)` : ""} para la celda regional de {zoneName}{ctx?.nasa?.cell_elevation_m != null ? ` (celda a ${fmt(ctx.nasa.cell_elevation_m)} m; el campo está a unos ${fmt(zone?.elevation_m?.value ?? 0)} m)` : ""}; ET0 calculada por CERES con FAO-56. <Link href="/fuentes">Ver fuente y procedencia</Link>.
               </p>
             </div>
+          </div>
+        </section>
+        )}
+
+        {/* DÓNDE USAMOS DATOS DE LA NASA */}
+        <section id="datos-nasa" className={s.section}>
+          <div className={s.container}>
+            <p className={s.kicker}>Con datos de la NASA</p>
+            <h2 className={`${s.display} ${s.h2}`}>Dónde usamos datos de la NASA, y para qué.</h2>
+            <p className={s.sub}>Tres productos abiertos de la NASA, cada uno con su período y resolución. Ninguno se presenta como medición de tu parcela ni como pronóstico.</p>
+            <ol className={s.flow} aria-label="Del dato a la decisión">
+              <li><b>Dato NASA</b><span>clima diario, imagen satelital</span></li>
+              <li><b>Cálculo CERES</b><span>agua por mes (FAO-56), verdor, riesgo</span></li>
+              <li><b>Tu decisión</b><span>qué y cuándo sembrar</span></li>
+            </ol>
+            <div className={s.nasaCards}>
+              {(["power", "hls", "gibs"] as const).map((k) => {
+                const p = NASA[k];
+                const where = k === "power" ? ["Qué sembrar", "/app"] : ["Mi chacra", "/app/chacra"];
+                return (
+                  <article key={k} className={s.nasaCard}>
+                    <span className={s.nasaIcon}><SatIcon size={20} /></span>
+                    <h3>{p.name}</h3>
+                    <p className={s.nasaDetail}>{p.detail}</p>
+                    <p>{p.use}</p>
+                    <p className={s.nasaWhere}>
+                      Lo ves en <Link href={where[1]}>{where[0]}</Link>{k === "power" ? <> y <Link href="/app/cuando">Cuándo sembrar</Link></> : null} · <Link href={`/fuentes#nasa-${k}`}>fuente</Link>
+                    </p>
+                  </article>
+                );
+              })}
+            </div>
+            <p className={s.dataNoteDark}>CERES usa datos abiertos de la NASA; no está respaldado por la NASA. El Niño (NOAA) y los precios (MIDAGRI-SISAP) no son datos NASA.</p>
           </div>
         </section>
 
@@ -337,13 +378,14 @@ export default function Landing() {
                 <span className={s.stepNum} aria-hidden="true">2</span>
                 <div className={s.stepIcon}><Icon d={I.cards} /></div>
                 <h3>Mira tus opciones</h3>
-                <p>Tu plan y dos alternativas sobre los mismos 24 meses: cuándo sembrar y cosechar, agua por mes y margen estimado.</p>
+                <p>Tu plan, dos alternativas y el plan sugerido por CERES sobre los mismos 24 meses: cuándo sembrar, agua por mes, ganancia probable y si es viable con tu agua.</p>
               </article>
               <article className={s.step}>
                 <span className={s.stepNum} aria-hidden="true">3</span>
                 <div className={s.stepIcon}><Icon d={I.why} /></div>
                 <h3>Pregunta por qué</h3>
-                <p>Cada opción se explica en capas, hasta la fuente. Y si falta un dato, te decimos cuál cambiaría la decisión.</p>
+                <p>Nada de cajas negras: primero la razón en una frase, luego los datos y supuestos usados, y al final las reglas con su fuente. Si falta un dato, te decimos cuál cambiaría la decisión.</p>
+                {layerReason && <p className={s.stepQuote}>«{layerReason}»</p>}
               </article>
             </div>
           </div>
@@ -366,34 +408,29 @@ export default function Landing() {
           </div>
         </section>
 
-        {/* POR QUÉ EN CAPAS */}
+        {/* PRECIOS REALES Y PLAN SUGERIDO */}
         <section className={s.section} style={{ paddingTop: 0 }}>
-          <div ref={r4} className={`${s.container} ${s.whyWrap} ${c4}`}>
+          <div ref={r4} className={`${s.container} ${s.pricesBand} ${c4}`}>
             <div>
-              <p className={s.kicker}>Opciones primero, el porqué después</p>
-              <h2 className={`${s.display} ${s.h2}`}>Nada de cajas negras.</h2>
+              <p className={s.kicker}>Precios reales y el plan que más deja</p>
+              <h2 className={`${s.display} ${s.h2}`}>Cruza tu agua, el clima NASA y los precios de esta semana.</h2>
               <p className={s.sub}>
-                Cada recomendación se abre en capas: primero la razón en una frase, luego los datos y supuestos usados, y al final el detalle técnico con sus fuentes. Los supuestos se marcan como supuestos; nunca se presentan como mediciones.
+                CERES prueba todas las combinaciones de cultivos y meses de siembra de los próximos 24 meses y te sugiere la que más deja sin arriesgar de más: 1 000 escenarios con años reales de NASA POWER, precios que suben o bajan y rendimientos mejores o peores. Te dice el rango probable, la probabilidad de perder y a qué precio dejarías de ganar.
               </p>
+              <Link href="/app" className={`${s.btn} ${s.btnPrimary}`}>Ver mi plan sugerido</Link>
             </div>
-            <div className={s.layers}>
-              <div className={s.layer}>
-                <span className={s.layerN}>1</span>
-                <div><h4>La razón, en una frase</h4><p>{layerReason ?? "Cargando la explicación del caso demo…"}</p></div>
+            {prices.length > 0 && (
+              <div className={s.priceChips} aria-label="Precios mayoristas en Arequipa">
+                {prices.slice(0, 4).map((p) => (
+                  <div key={p.crop_id} className={s.priceChip}>
+                    <span>{p.crop_name}</span>
+                    <strong>S/ {p.markets[0].median_soles_kg.toFixed(2)}/kg</strong>
+                    <small>mayorista {p.markets[0].market}</small>
+                  </div>
+                ))}
+                <p className={s.priceNote}>MIDAGRI-SISAP, 2–13 nov 2026. Precio mayorista de hoy: en chacra se paga menos y a la cosecha puede cambiar.</p>
               </div>
-              <div className={s.layer}>
-                <span className={s.layerN}>2</span>
-                <div><h4>Datos y supuestos usados</h4><p>Agua declarada, clima NASA de esas fechas, umbrales del cultivo y precios — cada uno etiquetado como observado, declarado o supuesto.</p></div>
-              </div>
-              <div className={s.layer}>
-                <span className={s.layerN}>3</span>
-                <div>
-                  <h4>Detalle técnico y fuentes</h4>
-                  <p>Fórmulas, unidades y reglas del motor, con la fuente original de cada parámetro.</p>
-                  {layerSources.length > 0 && <div className={s.layerSrc}>{layerSources.map((x) => <span key={x}>{x}</span>)}</div>}
-                </div>
-              </div>
-            </div>
+            )}
           </div>
         </section>
 
@@ -463,7 +500,7 @@ export default function Landing() {
                       <div className={s.confirmBtns}><span style={{ background: "#1f4d2b", color: "#fff" }}>Guardar</span><span style={{ background: "#ece3d0" }}>Corregir</span></div>
                     </div>
                   </div>
-                  <p className={s.illus}>Ejemplo ilustrativo de la próxima versión</p>
+                  <p className={s.illus}>Conversación de ejemplo</p>
                 </div>
               </div>
             </div>
@@ -512,11 +549,11 @@ export default function Landing() {
             </div>
             <div>
               <h5>Datos</h5>
-              <ul><li><Link href="/fuentes">Fuentes y procedencia</Link></li><li><a href="https://power.larc.nasa.gov/" target="_blank" rel="noreferrer">NASA POWER</a></li><li><a href="https://www.fao.org/4/x0490e/x0490e00.htm" target="_blank" rel="noreferrer">FAO-56</a></li></ul>
+              <ul><li><Link href="/fuentes">Fuentes y procedencia</Link></li><li><a href="https://power.larc.nasa.gov/" target="_blank" rel="noreferrer">NASA POWER</a></li><li><a href="https://hls.gsfc.nasa.gov/" target="_blank" rel="noreferrer">NASA HLS</a></li><li><a href="https://nasa-gibs.github.io/gibs-api-docs/" target="_blank" rel="noreferrer">NASA GIBS</a></li><li><a href="http://sistemas.midagri.gob.pe/sisap/portal2/ciudades/" target="_blank" rel="noreferrer">MIDAGRI-SISAP</a></li><li><a href="https://www.fao.org/4/x0490e/x0490e00.htm" target="_blank" rel="noreferrer">FAO-56</a></li></ul>
             </div>
           </div>
           <div className={s.footBottom}>
-            Prototipo: no garantiza rendimientos, precios ni ahorro, y no reemplaza la asesoría agronómica local. Clima histórico de NASA POWER (celda regional, no medición de la parcela). Límites referenciales SERFOR/INEI. Mapa © colaboradores de OpenStreetMap.
+            Prototipo: no garantiza rendimientos, precios ni ahorro, y no reemplaza la asesoría agronómica local. Clima histórico de NASA POWER (celda regional, no medición de la parcela). CERES usa datos abiertos de la NASA y no está respaldado por la NASA. Precios mayoristas MIDAGRI-SISAP. Límites referenciales SERFOR/INEI. Mapa © colaboradores de OpenStreetMap; imagen NASA GIBS.
           </div>
         </div>
       </footer>

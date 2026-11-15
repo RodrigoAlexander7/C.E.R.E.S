@@ -169,6 +169,38 @@
 .layerSrc { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px; }
 .layerSrc span { font-size: 0.7rem; font-weight: 700; padding: 3px 8px; border-radius: 6px; background: var(--l-sky); color: #18405e; }
 
+/* Héroe: enlace secundario y esqueleto de cifras */
+.heroLink { margin: 12px 0 0; }
+.heroLink a { color: var(--l-forest); font-weight: 700; text-underline-offset: 3px; }
+.skel { display: inline-block; width: 3.2ch; height: 0.8em; border-radius: 8px; background: rgba(255, 255, 255, 0.18); vertical-align: middle; animation: pulse 1.2s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: 0.45; } }
+.stepQuote { margin: 10px 0 0 !important; padding: 10px 12px; border-left: 3px solid var(--l-maize); background: var(--l-sand); border-radius: 0 12px 12px 0; font-size: 0.88rem !important; }
+
+/* Dónde usamos datos de la NASA (solo texto: sin logo de la NASA) */
+.flow { list-style: none; padding: 0; margin: 24px 0 0; display: grid; gap: 8px; counter-reset: f; }
+.flow li { display: grid; gap: 2px; padding: 12px 14px; border-radius: 16px; background: #e3edf6; color: #17385a; position: relative; }
+.flow li b { font-size: 0.95rem; }
+.flow li span { font-size: 0.85rem; color: #3b5874; }
+.nasaCards { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; margin-top: 18px; }
+.nasaCard { background: #fff; border: 1px solid #c6d8ea; border-radius: var(--l-radius); padding: 20px; display: grid; gap: 8px; align-content: start; }
+.nasaCard h3 { margin: 0; font-size: 1.15rem; color: #17385a; }
+.nasaCard p { margin: 0; color: var(--l-ink-2); line-height: 1.5; font-size: 0.93rem; }
+.nasaIcon { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: #e3edf6; color: #17385a; }
+.nasaDetail { font-weight: 700; color: #3b5874 !important; font-size: 0.85rem !important; }
+.nasaWhere { font-size: 0.85rem !important; }
+.nasaWhere a { color: var(--l-forest); font-weight: 700; }
+.dataNoteDark { margin: 16px 0 0; font-size: 0.8rem; color: var(--l-muted); line-height: 1.5; }
+
+/* Precios reales y plan sugerido */
+.pricesBand { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; }
+.pricesBand .btn { margin-top: 18px; }
+.priceChips { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; align-content: start; }
+.priceChip { background: #fff; border: 1px solid var(--l-line); border-radius: 18px; padding: 14px; display: grid; gap: 2px; }
+.priceChip span { text-transform: capitalize; font-weight: 700; color: var(--l-ink-2); font-size: 0.9rem; }
+.priceChip strong { font-family: var(--font-display), serif; font-size: 1.35rem; }
+.priceChip small { color: var(--l-muted); font-size: 0.76rem; }
+.priceNote { grid-column: 1 / -1; margin: 0; font-size: 0.78rem; color: var(--l-muted); line-height: 1.5; }
+
 /* Funciones: carrusel horizontal en móvil */
 .features { display: grid; grid-auto-flow: column; grid-auto-columns: 82%; gap: 12px; margin: 28px calc(-1 * var(--l-gutter)) 0; padding: 4px var(--l-gutter) 12px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; }
 .features::-webkit-scrollbar { display: none; }
@@ -285,6 +317,9 @@
   .steps { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px; margin-top: 44px; }
   .chartWrap { grid-template-columns: 0.85fr 1.15fr; gap: 44px; align-items: center; }
   .whyWrap { grid-template-columns: 1fr 1fr; gap: 48px; align-items: center; }
+  .flow { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .nasaCards { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+  .pricesBand { grid-template-columns: 1.1fr 0.9fr; gap: 48px; align-items: center; }
   .features { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
   .feature:hover { transform: translateY(-3px); box-shadow: 0 24px 50px -30px rgba(19, 34, 26, 0.4); }
   .ceres { grid-template-columns: 1fr 1fr; gap: 48px; padding: 64px; border-radius: 40px; align-items: center; }
