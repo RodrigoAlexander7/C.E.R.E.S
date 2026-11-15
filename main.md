@@ -157,6 +157,10 @@ Decisión del usuario tras evaluar el MVP: la versión actual es rigurosa pero c
 
 Fase 0 especificación y landing → Fase 1 motor sin bloqueos → Fase 2 modo sencillo → Fase 3 momento NASA → Fase 4 NDVI de la parcela → Fase 5 cuaderno de campo → Fase 6 registro por chat/voz → Fase 7 asistente Ceres → Fase 8 pruebas, despliegue y guion de demo. Detalle en `specs/tareas.md` (incrementos 7–14).
 
+### Segundo piloto: Valle de Chilina, Arequipa ciudad (decisión del 15-nov-2026)
+
+Además de Majes I, CERES tendrá un segundo piloto en la **campiña del Valle de Chilina** (río Chili, ciudad de Arequipa). Implica pasar de un piloto fijo a **zonas piloto configurables**: límites/distritos de la zona (verificar con SERFOR/INEI cuáles abarca el valle), su propia instantánea NASA POWER (otra celda y otra altitud que Majes), sus supuestos de zona con fuente (agua de la junta de usuarios correspondiente, método de riego habitual) o marcados como `supuesto_zona`, y fichas/calendarios revisados para sus cultivos habituales. No trasladar valores de Majes a Chilina. Detalle en `specs/tareas.md` (incremento 15).
+
 ### Decisiones pendientes del usuario
 
 - Canal de las preguntas mensuales: por defecto, revisión al abrir la app + notificaciones del navegador; WhatsApp/SMS sigue fuera de alcance.

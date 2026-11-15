@@ -114,6 +114,14 @@ Estado real de la publicación: ver `despliegue.md`.
 - [ ] `ProposeRecords` (texto/audio) con esquema estricto, tarjeta «¿Guardo esto?» y confirmación obligatoria. **R17**.
 - [ ] Revisión mensual determinista y notificaciones opcionales del navegador. **R17**.
 
+## Incremento 15 — Segundo piloto: Valle de Chilina (Arequipa ciudad)
+
+- [ ] Identificar con límites SERFOR/INEI los distritos que abarca la campiña del Valle de Chilina y definir cómo se reconoce la zona (distritos o polígono con fuente).
+- [ ] Generalizar el piloto: `PILOT_DISTRICT`, `zona_majes.json`, la instantánea NASA única y la zona del motor pasan a un registro de zonas (`data/zonas/<zona>/`) con clima, supuestos y catálogo por zona; el run congela la zona usada.
+- [ ] Descargar NASA POWER 2015–2025 para Chilina con hash y metadatos; documentar elevación de la celda frente a la real.
+- [ ] Supuestos de zona de Chilina con fuente (junta de usuarios/ALA, método de riego) o como `supuesto_zona`; fichas y calendarios de sus cultivos habituales revisados contra FAO, sin copiar los de Majes.
+- [ ] Modo sencillo, landing y modo avanzado muestran ambas zonas; pruebas por zona (no mezclar clima ni supuestos).
+
 ## Incremento 14 — Fases 7–8: asistente Ceres, pruebas y demo
 
 - [ ] Ceres con memoria del cuaderno, herramienta `simular_escenario`, voz de entrada/salida. **R18**.
