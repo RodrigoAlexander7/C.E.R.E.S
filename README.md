@@ -75,7 +75,7 @@ El registro `data/zonas/registro.json` incluye Majes I y Valle de Chilina, cada 
 cd apps/api && uv run pytest
 ```
 
-116 pruebas: ET0 contra el ejemplo 18 de FAO-56, lluvia efectiva FAO, calendario/horizonte/bisiestos, unidades mm→m³, margen por ciclos, restricciones, zonas, reproducción, optimización de secuencias y precios SISAP; integración con PostgreSQL real (propietarios aislados, sesiones, CSRF, historial, runs, HLS y cuaderno); propuestas confirmadas y asistente con proveedor **simulado** (citas inventadas, cifras sin respaldo, inyección y contexto ajeno). Incluyen confirmación de transacciones antes de enviar éxito HTTP, área desconocida, exclusión de datos simulados de la economía propia y registro fuera de los pilotos sin tomar su clima ni catálogo. Las pruebas automáticas nunca llaman al proveedor real; la conexión real se valida aparte.
+123 pruebas: ET0 contra el ejemplo 18 de FAO-56, lluvia efectiva FAO, calendario/horizonte/bisiestos, unidades mm→m³, margen por ciclos, restricciones, zonas, reproducción, optimización de secuencias y precios SISAP; integración con PostgreSQL real (propietarios aislados, sesiones, CSRF, historial, runs, HLS y cuaderno); propuestas confirmadas y asistente con proveedor **simulado** (citas inventadas, cifras sin respaldo, inyección, contexto ajeno y cuotas). Incluyen confirmación de transacciones antes de enviar éxito HTTP, reintentos HLS y centros de píxel ausentes, área desconocida, exclusión de datos simulados de la economía propia y registro fuera de los pilotos sin tomar su clima ni catálogo. Las pruebas automáticas nunca llaman al proveedor real; la conexión real se valida aparte.
 
 E2E del recorrido de aceptación y de la landing (con API y web en marcha):
 
@@ -94,7 +94,9 @@ Las cuentas privadas pueden registrar su historia y agenda fuera de los pilotos;
 
 Actualizar HLS fuera de peticiones web: `uv run python -m ceres.cli ndvi --parcel ID --start 2025-06-01 --end 2025-08-31`. Memoria máxima medida en local: 185 MiB; la lectura queda acotada por ventana y caché. Hay que medir de nuevo bajo concurrencia antes de ampliar el uso.
 
-E2E completo: arrancar la API explícitamente con `uv run uvicorn tests.e2e_app:app --host 127.0.0.1 --port 8000` y sin claves LLM. Este servidor usa `FakeLanguageModel` y nunca se importa en producción. Luego `npx playwright test` (6 recorridos, incluido R20). La validación real se ejecuta aparte con `uv run python scripts/validar_ceres_real.py`. [Guion de demo de 30 segundos](DEMO.md).
+E2E completo: arrancar la API explícitamente con `uv run uvicorn tests.e2e_app:app --host 127.0.0.1 --port 8000` y sin claves LLM. Este servidor usa `FakeLanguageModel` y nunca se importa en producción. Luego `npx playwright test` (7 recorridos, incluido R20 y fallos de servicios). La validación real se ejecuta aparte con `uv run python scripts/validar_ceres_real.py`. [Guion de demo de 30 segundos](DEMO.md).
+
+La serie HLS guardada se consulta sin espera. Buscar escenas nuevas tiene una espera de cinco minutos tras completar una consulta y de 30 segundos tras un fallo rápido. Si una escena falla se conservan las demás y el reintento omite las ya leídas. La falta de centros de píxel en un lote pequeño se muestra expresamente, sin inventar NDVI. Los límites de Gemini pertenecen al proyecto de Google; un 429 se muestra como cuota de IA y no impide usar los formularios. [Consultar los límites del proyecto en AI Studio](https://aistudio.google.com/rate-limit?timeRange=last-28-days).
 
 ## Estado de las validaciones del plan
 

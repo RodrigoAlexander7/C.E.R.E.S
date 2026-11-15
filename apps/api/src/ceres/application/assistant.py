@@ -10,6 +10,7 @@ import re
 from dataclasses import dataclass, field
 
 from ceres.application.ports import LanguageModel, LlmRequest
+from ceres.application.errors import llm_failure
 
 SYSTEM_PROMPT = """Eres el asistente de CERES Majes. Explicas en español sencillo y breve (máximo 4 frases en `answer`) los resultados que YA calculó el motor de la aplicación para la parcela y la comparación indicadas.
 
@@ -234,7 +235,7 @@ def answer_question(llm: LanguageModel, ctx: AssistantContext, question: str, hi
             text, sids = deterministic_explanation(run)
             return AssistantAnswer(
                 "error_proveedor",
-                "El servicio de IA no respondió. Esta es la explicación registrada por la aplicación, sin IA.",
+                llm_failure(res).message + ". Esta es la explicación registrada por la aplicación, sin IA.",
                 text, [], sids, [], [], res.model, [res.error or "error"], fragments, profile_changed,
             )
         v = validate_answer(res.data, ctx)

@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { Icon, Tip } from "./icons";
 import { api, ApiError, fmtNumber } from "@/lib/api";
 import s from "./simple.module.css";
-interface Series { needs_polygon: boolean; items: { scene_id: string; observed_on: string; ndvi: number | null; cloud_pct: number | null; valid_pct: number | null; source_url: string }[]; monthly: { month: string; ndvi: number; scenes: number }[]; job: { status: string; detail: string | null } | null }
+interface Series { needs_polygon: boolean; coverage?: "no_pixel_centers" | null; refresh?: { allowed: boolean; retry_after_seconds: number; reason: string | null }; items: { scene_id: string; observed_on: string; ndvi: number | null; cloud_pct: number | null; valid_pct: number | null; source_url: string }[]; monthly: { month: string; ndvi: number; scenes: number }[]; job: { status: string; detail: string | null } | null }
 
 const MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
 const monthLabel = (ym: string) => `${MESES[Number(ym.slice(5, 7)) - 1]} ${ym.slice(0, 4)}`;
@@ -23,13 +23,14 @@ export function Ndvi({ parcelId, zone = "majes", zoneName }: { parcelId?: string
   const path = parcelId ? `/parcels/${parcelId}/ndvi` : `/public/ndvi?zone=${zone}`;
   useEffect(() => {
     let live = true;
-    const load = () => api<Series>(path).then(d => live && setData(d)).catch(() => live && setErr("No se pudo cargar HLS"));
+    setData(null); setErr("");
+    const load = () => api<Series>(path).then(d => { if (live) { setData(d); setErr(""); } }).catch(() => live && setErr("No se pudo cargar HLS"));
     load(); const timer = setInterval(load, 15000);
     return () => { live = false; clearInterval(timer); };
   }, [path]);
   const refresh = async () => {
     setBusy(true); setErr("");
-    try { await api(`/parcels/${parcelId}/ndvi/refresh`, { method: "POST" }); setData(d => d && ({ ...d, job: { status: "pendiente", detail: "Procesando escenas; puedes seguir usando CERES." } })); }
+    try { await api(`/parcels/${parcelId}/ndvi/refresh`, { method: "POST" }); setData(d => d && ({ ...d, refresh: { allowed: false, retry_after_seconds: 0, reason: "procesando" }, job: { status: "pendiente", detail: "Procesando escenas; puedes seguir usando CERES." } })); }
     catch (e) { setErr(e instanceof ApiError ? e.message : "No se pudo actualizar"); }
     finally { setBusy(false); }
   };
@@ -62,9 +63,9 @@ export function Ndvi({ parcelId, zone = "majes", zoneName }: { parcelId?: string
         </div>
         {last && <p className={s.sub}>Último mes: <b>{reading(last.ndvi)}</b> ({fmtNumber(last.ndvi, 2)} de 1).</p>}
       </>
-    ) : <p>{data ? "Sin observaciones válidas todavía. Los huecos no son un NDVI de cero." : "Cargando escenas…"}</p>}
+    ) : !data?.needs_polygon && <p>{!data ? "Cargando escenas…" : data.coverage === "no_pixel_centers" ? "En las escenas leídas no hay centros de píxel HLS dentro de tu contorno. Con píxeles de 30 m no podemos obtener un NDVI válido de este lote; no equivale a cero ni indica que falte vegetación." : "Sin observaciones válidas todavía. Los huecos no son un NDVI de cero."}</p>}
     {data?.job && data.job.status !== "completo" && <p role="status">{data.job.status}: {data.job.detail}</p>}
-    {parcelId && !data?.needs_polygon && <button className={`${s.btn} ${s.btnGhost}`} onClick={refresh} disabled={busy || ["pendiente", "procesando"].includes(data?.job?.status ?? "")}>Actualizar desde HLS</button>}
+    {parcelId && !data?.needs_polygon && <><button className={`${s.btn} ${s.btnGhost}`} onClick={refresh} disabled={busy || !data || data.refresh?.allowed === false || ["pendiente", "procesando"].includes(data?.job?.status ?? "")}>Actualizar desde HLS</button><p className={s.sub}>{data?.refresh && !data.refresh.allowed && data.refresh.reason !== "procesando" ? `Puedes actualizar de nuevo en ${data.refresh.retry_after_seconds > 60 ? `${Math.ceil(data.refresh.retry_after_seconds / 60)} min` : `${data.refresh.retry_after_seconds} s`}. ` : ""}La serie guardada se puede consultar en cualquier momento. Tras un fallo puedes reintentar sin esperar 30 minutos.</p></>}
     {!!data?.items.length && <details className={s.more}><summary>Ver escenas y calidad</summary><div className={s.moreBody} style={{ overflowX: "auto" }}><table><thead><tr><th>Fecha</th><th>NDVI</th><th>Nubes de escena</th><th>Píxeles válidos</th></tr></thead><tbody>{data.items.map(i => <tr key={i.scene_id}><td><a href={i.source_url} target="_blank" rel="noreferrer">{i.observed_on}</a></td><td>{fmtNumber(i.ndvi, 2)}</td><td>{fmtNumber(i.cloud_pct, 1)} %</td><td>{fmtNumber(i.valid_pct, 1)} %</td></tr>)}</tbody></table><p className={s.sub}>NASA HLS v2 (Landsat 8/9 y Sentinel-2 armonizados, 30 m). Mediana mensual de hasta dos escenas por mes. Nubes, sombra, nieve, agua y aerosol alto enmascarados. Parcelas pequeñas pueden no contener centros de píxel.</p></div></details>}
   </section>;
 }

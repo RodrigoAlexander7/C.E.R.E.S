@@ -46,6 +46,7 @@ class LlmResult:
     data: dict | None = None  # salida estructurada
     model: str | None = None
     error: str | None = None
+    error_code: str | None = None  # categoría segura; nunca claves, audio o texto del agricultor
 
 
 class LanguageModel(Protocol):

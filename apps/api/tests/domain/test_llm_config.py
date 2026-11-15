@@ -4,6 +4,7 @@ from ceres.config import Settings
 from ceres.infrastructure.llm.factory import build_language_model, check_connection
 from ceres.infrastructure.llm.gemini import GeminiModel
 from ceres.infrastructure.llm.openai_responses import OpenAIResponsesModel
+from ceres.application.ports import LlmRequest
 
 BASE = {"_env_file": None}
 
@@ -32,3 +33,18 @@ def test_openai_fallback_and_unconfigured(monkeypatch):
     assert s.llm_provider is None
     assert not build_language_model(s).configured
     assert check_connection(s)["status"] == "no_configurado"
+
+
+def test_gemini_preserves_quota_category_and_redacts_sdk_error():
+    from types import SimpleNamespace
+    class ProviderError(Exception):
+        code=429
+    attempts=[]
+    def fail(**kw):
+        attempts.append(kw["model"])
+        raise ProviderError("clave-secreta texto privado https://example.test/?key=privado")
+    model=GeminiModel(Settings(_env_file=None,gemini_api_key=None,gemini_model="principal",gemini_fallback_model="respaldo"))
+    model._client=SimpleNamespace(models=SimpleNamespace(generate_content=fail))
+    r=model.answer(LlmRequest(system="Prueba",context_json="{}",question="Texto"))
+    assert attempts==["principal","respaldo"] and r.error_code=="quota" and r.model=="respaldo"
+    assert "secreta" not in r.error and "privado" not in r.error and "https://" not in r.error

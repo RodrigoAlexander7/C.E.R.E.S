@@ -6,6 +6,7 @@ from zoneinfo import ZoneInfo
 from fastapi import APIRouter, Depends
 from pydantic import Field, ValidationError
 from ceres.application.assistant import answer_question, build_context
+from ceres.application.errors import llm_failure
 from ceres.infrastructure.db.notebook import records
 from ceres.application.ports import LlmRequest
 from ceres.domain.notebook import Strict, summary
@@ -51,8 +52,8 @@ Para recordar historial usa consultar_cuaderno. Para explicación general respon
         context_json=json.dumps({"cuaderno": book, "perfil": run.inputs["profile"]}, ensure_ascii=False),
         question=body.text or "Escucha la pregunta del audio", history=history, schema=Action.model_json_schema(),
         audio=audio_bytes(body), audio_mime=body.audio_mime))
+    if plan.status != "ok": raise llm_failure(plan)
     try:
-        if plan.status != "ok": raise ValueError()
         action = Action.model_validate(plan.data)
     except (ValidationError, ValueError): raise ApiError(503, "agente", "Ceres no pudo interpretar la petición; inténtalo de nuevo")
     if action.action == "pedir_dato":

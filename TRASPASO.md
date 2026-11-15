@@ -2,6 +2,14 @@
 
 Este documento es para el agente que continúe. Explica qué se hizo, qué falta, qué decidió el usuario y qué se recomienda.
 
+## Incidencias de consulta satelital y cuota IA (15-nov-2026)
+
+- Tras los cambios de Claude (`f5dfc1c`) se reprodujeron los errores reportados. La API de Google devolvió **429 RESOURCE_EXHAUSTED por cuota del proyecto** al extraer con el contexto privado. La conexión simple podía responder; eso no demuestra cuota disponible para todas las peticiones. También se probaron audios sintéticos WAV/WebM, sin confirmar registros; el proveedor no permitió completar su extracción. No volver a gastar peticiones reales en bucle ni afirmar que se corrigió la cuota mediante código.
+- `LlmResult.error_code` conserva una categoría segura; el adaptador Gemini registra modelo/categoría/HTTP sin copiar el texto del SDK. Captura, Ceres y explicación muestran la falta de cuota o timeout en lugar de «No se pudo extraer». El texto del formulario se conserva y el registro manual sigue disponible.
+- Salamanca tenía diez escenas reales persistidas, todas sin centros de píxel dentro del contorno (NDVI null). Una lectura posterior pendiente funcionó directamente en la VM: fallo de descarga intermitente, distinto de la limitación de resolución del lote. La interfaz distingue ambas causas.
+- HLS: lectura de la serie sin espera; actualización tras éxito con intervalo de 5 minutos; tras fallo rápido, 30 segundos; trabajo activo no se duplica y el interrumpido caduca a los 30 minutos. Reintento de errores de red hasta tres veces por escena; una escena fallida no impide conservar las demás y una nueva ejecución omite las ya leídas.
+- Nuevas pruebas de cuota sin escrituras, redacción de errores, conservación de texto y estados HLS. Las carpetas del usuario y `.claude/launch.json` no forman parte de estas correcciones. Registrar revisión publicada y resultado final de Salamanca tras verificarlos.
+
 ## Reanudación tras el límite de uso (15-nov-2026)
 
 - Se encontraron ocho commits locales posteriores al cierre anterior: precios mayoristas SISAP, catálogo ampliado de Majes, comparación después de alfalfa, plan sugerido con programación dinámica/Monte Carlo y rediseño de portada, resultados y navegación. Las carpetas sin seguimiento `ceres-video/` y `references/` pertenecen al trabajo del usuario; no se modificaron ni se incluyeron en commits.

@@ -17,6 +17,15 @@ COLLECTIONS = ("hls2-l30", "hls2-s30")
 METHOD = "HLSv2-NDVI-Fmask-1.0"
 
 
+def retryable_error(exc: Exception) -> bool:
+    if isinstance(exc, httpx.HTTPStatusError):
+        return exc.response.status_code in {408, 429, 500, 502, 503, 504}
+    if isinstance(exc, httpx.TransportError):
+        return True
+    from rasterio.errors import RasterioIOError
+    return isinstance(exc, RasterioIOError)
+
+
 def geometry_hash(geometry: dict) -> str:
     return hashlib.sha256(json.dumps(geometry, sort_keys=True).encode()).hexdigest()
 

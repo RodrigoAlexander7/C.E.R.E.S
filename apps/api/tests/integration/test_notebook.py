@@ -127,3 +127,19 @@ def test_outside_pilot_keeps_private_history_without_borrowing_zone_assumptions(
     assert run.json()["result"]["strategies"]==[]
     assert run.json()["inputs"]["assumed"]==[]
     assert c.get(f"/api/v1/recommendations/{run.json()['id']}/reproduce").json()=={"same_versions":True,"identical":True}
+
+
+def test_provider_quota_is_explained_in_capture_and_ceres_without_writes(make_client):
+    from ceres.application.ports import LlmResult
+    class NoQuota:
+        configured=True
+        model_name="simulado-sin-cuota"
+        def answer(self,request):
+            return LlmResult(status="error_proveedor",error_code="quota",error="Detalle privado que no debe mostrarse")
+    c=make_client(llm=NoQuota());register(c);pid=create_parcel(c)["id"]
+    for endpoint in ("proposals","ceres"):
+        r=c.post(f"/api/v1/parcels/{pid}/{endpoint}",json={"text":"Gasté 35 soles en riego"})
+        assert r.status_code==503 and r.json()["error"]["code"]=="ia_sin_cuota"
+        assert "límite de uso" in r.json()["error"]["message"] and "privado" not in r.text
+    assert c.get(f"/api/v1/parcels/{pid}/notebook").json()["items"]==[]
+    assert c.get(f"/api/v1/parcels/{pid}/proposals").json()["items"]==[]
