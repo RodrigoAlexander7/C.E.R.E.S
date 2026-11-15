@@ -4,15 +4,19 @@ Actualizado el 15 de noviembre de 2026 (UTC). Este documento distingue infraestr
 
 ## Estado actual
 
+Validación del 15-nov-2026: revisión `81920443e69fce4cc22667b907eafba577df12f5`, motor 0.3.0, zonas Majes I y Valle de Chilina. CI remoto pasó pruebas API/PostgreSQL, migraciones, tipos, build y cinco E2E. Workflow: https://github.com/RodrigoAlexander7/C.E.R.E.S/actions/runs/43724182378.
+
+Comprobación pública posterior al despliegue: health `ok` con ambas zonas y snapshots distintos; demo de Chilina accesible; `sowing-window?zone=chilina&crop=papa` devuelve 12 meses y comparación ONI; `/avanzado` redirige a `/app` (307); Permissions-Policy permite `microphone=(self)`. No se hicieron llamadas reales al LLM durante estas pruebas. Los datos de memoria/carga y conexión LLM de la tabla son mediciones históricas, no repetidas en esta publicación.
+
 **Aplicación publicada:** <https://ceres-f7ctifta45nnk.northcentralus.cloudapp.azure.com>
 
 | Elemento | Estado comprobado |
 |---|---|
-| Versión en servicio | `fc41b2ccac330f6574d432681723d7f617d0c937` (anterior registrada: `19ec89e…`) |
+| Versión en servicio | `81920443e69fce4cc22667b907eafba577df12f5` (anterior: `530b761…`) |
 | HTTPS | Certificado Let's Encrypt (emisor YE2) para el FQDN, válido hasta el 12-feb-2027, renovación automática por Caddy. HTTP → HTTPS 308; HSTS. |
 | Puertos públicos | Solo 80/443. Desde Internet: 22, 3000, 5432 y 8000 **cerrados** (comprobado desde GitHub y desde fuera). |
 | Base de datos | PostgreSQL 16.15 en red interna Docker, volumen con nombre fijo `ceres_pgdata`; datos conservados entre 4 despliegues y un rollback. |
-| Datos | Seed aplicado: 23 fuentes, instantánea NASA `nasa-power-6182bcf32295` (SHA-256 `6182bcf3…`), caso demo. |
+| Datos | Seed por zona aplicado: NASA Majes `nasa-power-6182bcf32295` y Chilina `nasa-power-e7430e42e9be`, demos públicas y fuente NOAA ONI. |
 | Asistente IA | **IA conectada** con Google Gemini `gemini-4-hydrogen` (secret `GEMINI_API_KEY` y variable `GEMINI_MODEL` en el entorno `production`, cargados el 15-nov 01:14 UTC). `check-llm` ejecutado dentro del contenedor API en la VM: **conectado**, respuesta JSON según esquema. Las 4 preguntas de la demo (incluida una inyección) se validaron con el proveedor real en local; en producción no se hicieron preguntas con cuentas reales. |
 | Mapa base | Teselas OSM cargando en producción (comprobado en navegador el 15-nov). El 403 «Access blocked» se debía a `Referrer-Policy: same-origin`, que impedía enviar el Referer que exige la política de OSM; ahora `strict-origin-when-cross-origin` (solo el origen, nunca rutas con IDs). No tenía relación con los certificados. |
 | Memoria | Reposo: ~165 MiB entre los 4 contenedores; tras 200 peticiones concurrentes: api 115, web 48, caddy 23, db 21 MiB; 457 MiB disponibles de 887. Carga ligera: 200/200 OK, p50 0,76 s, p95 1,46 s (medido desde Perú). No es una prueba de capacidad; el chat con LLM y varios usuarios simultáneos no se han medido. |

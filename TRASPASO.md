@@ -14,9 +14,16 @@ Este apartado actualiza el estado histórico que sigue debajo.
 - Documentación actualizada a aplicación por módulos sin modo avanzado en `main.md`, R15/R20, diseño §9 y README. Eliminada variable obsoleta `NASA_SNAPSHOT_FILE`; corregidas rutas de fuentes; creada `data/zonas/chilina/REVISION.md`.
 - Caddy ahora permite `microphone=(self)`, igual que Next.js. El script de despliegue ya ejecuta migración, seed y recarga del proxy al cambiar el Caddyfile.
 - Servidores de prueba aislados: API 8001 con claves LLM vacías, web 3001 (`API_ORIGIN=http://127.0.0.1:8001`). Los servidores originales 8000/3000 siguen perteneciendo a la sesión previa; el 8000 tiene LLM real, **no usarlo para E2E**. El nuevo E2E aborta si `/health` declara `llm_configured=true`.
-- Build de producción y pruebas comprobados; publicación y validación de la revisión en Azure se registrarán cuando ocurran. No dar por desplegados estos cambios por estar validados localmente.
+- Publicado y verificado en Azure: `81920443e69fce4cc22667b907eafba577df12f5`, health `ok`, motor 0.3.0 y ambas zonas con snapshots distintos. Demo Chilina y ventana de siembra de 12 meses con ONI responden; redirección `/avanzado` → `/app` y cabecera de micrófono comprobadas. Workflow `43724182378`; detalles en `despliegue.md`.
 
 Siguiente trabajo funcional: incremento 11 HLS (escenas reales, Fmask y persistencia), después 12–14. La comparación anterior con Earth Engine no se verificó técnicamente en esta continuación: no tratar como hechos que exija una cuenta de servicio, que sea pesado o que la publicación sea incompatible. La elección de catálogo público sigue autorizada por el usuario.
+
+**Acceso HLS comprobado durante esta continuación:** consulta STAC GET `/api/stac/v1/search` de Planetary Computer, colecciones `hls2-l30,hls2-s30`, periodo 2025, bbox de las demos. Ambas zonas devuelven HTTP 200, firma SAS HTTP 200 y lectura `Range: bytes=0-15` de B04 con HTTP 206 (16 bytes):
+
+- Majes: `HLS.S30.T18KYG.2025365T145941.v2.0`, adquisición `2025-12-31T15:08:01.774750Z`.
+- Chilina: `HLS.S30.T18KZG.2025365T145941.v2.0`, adquisición `2025-12-31T15:07:59.113370Z`.
+- Recursos públicos: `https://hls2euwest.blob.core.windows.net/hls2/S30/`; disponibles B04, B8A y Fmask. Para S30 usar **B8A**, no B05 (B05 es una banda red-edge); para L30 usar B05. La correspondencia está documentada por NASA en `https://hls.gsfc.nasa.gov/algorithms/`.
+- No se conservaron los tokens SAS. Esta comprobación solo prueba acceso al catálogo y al archivo, no píxeles útiles, porcentaje despejado, cobertura completa del polígono ni una serie NDVI calculada; el incremento 11 sigue abierto.
 
 Lee primero, en este orden:
 
@@ -34,8 +41,8 @@ Reglas que siguen vigentes:
 
 ## 1. Estado del repositorio
 
-- **Último commit publicado:** `bfeaae4`. Producción sirve `530b761`.
-- **Commit local sin publicar:** `66b1c25` (zonas piloto + ventana de siembra), más el commit de rediseño que acompaña a este archivo.
+- **Última revisión funcional publicada y verificada:** `8192044`. Sustituye a `530b761` en producción.
+- `66b1c25` (zonas/ventana) y `480aebc` (rediseño) también quedaron publicados con ella.
 - El bloqueo E2E de esta sección histórica quedó resuelto en la continuación de Codex; consultar el apartado actualizado de arriba.
 
 ## 2. Hecho y comprobado
