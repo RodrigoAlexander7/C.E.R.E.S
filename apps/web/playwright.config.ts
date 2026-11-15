@@ -3,7 +3,7 @@ import { defineConfig } from "@playwright/test";
 // E2E contra la app en ejecución (web + API + PostgreSQL). BASE_URL permite apuntar a otro entorno.
 export default defineConfig({
   testDir: "./e2e",
-  timeout: 90_000,
+  timeout: 180_000,
   retries: 0,
   reporter: [["list"]],
   use: {

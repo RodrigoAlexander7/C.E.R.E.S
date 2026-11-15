@@ -154,6 +154,7 @@ jobs:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+          GEMINI_FALLBACK_MODEL: ${{ vars.GEMINI_FALLBACK_MODEL }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}
           BACKUP_FILE: ${{ inputs.backup_file }}
@@ -168,7 +169,7 @@ jobs:
             --script @/tmp/runcmd.sh --timeout-in-seconds 1500 \
             --parameters CERES_TAG="$TAG" CERES_DOMAIN="$CERES_DOMAIN" BACKUP_FILE="$BACKUP_FILE" \
               CERES_REGISTRY="${REGISTRY}/${GITHUB_REPOSITORY_OWNER,,}" GHCR_USER="$GITHUB_ACTOR" \
-              GEMINI_MODEL="$GEMINI_MODEL" OPENAI_MODEL="$OPENAI_MODEL" \
+              GEMINI_MODEL="$GEMINI_MODEL" GEMINI_FALLBACK_MODEL="$GEMINI_FALLBACK_MODEL" OPENAI_MODEL="$OPENAI_MODEL" \
             --protected-parameters "${prot[@]}" \
             --only-show-errors -o none || true
           view=$(az vm run-command show -g "$RG" --vm-name "$VM" --name "$name" --instance-view \

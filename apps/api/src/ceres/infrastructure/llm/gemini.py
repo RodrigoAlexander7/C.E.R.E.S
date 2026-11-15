@@ -60,16 +60,21 @@ class GeminiModel:
                 else None
             ),
         )
+        # Principal una vez; ante error transitorio, el modelo de respaldo (o un reintento breve del principal).
+        primary = self._settings.gemini_model
+        fallback = self._settings.gemini_fallback_model
+        plan = [primary, fallback] if fallback and fallback != primary else [primary, primary]
         last_error = ""
-        for attempt in range(3):
+        for attempt, model in enumerate(plan):
             try:
-                resp = self._client.models.generate_content(model=self._settings.gemini_model, contents=contents, config=config)
+                resp = self._client.models.generate_content(model=model, contents=contents, config=config)
                 data = json.loads(resp.text or "")
-                return LlmResult(status="ok", data=data, model=getattr(resp, "model_version", None) or self._settings.gemini_model)
+                return LlmResult(status="ok", data=data, model=getattr(resp, "model_version", None) or model)
             except Exception as exc:  # red, autenticación, cuota, modelo inexistente, bloqueo o JSON inválido
-                last_error = type(exc).__name__ + ": " + str(exc)[:300]
-                transient = getattr(exc, "code", None) in (429, 500, 503, 504)
-                if not transient or attempt == 2:
+                last_error = f"{model}: {type(exc).__name__}: {str(exc)[:280]}"
+                transient = getattr(exc, "code", None) in (429, 500, 503, 504) or "timeout" in type(exc).__name__.lower()
+                if not transient or attempt == len(plan) - 1:
                     break
-                time.sleep(1.5 * (attempt + 1))
-        return LlmResult(status="error_proveedor", model=self._settings.gemini_model, error=last_error)
+                if model == primary and plan[attempt + 1] == primary:
+                    time.sleep(1.5)
+        return LlmResult(status="error_proveedor", model=primary, error=last_error)

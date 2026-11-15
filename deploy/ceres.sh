@@ -38,6 +38,7 @@ ensure_env() {
   # Las claves del asistente solo se actualizan si el workflow las envía (parámetros protegidos).
   if [[ -n ${GEMINI_API_KEY:-} ]]; then set_env GEMINI_API_KEY "$GEMINI_API_KEY"; fi
   if [[ -n ${GEMINI_MODEL:-} ]]; then set_env GEMINI_MODEL "$GEMINI_MODEL"; fi
+  if [[ -n ${GEMINI_FALLBACK_MODEL:-} ]]; then set_env GEMINI_FALLBACK_MODEL "$GEMINI_FALLBACK_MODEL"; fi
   if [[ -n ${OPENAI_API_KEY:-} ]]; then set_env OPENAI_API_KEY "$OPENAI_API_KEY"; fi
   if [[ -n ${OPENAI_MODEL:-} ]]; then set_env OPENAI_MODEL "$OPENAI_MODEL"; fi
   chmod 600 "$ENV_FILE"

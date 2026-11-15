@@ -129,6 +129,12 @@ export function Comparison({ result, onSelect }: { result: ComparisonResult; onS
               <dt>Margen bruto</dt><dd>{moneyLine(s)}</dd>
               <dt>Suelo</dt><dd>{s.soil.indicators ? `${s.soil.indicators.families} familia(s), ${s.soil.indicators.legume_cycles} leguminosa(s)` : "—"}</dd>
             </dl>
+            {s.simple && (
+              <p style={{ margin: 0 }}>
+                <span className="tag" style={{ fontWeight: 700 }}>En palabras simples: {s.simple.label}</span>{" "}
+                {s.simple.headline}
+              </p>
+            )}
             <p style={{ margin: 0 }}><strong>Razón principal:</strong> {mainReason(s)}</p>
             <button className={sel === s.strategy_id ? "btn-primary" : "btn-secondary"} onClick={() => pick(s.strategy_id)} aria-pressed={sel === s.strategy_id}>
               {sel === s.strategy_id ? "Viendo el detalle" : "Ver ciclo, razones y fuentes"}
@@ -201,6 +207,12 @@ function StrategyDetail({ s }: { s: Strategy }) {
           ))}
         </div>
         {s.missing.length > 0 && <div className="notice notice-warn">Datos que cambiarían el resultado: {s.missing.join("; ")}.</div>}
+        {s.decisive && s.decisive.length > 0 && (
+          <div className="notice notice-info">
+            <strong>Preguntas que cambiarían el nivel de esta opción</strong> (respóndelas en el modo sencillo o actualiza el perfil):
+            <ul style={{ margin: "0.3rem 0 0" }}>{s.decisive.map((d) => <li key={d.id}>{d.question} <span className="small muted">{d.detail}</span></li>)}</ul>
+          </div>
+        )}
         {s.assumptions.length > 0 && (
           <div className="small"><strong>Supuestos visibles:</strong><ul>{s.assumptions.map((a) => <li key={a}>{a}</li>)}</ul></div>
         )}

@@ -5,6 +5,7 @@
       "name": "ceres-api",
       "runtimeExecutable": "uv",
       "runtimeArgs": ["run", "--project", "apps/api", "uvicorn", "ceres.main:app", "--host", "127.0.0.1", "--port", "8000"],
+      "env": { "GEMINI_FALLBACK_MODEL": "gemini-3.5-flash" },
       "port": 8000
     },
     {

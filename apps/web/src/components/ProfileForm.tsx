@@ -73,7 +73,20 @@ export function ProfileForm({ value, onChange, compact = false }: { value: Profi
           <label><input type="radio" name="water" checked={p.water.mode === "no_se"} onChange={() => setWater({ mode: "no_se" })} /> No sé</label>
           <label><input type="radio" name="water" checked={p.water.mode === "conozco"} onChange={() => setWater({ mode: "conozco", allocation_period: p.water.allocation_period ?? "mensual" })} /> Lo sé</label>
         </div>
-        {p.water.mode === "no_se" && <p className="hint" style={{ marginTop: "0.4rem" }}>Sin la dotación no se puede confirmar que un ciclo tenga agua suficiente; verás qué dato falta.</p>}
+        {p.water.mode === "no_se" && (
+          <p className="hint" style={{ marginTop: "0.4rem" }}>
+            Usaremos el agua típica de Majes (22 500 m³/ha/año, consumo reportado por AUTODEMA en 2023) como <b>supuesto</b> y te diremos cuánta necesita cada opción en su mes más exigente.
+          </p>
+        )}
+        <div className="field" style={{ marginTop: "0.6rem" }}>
+          <label htmlFor="method">¿Cómo riegas? <span className="hint">Define la eficiencia (FAO: goteo 90 %, aspersión 75 %, gravedad 60 %)</span></label>
+          <select id="method" value={p.water.method ?? ""} onChange={(e) => setWater({ method: (e.target.value || null) as Profile["water"]["method"] })}>
+            <option value="">No sé (se supone aspersión)</option>
+            <option value="goteo">Goteo</option>
+            <option value="aspersion">Aspersión</option>
+            <option value="gravedad">Gravedad</option>
+          </select>
+        </div>
         {p.water.mode === "conozco" && (
           <div className="grid-2" style={{ marginTop: "0.6rem" }}>
             <div>
@@ -118,6 +131,14 @@ export function ProfileForm({ value, onChange, compact = false }: { value: Profi
           </div>
           <fieldset>
             <legend>Análisis de suelo</legend>
+            <div className="field" style={{ marginBottom: "0.6rem" }}>
+              <label htmlFor="signs">¿Ves costras blancas o manchas de sal? <span className="hint">Sirve si no tienes análisis; no lo reemplaza</span></label>
+              <select id="signs" value={p.soil.salinity_signs ?? ""} onChange={(e) => setSoil({ salinity_signs: (e.target.value || null) as Profile["soil"]["salinity_signs"] })}>
+                <option value="">No sé</option>
+                <option value="sin_signos">No, no veo</option>
+                <option value="con_signos">Sí, se ven</option>
+              </select>
+            </div>
             <div className="grid-2">
               <div>
                 <label htmlFor="ece">Salinidad CE (dS/m)</label>

@@ -139,12 +139,14 @@ function FieldIllustration() {
 
 // ---------------------------------------------------------------- vista previa del teléfono
 
+// Fallback solo si el resultado demo es de una versión del motor sin capa sencilla.
 const LEVEL: Record<Status, { label: string; cls: string }> = {
-  viable_con_supuestos: { label: "Buena opción", cls: s.pillGood },
+  viable_con_supuestos: { label: "Viable con supuestos", cls: s.pillGood },
   requiere_datos: { label: "Posible, confirma", cls: s.pillMaybe },
   no_viable: { label: "No conviene", cls: s.pillNo },
   exploratoria: { label: "Por explorar", cls: s.pillExplore },
 };
+const SIMPLE_CLS: Record<string, string> = { buena: s.pillGood, posible: s.pillMaybe, explorar: s.pillExplore, no_conviene: s.pillNo };
 const CROP_COLOR: Record<string, string> = { maiz_grano: "#d9a53a", frejol_grano: "#5b9a45", cebolla_roja: "#a2456f" };
 const SHORT: Record<string, string> = { maiz_grano: "Maíz", frejol_grano: "Frejol", cebolla_roja: "Cebolla" };
 
@@ -158,7 +160,7 @@ function PhonePreview({ strategies }: { strategies: Strategy[] | null }) {
         {!strategies &&
           [0, 1, 2].map((i) => <div key={i} className={`${s.opt} ${s.skeleton}`} style={{ height: 96 }} />)}
         {strategies?.map((st) => {
-          const lvl = LEVEL[st.status];
+          const lvl = st.simple ? { label: st.simple.label, cls: SIMPLE_CLS[st.simple.level] } : LEVEL[st.status];
           const margin = st.metrics[`${st.strategy_id}.eco.margen`]?.value;
           const water = st.metrics[`${st.strategy_id}.agua.bruto_m3`]?.value ?? null;
           const total = st.timeline.reduce((a, b) => a + (Date.parse(b.end) - Date.parse(b.start)), 0) || 1;
@@ -316,7 +318,7 @@ export default function Landing() {
           </nav>
           <div className={s.navCta}>
             <Link href="/ingresar" className={`${s.btn} ${s.btnGhost} ${s.btnSmall} ${s.hideXs}`}>Ingresar</Link>
-            <Link href="/demo" className={`${s.btn} ${s.btnPrimary} ${s.btnSmall}`}>Probar</Link>
+            <Link href="/app" className={`${s.btn} ${s.btnPrimary} ${s.btnSmall}`}>Probar</Link>
           </div>
         </div>
       </header>
@@ -333,7 +335,7 @@ export default function Landing() {
               </p>
               <div className={s.heroCtas}>
                 <Link href="/demo" className={`${s.btn} ${s.btnPrimary}`}>Ver el caso de Majes</Link>
-                <Link href="/avanzado" className={`${s.btn} ${s.btnGhost}`}>Comparar mi parcela</Link>
+                <Link href="/app" className={`${s.btn} ${s.btnGhost}`}>Probar con mi chacra</Link>
               </div>
               <div className={s.trust}>
                 <span><Check />Clima NASA POWER 2015–2025</span>
@@ -477,7 +479,7 @@ export default function Landing() {
                 { icon: I.mic, bg: "#f8ddd6", fg: "#9b2f1f", t: "Registro por voz", d: "Manda un audio: «vendí 40 toneladas a un sol diez». CERES propone y tú confirmas.", live: false },
                 { icon: I.chat, bg: "#ebe4f6", fg: "#5d4189", t: "Conversa con Ceres", d: "Un asistente que recuerda tus campañas y simula escenarios contigo.", live: false },
                 { icon: I.sat, bg: "#d9e8f2", fg: "#2f6f9f", t: "Tu chacra desde el satélite", d: "Índice de vegetación mensual (HLS de NASA, 30 m) de tu lote.", live: false },
-                { icon: I.cards, bg: "#f3e6c8", fg: "#8a5a00", t: "Modo sencillo", d: "Tres preguntas, opciones en palabras simples y ayuda junto a cada término.", live: false },
+                { icon: I.cards, bg: "#f3e6c8", fg: "#8a5a00", t: "Modo sencillo", d: "Tres preguntas, opciones en palabras simples, «¿Por qué?» en capas y ayuda junto a cada término.", live: true },
               ].map((f) => (
                 <article key={f.t} className={s.feature}>
                   <div className={s.featureTop}>
@@ -556,7 +558,7 @@ export default function Landing() {
               <p>Explora la comparación pública con datos NASA, o crea tu cuenta para guardar tu parcela y preguntarle a la IA.</p>
               <div className={s.finalCtas}>
                 <Link href="/demo" className={`${s.btn} ${s.btnLight}`}>Ver el caso de Majes</Link>
-                <Link href="/ingresar" className={`${s.btn} ${s.btnGhost}`}>Crear mi cuenta</Link>
+                <Link href="/app" className={`${s.btn} ${s.btnGhost}`}>Probar con mi chacra</Link>
               </div>
             </div>
           </div>

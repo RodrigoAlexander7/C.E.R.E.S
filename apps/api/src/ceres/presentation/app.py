@@ -43,6 +43,7 @@ from ceres.presentation.schemas import (
     MessageCreate,
     ParcelCreate,
     ParcelPatch,
+    QuickCompare,
     RevisionCreate,
     RunCreate,
     SoilCreate,
@@ -202,6 +203,30 @@ def public_demo(db: DbSession = Depends(get_db)):
         "parcel": ser.parcel(p),
         "run": ser.run_full(run, p.active_revision_id) if run else None,
         "note": "Caso público de demostración con supuestos etiquetados; no corresponde a una parcela ni entrevista real.",
+    }
+
+
+@public.get("/public/zone")
+def public_zone(c: Container = Depends(container)):
+    return c.zone
+
+
+@public.post("/public/quick-compare")
+def quick_compare(body: QuickCompare, request: Request, c: Container = Depends(container)):
+    """Comparación del modo sencillo SIN cuenta: no guarda nada (R15). Zona piloto Majes I."""
+    if c.quick_limiter and not c.quick_limiter.hit(request.client.host if request.client else "?"):
+        raise ApiError(429, "demasiadas_consultas", "Demasiadas consultas seguidas; espera un momento")
+    profile = body.profile.model_dump(mode="json")
+    inputs = frozen_inputs(profile, body.area_ha, True, _today(c), c.zone)
+    try:
+        result = evaluate_frozen(inputs, c.catalog, c.climate)
+    except InvalidInput as exc:
+        raise ApiError(422, "entrada_invalida", str(exc))
+    return {
+        "inputs": inputs,
+        "result": result.to_dict(),
+        "dataset_snapshot_id": result.climate_snapshot_id,
+        "note": "Consulta no guardada. Inicia sesión para guardar tu parcela, su historial y preguntarle a la IA.",
     }
 
 
@@ -436,7 +461,7 @@ def create_run(c: Container, repo: ParcelRepo, p: m.Parcel, scenario: dict | Non
     if rev is None:
         raise ApiError(409, "perfil_incompleto", "Completa el perfil de la parcela antes de comparar")
     profile, label = apply_scenario(rev.data, scenario)
-    inputs = frozen_inputs(profile, p.area_ha, p.in_pilot_zone, _today(c))
+    inputs = frozen_inputs(profile, p.area_ha, p.in_pilot_zone, _today(c), c.zone)
     try:
         result = evaluate_frozen(inputs, c.catalog, c.climate)
     except InvalidInput as exc:

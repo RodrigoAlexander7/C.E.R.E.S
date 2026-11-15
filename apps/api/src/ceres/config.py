@@ -38,9 +38,11 @@ class Settings(BaseSettings):
     gemini_model: str | None = Field(default=None, validation_alias=AliasChoices("GEMINI_MODEL", "GEMINI_MODE"))
     # Presupuesto de razonamiento: 0 = respuesta rápida (el motor ya calculó todo); vacío = valor del modelo.
     gemini_thinking_budget: int | None = 0
+    # Modelo de respaldo si el principal falla de forma transitoria (429/500/503/504).
+    gemini_fallback_model: str | None = None
     openai_api_key: str | None = None
     openai_model: str | None = None
-    llm_timeout_seconds: float = Field(default=40.0, validation_alias=AliasChoices("LLM_TIMEOUT_SECONDS", "OPENAI_TIMEOUT_SECONDS"))
+    llm_timeout_seconds: float = Field(default=25.0, validation_alias=AliasChoices("LLM_TIMEOUT_SECONDS", "OPENAI_TIMEOUT_SECONDS"))
     llm_max_question_chars: int = 600
 
     # Datos y caché.

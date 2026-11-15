@@ -9,7 +9,8 @@ from typing import Any, Literal
 Priority = Literal["dinero", "agua", "suelo", "equilibrada"]
 Status = Literal["viable_con_supuestos", "no_viable", "requiere_datos", "exploratoria"]
 ReasonState = Literal["cumple", "no_cumple", "falta_dato", "advertencia", "informacion"]
-Kind = Literal["observado", "declarado", "derivado", "referencia_bibliografica", "supuesto_demo", "sin_verificar"]
+Kind = Literal["observado", "declarado", "derivado", "referencia_bibliografica", "supuesto_demo", "supuesto_zona", "sin_verificar"]
+IrrigationMethod = Literal["goteo", "aspersion", "gravedad"]
 
 STATUS_LABELS = {
     "viable_con_supuestos": "Viable con supuestos",
@@ -32,14 +33,27 @@ class WaterInput:
     allocation_period: Literal["mensual", "anual"] = "mensual"
     efficiency: float | None = None  # fracción (0, 1]
     delivery_point: str | None = None
+    # Respuestas sencillas: «recibo al menos X» / «recibo menos de X» (m³ por mes, toda la parcela).
+    allocation_min_m3: float | None = None
+    allocation_max_m3: float | None = None
+    method: IrrigationMethod | None = None
 
     def validate(self) -> None:
-        if self.allocation_m3 is not None and self.allocation_m3 < 0:
-            raise InvalidInput("La dotación no puede ser negativa")
+        for v in (self.allocation_m3, self.allocation_min_m3, self.allocation_max_m3):
+            if v is not None and v < 0:
+                raise InvalidInput("La dotación no puede ser negativa")
         if self.efficiency is not None and not (0 < self.efficiency <= 1):
             raise InvalidInput("La eficiencia de riego es una fracción entre 0 y 1 (p. ej. 0,85)")
         if self.mode == "conozco" and self.allocation_m3 is None:
             raise InvalidInput("Si conoces la dotación, indica el volumen")
+        if self.allocation_min_m3 is not None and self.allocation_max_m3 is not None and self.allocation_min_m3 > self.allocation_max_m3:
+            raise InvalidInput("El mínimo de agua no puede superar el máximo")
+
+    def bounds(self) -> tuple[float | None, float | None]:
+        """Intervalo mensual conocido: exacto si se declaró el volumen; si no, los límites respondidos."""
+        if self.mode == "conozco" and self.allocation_m3 is not None:
+            return self.allocation_m3, self.allocation_m3
+        return self.allocation_min_m3, self.allocation_max_m3
 
 
 @dataclass(frozen=True)
@@ -51,6 +65,8 @@ class SoilInput:
     depth_cm: str | None = None
     method: str | None = None
     kind: Kind = "declarado"
+    # Observación sencilla del agricultor cuando no hay análisis («¿ves costras blancas?»).
+    salinity_signs: Literal["sin_signos", "con_signos"] | None = None
 
     def validate(self) -> None:
         if self.ece_ds_m is not None and self.ece_ds_m < 0:
@@ -85,6 +101,9 @@ class ParcelInput:
     residue_management: Literal["incorporar", "retirar", "no_se"]
     economic_overrides: tuple[EconomicOverride, ...] = ()
     reference_date: date = field(default_factory=date.today)
+    # Campos completados con supuestos de zona (p. ej. "water.allocation", "water.efficiency").
+    assumed: frozenset[str] = frozenset()
+    zone_label: str = "Majes I"
 
     def validate(self) -> None:
         if not (self.area_ha > 0):
@@ -122,6 +141,8 @@ class Reason:
     source_ids: list[str] = field(default_factory=list)
     assumptions: list[str] = field(default_factory=list)
     missing: list[str] = field(default_factory=list)
+    # Supuestos de zona de los que depende esta regla (vacío = solo datos declarados/medidos).
+    assumed_inputs: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -151,6 +172,8 @@ class StrategyAssessment:
     soil: dict[str, Any]
     summary: str
     rank: int | None = None
+    simple: dict[str, Any] = field(default_factory=dict)
+    decisive: list[dict[str, Any]] = field(default_factory=list)
 
 
 @dataclass
@@ -166,6 +189,8 @@ class ComparisonResult:
     associations: list[dict[str, Any]]
     notes: list[str]
     blocking: list[str]
+    simple_order: list[str] = field(default_factory=list)
+    assumed: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         return _jsonable(asdict(self))

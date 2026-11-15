@@ -79,6 +79,30 @@ export interface Strategy {
   };
   summary: string;
   rank: number | null;
+  simple?: SimpleLayer;
+  decisive?: Decisive[];
+}
+
+export type SimpleLevel = "buena" | "posible" | "explorar" | "no_conviene";
+
+export interface SimpleLayer {
+  level: SimpleLevel;
+  label: string;
+  names: string;
+  headline: string;
+  tags: string[];
+  facts: { margin_soles: number | null; margin_kind: string | null; water_m3: number | null; first_sowing: string | null; cycles: number };
+}
+
+export interface Decisive {
+  id: "agua" | "riego" | "sal" | string;
+  label: string;
+  question: string;
+  detail: string;
+  critical_value?: number;
+  unit?: string;
+  answers: { label: string; patch: Record<string, string | number> }[];
+  source_ids: string[];
 }
 
 export interface Association {
@@ -111,6 +135,8 @@ export interface ComparisonResult {
   associations: Association[];
   notes: string[];
   blocking: string[];
+  simple_order?: string[];
+  assumed?: string[];
 }
 
 export interface Run {
@@ -125,7 +151,7 @@ export interface Run {
   dataset_snapshot_id: string | null;
   dataset_sha256?: string | null;
   created_at: string;
-  inputs?: { profile: Profile; area_ha: number; in_pilot_zone: boolean; reference_date: string };
+  inputs?: { profile: Profile; effective_profile?: Profile; assumed?: string[]; zone_version?: string | null; area_ha: number; in_pilot_zone: boolean; reference_date: string };
   result?: ComparisonResult;
   profile_changed?: boolean;
 }
@@ -137,6 +163,9 @@ export interface Water {
   efficiency?: number | null;
   delivery_point?: string | null;
   origin?: "declarado" | "supuesto_demo";
+  allocation_min_m3?: number | null;
+  allocation_max_m3?: number | null;
+  method?: "goteo" | "aspersion" | "gravedad" | null;
 }
 
 export interface Soil {
@@ -147,6 +176,7 @@ export interface Soil {
   depth_cm?: string | null;
   method?: string | null;
   kind?: "observado" | "declarado" | "supuesto_demo";
+  salinity_signs?: "sin_signos" | "con_signos" | null;
 }
 
 export interface Profile {
@@ -160,6 +190,7 @@ export interface Profile {
   budget_soles?: number | null;
   residue_management: "incorporar" | "retirar" | "no_se";
   economic_overrides?: { crop_id: string; yield_t_ha?: number | null; price_soles_kg?: number | null; variable_cost_soles_ha?: number | null }[];
+  use_zone_defaults?: boolean;
 }
 
 export interface Parcel {
@@ -260,5 +291,6 @@ export const KIND_LABELS: Record<string, string> = {
   derivado: "Calculado por CERES",
   referencia_bibliografica: "Referencia bibliográfica",
   supuesto_demo: "Supuesto de demostración",
+  supuesto_zona: "Supuesto de zona (Majes I)",
   sin_verificar: "Sin verificar",
 };

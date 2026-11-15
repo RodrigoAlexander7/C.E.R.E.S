@@ -101,13 +101,53 @@ def test_profile_change_flags_old_runs(make_client):
     assert c.get(f"/api/v1/recommendations/{run['id']}").json()["profile_changed"] is True
 
 
-def test_unknown_water_is_valid_result_not_error(make_client):
+def test_unknown_water_uses_zone_assumption_never_dead_end(make_client):
+    """R16: «no sé» → agua típica de Majes como supuesto; nada queda «No conviene» solo por un supuesto."""
     c = make_client()
     register(c)
     p = create_parcel(c, water={"mode": "no_se"})
     r = c.post(f"/api/v1/parcels/{p['id']}/recommendations", json={})
     assert r.status_code == 201
-    assert set(r.json()["statuses"].values()) == {"requiere_datos"}
+    run = r.json()
+    assert set(run["inputs"]["assumed"]) == {"water.allocation", "water.efficiency"}
+    assert run["inputs"]["profile"]["water"]["mode"] == "no_se"  # lo declarado se conserva tal cual
+    levels = {s["strategy_id"]: s["simple"]["level"] for s in run["result"]["strategies"]}
+    assert "buena" not in levels.values()  # un supuesto en restricción obligatoria nunca da «Buena opción»
+    assert "no_conviene" not in levels.values()
+    for s in run["result"]["strategies"]:
+        assert any(d["id"] == "agua" for d in s["decisive"])
+        dot = s["metrics"].get(f"{s['strategy_id']}.agua.dotacion_m3")
+        assert dot and dot["kind"] == "supuesto_zona"
+
+
+def test_zone_defaults_can_be_disabled(make_client):
+    c = make_client()
+    register(c)
+    p = create_parcel(c, water={"mode": "no_se"}, use_zone_defaults=False)
+    run = c.post(f"/api/v1/parcels/{p['id']}/recommendations", json={}).json()
+    assert run["inputs"]["assumed"] == []
+    assert set(run["statuses"].values()) == {"requiere_datos"}
+
+
+def test_quick_compare_without_account_saves_nothing(make_client):
+    from sqlalchemy import func, select
+
+    from ceres.infrastructure.db import models as m
+
+    c = make_client()
+    body = {"profile": {"current_crop_id": "maiz_grano", "current_status": "cosechado", "priority": "dinero"}}
+    r = c.post("/api/v1/public/quick-compare", json=body)
+    assert r.status_code == 200
+    data = r.json()
+    assert len(data["result"]["strategies"]) == 3 and data["result"]["simple_order"]
+    assert data["inputs"]["area_ha"] == 5
+    with c.container.sessions() as db:
+        assert db.scalar(select(func.count()).select_from(m.RecommendationRun)) == 0
+    # Responder una pregunta decisiva (parche) cambia el resultado de forma reproducible.
+    body["profile"]["water"] = {"allocation_min_m3": 999999, "method": "goteo"}
+    body["profile"]["soil"] = {"salinity_signs": "sin_signos"}
+    levels = {s["strategy_id"]: s["simple"]["level"] for s in c.post("/api/v1/public/quick-compare", json=body).json()["result"]["strategies"]}
+    assert levels["A"] == "buena" and levels["B"] == "buena" and levels["C"] == "explorar"
 
 
 def test_public_demo_and_sources(make_client):

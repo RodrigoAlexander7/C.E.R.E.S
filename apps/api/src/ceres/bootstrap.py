@@ -36,6 +36,8 @@ class Container:
     login_limiter: RateLimiter
     chat_limiter: RateLimiter
     nasa_error: str | None = None
+    zone: dict | None = None
+    quick_limiter: RateLimiter | None = None
     extra: dict = field(default_factory=dict)
 
 
@@ -67,4 +69,6 @@ def build_container(settings: Settings | None = None, llm: LanguageModel | None 
         login_limiter=RateLimiter(settings.login_max_attempts, settings.login_window_seconds),
         chat_limiter=RateLimiter(20, 300),
         nasa_error=nasa_error,
+        zone=load_sources_file(settings.data_dir / "catalog" / "zona_majes.json"),
+        quick_limiter=RateLimiter(60, 600),
     )

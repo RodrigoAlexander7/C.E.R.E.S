@@ -93,9 +93,11 @@ def run_seed(settings: Settings) -> dict:
             )
             repo.add_revision(parcel, demo_profile(lima_today()), "Caso de demostración: todos los datos de parcela son supuestos etiquetados")
             repo.add_event(m.CropEvent(parcel_id=parcel.id, crop_id="maiz_grano", status="en_campo", origin="supuesto_demo"))
+        from ceres.domain.engine import ENGINE_VERSION
+
         latest = repo.runs(parcel.id)[:1]
-        current = (c.catalog.version, c.climate.snapshot_id)
-        if latest and (latest[0].catalog_version, latest[0].dataset_snapshot_id) == current:
+        current = (c.catalog.version, c.climate.snapshot_id, ENGINE_VERSION)
+        if latest and (latest[0].catalog_version, latest[0].dataset_snapshot_id, latest[0].engine_version) == current:
             run = latest[0]  # idempotente: no duplica el run de demostración
         else:
             run = create_run(c, repo, parcel, None)

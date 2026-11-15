@@ -82,16 +82,17 @@ Estado real de la publicación: ver `despliegue.md`.
 
 ## Incremento 8 — Fase 1: motor sin bloqueos
 
-- [ ] Investigar y registrar valores típicos de Majes I (dotación, eficiencia, salinidad, calendario, precios) con fuente; lo no encontrado queda como `supuesto_zona`. **R16**.
-- [ ] `ZoneDefaults` versionado, aplicado a desconocidos y congelado en el run. **R16**.
-- [ ] Nivel sencillo y `decisive_data` por opción con pregunta observable. **R15, R16**.
-- [ ] Pruebas: «no sé» en todo → tres opciones útiles; supuesto en restricción obligatoria nunca da «Buena opción»; reemplazar supuesto recalcula y conserva el run anterior.
+- [x] Valores típicos de Majes I con fuente: agua 22 500 m³/ha/año (AUTODEMA, indicador 2023, consumo reportado) con reparto mensual uniforme como `supuesto_zona`; eficiencias FAO por método (60/75/90 %), aspersión supuesta si no se sabe. **Sin dato publicado de salinidad típica**: no se inventa; se pregunta de forma observable. Calendario y precios siguen como `supuesto_demo`. **R16**.
+- [x] `data/catalog/zona_majes.json` versionado, aplicado solo a desconocidos y congelado en el run (`effective_profile`, `assumed`, `zone_version`). **R16**.
+- [x] Nivel sencillo (`domain/simple.py`), titular, datos clave, orden por nivel y prioridad, y `decisive` con preguntas observables (agua del mes más exigente, método de riego, signos de sal); agua como intervalo (exacto / «al menos» / «menos de»). **R15, R16**.
+- [x] Pruebas: «no sé» en todo → opciones útiles; supuesto en restricción obligatoria nunca da «Buena opción»; plantilla exploratoria nunca sube; respuestas recalculan; intervalo de agua; comparación pública sin guardar. (`tests/domain/test_simple.py`, `tests/integration/test_profile_runs.py`)
 
 ## Incremento 9 — Fase 2: modo sencillo
 
-- [ ] `/app`: alta en 3 preguntas, tres opciones, «¿Por qué?» en capas, glosario + IA bajo demanda. **R15**.
-- [ ] Modo avanzado corregido y enlazado. **R15**.
-- [ ] E2E móvil (375 px): 3 preguntas y 2 toques hasta opciones. **R15, R20**.
+- [x] `/app`: alta en 3 preguntas (4 toques si el cultivo sigue en campo), tres opciones, «¿Por qué?» en tres capas, glosario fijo + IA bajo demanda en hoja inferior (dictado y lectura por voz del navegador, opcionales); sin cuenta usa `POST /public/quick-compare` (no guarda); «Guardar» crea parcela, revisión y run. **R15**.
+- [x] Modo avanzado corregido: nivel sencillo y preguntas decisivas en la comparación; método de riego y signos de sal en el perfil; supuesto de zona explicado; enlaces cruzados. **R15**.
+- [x] E2E móvil 375 px (`e2e/sencillo.spec.ts`): preguntas → opciones sin callejones sin salida → pregunta decisiva → «¿Por qué?» → glosario → IA → guardar con registro. **R15, R20**.
+- [ ] Revisión manual con agricultores reales y solo con teclado/lector de pantalla (pendiente).
 
 ## Incremento 10 — Fase 3: momento NASA
 

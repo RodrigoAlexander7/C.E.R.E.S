@@ -84,7 +84,8 @@ test("recorrido principal y aislamiento", async ({ page, browser }) => {
 
   // Asistente: respuesta respaldada o limitación clara (sin credenciales: «IA no conectada»).
   await page.getByRole("button", { name: "¿Qué cambia con menos agua?" }).click();
-  await expect(page.locator(".msg-assistant").first()).toBeVisible({ timeout: 60_000 });
+  // En CI no hay credenciales («IA no conectada», inmediato); en local puede llamar al proveedor real.
+  await expect(page.locator(".msg-assistant").first()).toBeVisible({ timeout: 120_000 });
   await expect(page.locator(".msg-assistant").first()).toContainText(/IA no conectada|agua|dotación/i);
 
   // Logout y aislamiento.

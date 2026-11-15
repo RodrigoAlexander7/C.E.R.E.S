@@ -34,6 +34,9 @@ class WaterData(Strict):
     efficiency: float | None = Field(None, gt=0, le=1)
     delivery_point: str | None = Field(None, max_length=120)
     origin: Literal["declarado", "supuesto_demo"] = "declarado"
+    allocation_min_m3: float | None = Field(None, ge=0, le=10_000_000)
+    allocation_max_m3: float | None = Field(None, ge=0, le=10_000_000)
+    method: Literal["goteo", "aspersion", "gravedad"] | None = None
 
 
 class SoilData(Strict):
@@ -44,6 +47,7 @@ class SoilData(Strict):
     depth_cm: str | None = Field(None, max_length=20)
     method: str | None = Field(None, max_length=120)
     kind: Literal["observado", "declarado", "supuesto_demo"] = "declarado"
+    salinity_signs: Literal["sin_signos", "con_signos"] | None = None
 
 
 class EconomicOverrideData(Strict):
@@ -64,6 +68,8 @@ class ProfileData(Strict):
     budget_soles: float | None = Field(None, ge=0, le=100_000_000)
     residue_management: Literal["incorporar", "retirar", "no_se"] = "no_se"
     economic_overrides: list[EconomicOverrideData] = Field(default_factory=list, max_length=5)
+    # Completar datos desconocidos con supuestos de zona de Majes I (R16).
+    use_zone_defaults: bool = True
 
     @field_validator("current_crop_id", "planned_next_crop_id")
     @classmethod
@@ -146,6 +152,13 @@ class Scenario(Strict):
 
 class RunCreate(Strict):
     scenario: Scenario | None = None
+
+
+class QuickCompare(Strict):
+    """Modo sencillo sin cuenta: perfil mínimo + área (por defecto, área de ejemplo de 5 ha)."""
+
+    profile: ProfileData
+    area_ha: float = Field(5, gt=0, le=10_000)
 
 
 class AreaRequest(Strict):

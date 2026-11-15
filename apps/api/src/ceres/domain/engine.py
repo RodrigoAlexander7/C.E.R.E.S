@@ -30,7 +30,7 @@ from ceres.domain.model import (
     TimelineBlock,
 )
 
-ENGINE_VERSION = "ceres-engine-0.1.0"
+ENGINE_VERSION = "ceres-engine-0.2.0"
 MM_HA_TO_M3 = 10.0  # 1 mm sobre 1 ha = 10 m³
 MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"]
 
@@ -211,7 +211,7 @@ def evaluate(p: ParcelInput, catalog: Catalog, climate: ClimateInput) -> Compari
         "Fechas orientativas para planificar. El clima es histórico (no pronóstico) y la decisión final es tuya."
     )
 
-    return ComparisonResult(
+    result = ComparisonResult(
         engine_version=ENGINE_VERSION,
         catalog_version=catalog.version,
         climate_snapshot_id=climate.snapshot_id if climate.available else None,
@@ -224,6 +224,10 @@ def evaluate(p: ParcelInput, catalog: Catalog, climate: ClimateInput) -> Compari
         notes=notes,
         blocking=blocking,
     )
+    from ceres.domain.simple import simplify
+
+    simplify(result, p, {t.id: t.cap_status for t in catalog.templates})
+    return result
 
 
 def _assess(
@@ -312,6 +316,46 @@ def _assess(
         if crop.salinity_ece_threshold is None:
             continue
         ece = p.soil.ece_ds_m
+        signs = p.soil.salinity_signs
+        if ece is None and signs == "con_signos":
+            # Observación del agricultor: no es medición, pero basta para no recomendar cultivos sensibles.
+            if crop.salinity_sensitive:
+                hard_fail = True
+                reasons.append(
+                    Reason(
+                        "SUE-06",
+                        "no_cumple",
+                        f"Indicaste que ves signos de sal en tu chacra y {crop.name} es sensible a sales "
+                        f"(empieza a perder rendimiento con {crop.salinity_ece_threshold} dS/m). Mide la CE del suelo para confirmarlo.",
+                        source_ids=list(crop.salinity_source_ids) + ["PARCELA"],
+                        missing=["CE del extracto de saturación"],
+                    )
+                )
+            else:
+                reasons.append(
+                    Reason(
+                        "SUE-07",
+                        "advertencia",
+                        f"Indicaste signos de sal: {crop.name} tolera algo más (umbral {crop.salinity_ece_threshold} dS/m), "
+                        "pero su rendimiento podría bajar. Un análisis de CE lo precisaría.",
+                        source_ids=list(crop.salinity_source_ids) + ["PARCELA"],
+                    )
+                )
+            continue
+        if ece is None and signs == "sin_signos":
+            if crop.salinity_sensitive:
+                reasons.append(
+                    Reason(
+                        "SUE-08",
+                        "cumple",
+                        f"Indicaste que no ves signos de sal; {crop.name} es sensible, así que se considera posible "
+                        "con esa observación, que no reemplaza un análisis de CE.",
+                        source_ids=list(crop.salinity_source_ids) + ["PARCELA"],
+                        assumptions=["Sin signos visibles de sal (tu observación, no una medición)."],
+                    )
+                )
+            assumptions.append("Sin signos visibles de sal (observación del agricultor, no medición).")
+            continue
         if ece is None:
             if crop.salinity_sensitive:
                 crit_missing = True
@@ -320,10 +364,10 @@ def _assess(
                     Reason(
                         "SUE-01",
                         "falta_dato",
-                        f"{crop.name} es sensible a sales (umbral {crop.salinity_ece_threshold} dS/m) y no hay análisis de "
-                        "salinidad del suelo. Sin ese dato no se puede afirmar que sea viable.",
+                        f"{crop.name} es sensible a sales (umbral {crop.salinity_ece_threshold} dS/m) y no sabemos si tu suelo "
+                        "tiene sal. Con un análisis o con tu observación («¿ves costras blancas?») se puede decidir.",
                         source_ids=list(crop.salinity_source_ids),
-                        missing=["CE del extracto de saturación"],
+                        missing=["CE del extracto de saturación o signos visibles de sal"],
                     )
                 )
             else:
@@ -383,7 +427,24 @@ def _assess(
         reasons.append(Reason("AGU-00", "falta_dato", "Sin datos NASA reales no se calcula la demanda de agua.", missing=["NASA POWER"]))
         crit_missing = True
 
-    if p.water.mode == "no_se":
+    lo, hi = p.water.bounds()
+    water_assumed = sorted(f for f in ("water.allocation", "water.efficiency") if f in p.assumed)
+    water_sources = ["NASA-POWER", "FAO56-PM", "FAO-TM3-PE"] + (
+        ["AUTODEMA-INDICADORES-2023", "ZONA-MAJES"] if "water.allocation" in p.assumed else ["PARCELA"]
+    ) + (["FAO-EFICIENCIA"] if "water.efficiency" in p.assumed or p.water.method else [])
+    if p.water.allocation_period == "anual" and p.water.mode == "conozco":
+        crit_missing = True
+        missing.append("Dotación desagregada por mes")
+        reasons.append(
+            Reason(
+                "AGU-02",
+                "falta_dato",
+                "Una dotación anual no demuestra disponibilidad en cada mes; se necesita la distribución mensual.",
+                source_ids=["AGUA-LOCAL"],
+                missing=["Dotación por mes"],
+            )
+        )
+    elif lo is None and hi is None:
         crit_missing = True
         missing.append("Dotación de riego por mes en la toma de la parcela")
         reasons.append(
@@ -394,18 +455,6 @@ def _assess(
                 "no se puede confirmar que el ciclo tenga agua suficiente.",
                 source_ids=["AGUA-LOCAL", "AUTODEMA-MAJES"],
                 missing=["Dotación mensual (m³) y punto de entrega"],
-            )
-        )
-    elif p.water.allocation_period == "anual":
-        crit_missing = True
-        missing.append("Dotación desagregada por mes")
-        reasons.append(
-            Reason(
-                "AGU-02",
-                "falta_dato",
-                "Una dotación anual no demuestra disponibilidad en cada mes; se necesita la distribución mensual.",
-                source_ids=["AGUA-LOCAL"],
-                missing=["Dotación por mes"],
             )
         )
     elif p.water.efficiency is None:
@@ -421,35 +470,69 @@ def _assess(
             )
         )
     elif water_known:
-        exceeded = [m for m in monthly_water if m["gross_m3"] is not None and m["gross_m3"] > p.water.allocation_m3]
-        if exceeded:
+        peak = max(monthly_water, key=lambda m: m["gross_m3"] or 0)
+        need = peak["gross_m3"]
+        zone_note = (
+            ["Agua típica de Majes: 22 500 m³/ha/año (consumo reportado por AUTODEMA, 2023) repartido igual cada mes; confírmalo con tu Junta."]
+            if "water.allocation" in p.assumed
+            else ["Dotación declarada igual en todos los meses, medida en la toma de la parcela."]
+        )
+        if "water.efficiency" in p.assumed:
+            zone_note.append("Riego por aspersión supuesto (eficiencia 75 %, FAO); goteo necesitaría menos agua.")
+        who = "el agua típica de la zona" if "water.allocation" in p.assumed else "tu dotación"
+        if hi is not None and need > hi:
             hard_fail = True
-            worst = max(exceeded, key=lambda m: m["gross_m3"] - p.water.allocation_m3)
+            exceeded = [m for m in monthly_water if m["gross_m3"] is not None and m["gross_m3"] > hi]
             reasons.append(
                 Reason(
                     "AGU-04",
                     "no_cumple",
-                    f"En {len(exceeded)} mes(es) la demanda bruta supera tu dotación de {p.water.allocation_m3:,.0f} m³/mes; "
-                    f"el peor es {worst['label']} con {worst['gross_m3']:,.0f} m³. Un margen alto no compensa la falta de agua.",
+                    f"En {len(exceeded)} mes(es) la demanda bruta supera {who} ({hi:,.0f} m³/mes); "
+                    f"el peor es {peak['label']} con {need:,.0f} m³. Un margen alto no compensa la falta de agua.",
                     metric_ids=[f"{sid}.agua.max_mes_m3", f"{sid}.agua.dotacion_m3"],
-                    source_ids=["NASA-POWER", "FAO56-PM", "FAO-TM3-PE", "PARCELA"],
+                    source_ids=water_sources,
+                    assumptions=zone_note,
+                    assumed_inputs=water_assumed,
                 )
             )
-        else:
+        elif lo is not None and need <= lo:
             reasons.append(
                 Reason(
                     "AGU-05",
                     "cumple",
-                    f"La demanda bruta mensual estimada no supera tu dotación de {p.water.allocation_m3:,.0f} m³/mes en ningún mes.",
+                    f"La demanda bruta mensual estimada no supera {who} ({lo:,.0f} m³/mes) en ningún mes; "
+                    f"el mes más exigente es {peak['label']} con {need:,.0f} m³.",
                     metric_ids=[f"{sid}.agua.max_mes_m3", f"{sid}.agua.dotacion_m3"],
-                    source_ids=["NASA-POWER", "FAO56-PM", "FAO-TM3-PE", "PARCELA"],
-                    assumptions=["Dotación declarada igual en todos los meses, medida en la toma de la parcela."],
+                    source_ids=water_sources,
+                    assumptions=zone_note,
+                    assumed_inputs=water_assumed,
                 )
             )
-        metrics[f"{sid}.agua.dotacion_m3"] = Metric(
-            f"{sid}.agua.dotacion_m3", "Dotación declarada", p.water.allocation_m3, "m³/mes", "declarado", "declaración del agricultor",
-            source_ids=["PARCELA"],
-        )
+        else:
+            crit_missing = True
+            missing.append(f"Confirmar si recibes al menos {need:,.0f} m³ en {peak['label']}")
+            reasons.append(
+                Reason(
+                    "AGU-07",
+                    "falta_dato",
+                    f"Esta opción necesita {need:,.0f} m³ en {peak['label']}, su mes más exigente; con lo que indicaste "
+                    "no se puede saber si alcanza.",
+                    metric_ids=[f"{sid}.agua.max_mes_m3"],
+                    source_ids=water_sources,
+                    missing=[f"¿Recibes al menos {need:,.0f} m³ en {peak['label']}?"],
+                )
+            )
+        ref = lo if lo is not None else hi
+        if ref is not None:
+            metrics[f"{sid}.agua.dotacion_m3"] = Metric(
+                f"{sid}.agua.dotacion_m3",
+                "Agua típica de la zona (supuesto)" if "water.allocation" in p.assumed else "Dotación declarada",
+                ref,
+                "m³/mes",
+                "supuesto_zona" if "water.allocation" in p.assumed else "declarado",
+                "22 500 m³/ha/año (AUTODEMA 2023) ÷ 12 × área" if "water.allocation" in p.assumed else "declaración del agricultor",
+                source_ids=["AUTODEMA-INDICADORES-2023", "ZONA-MAJES"] if "water.allocation" in p.assumed else ["PARCELA"],
+            )
 
     # --- economía
     econ_ok = _economics(sid, cycles, p, catalog, salinity_factor, metrics, reasons, assumptions, missing)

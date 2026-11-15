@@ -9,6 +9,8 @@ const nextConfig: NextConfig = {
   // /api/* directamente a FastAPI; el rewrite solo se usa en desarrollo.
   output: "standalone",
   poweredByHeader: false,
+  // El asistente puede tardar más de 30 s si el proveedor IA está saturado (solo afecta al rewrite de desarrollo).
+  experimental: { proxyTimeout: 120_000 },
   async rewrites() {
     return [
       { source: "/api/v1/:path*", destination: `${apiOrigin}/api/v1/:path*` },
