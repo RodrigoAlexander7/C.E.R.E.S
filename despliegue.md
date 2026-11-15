@@ -4,9 +4,11 @@ Actualizado el 15 de noviembre de 2026 (UTC). Este documento distingue infraestr
 
 ## Estado actual
 
-Validación del 15-nov-2026: revisión `81920443e69fce4cc22667b907eafba577df12f5`, motor 0.3.0, zonas Majes I y Valle de Chilina. CI remoto pasó pruebas API/PostgreSQL, migraciones, tipos, build y cinco E2E. Workflow: https://github.com/RodrigoAlexander7/C.E.R.E.S/actions/runs/43724182378.
+Validación del 15-nov-2026: revisión **`06e6a6e96102dbbfb4687632feba4a02c338edd6`**, motor 0.3.0, zonas Majes I y Valle de Chilina. CI remoto pasó **101 pruebas API/PostgreSQL**, migraciones, tipos, build y **6 E2E**, incluido R20. [Workflow exitoso](https://github.com/RodrigoAlexander7/C.E.R.E.S/actions/runs/43729718465).
 
-Comprobación pública posterior al despliegue: health `ok` con ambas zonas y snapshots distintos; demo de Chilina accesible; `sowing-window?zone=chilina&crop=papa` devuelve 12 meses y comparación ONI; `/avanzado` redirige a `/app` (307); Permissions-Policy permite `microphone=(self)`. No se hicieron llamadas reales al LLM durante estas pruebas. Los datos de memoria/carga y conexión LLM de la tabla son mediciones históricas, no repetidas en esta publicación.
+Comprobación posterior al despliegue: health `ok` con la revisión esperada, base conectada y ambas zonas; `/app/cuaderno`, `/app/ceres` y `/demo` responden 200. HLS público conserva **5 meses reales en Majes y 3 en Chilina**, con hashes y procedencia. Acceso al cuaderno sin sesión devuelve 401. Se creó una cuenta demo privada autorizada con dos lotes y 16 registros por lote: una campaña declarada y 15 continuaciones simuladas etiquetadas. Ninguna parcela se publica como demo; fuera de piloto, los runs no toman clima ni catálogo de otra zona. Coordenadas y credenciales solo en los archivos locales ignorados y en la cuenta privada.
+
+La consulta HLS de esos lotes privados no se ejecutó: requeriría enviar su ubicación a Planetary Computer y queda sujeta a autorización específica del usuario. Las series públicas de demo sí están comprobadas. Los datos de carga y conexión en la VM de la tabla son mediciones históricas; en esta publicación se repitieron aparte `check-llm` y `validar_ceres_real.py` en desarrollo con Gemini real: conexión, extracción, confirmación, memoria y simulación completadas. La última ejecución del asistente clásico aceptó 3/4 respuestas y una terminó en 504; no se declara 4/4 en esa ejecución. No se probó audio humano real.
 
 **Aplicación publicada:** <https://ceres-f7ctifta45nnk.northcentralus.cloudapp.azure.com>
 
@@ -39,7 +41,7 @@ Internet ──443/80──▶ caddy (TLS, cabeceras) ──/api/*──▶ api 
 
 | Workflow | Disparo | Qué hace |
 |---|---|---|
-| [`.github/workflows/ci.yml`](.github/workflows/ci.yml) | Pull requests (y llamado por Deploy) | 65 pruebas pytest con PostgreSQL real + `alembic check`; `tsc` + build Next.js; E2E Playwright del recorrido de aceptación; en PR, build de ambas imágenes sin publicar. |
+| [`.github/workflows/ci.yml`](.github/workflows/ci.yml) | Pull requests (y llamado por Deploy) | 101 pruebas pytest con PostgreSQL real + `alembic check`; `tsc` + build Next.js; 6 E2E Playwright con `tests.e2e_app:app` y LLM simulado; en PR, build de ambas imágenes sin publicar. |
 | [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) | `push` a `main` (excepto cambios solo `.md`) y manual | CI → build `linux/amd64` en GitHub → `ghcr.io/rodrigoalexander7/ceres-{api,web}:<SHA>` → despliegue en `ceres-vm` → verificación pública HTTPS. Manual: `deploy` (opcional `tag`), `rollback`, `backup`, `verify-backup`, `restore`, `status`. |
 
 Flujo de despliegue en la VM (`deploy/ceres.sh deploy <sha>`): login temporal en GHCR → `pull` → arranca db → **respaldo previo** si hay esquema → `alembic upgrade head` → seed idempotente → arranca api/web/caddy → espera healthchecks Docker → comprueba `https://<dominio>/api/v1/health` con la **revisión esperada** y certificado válido → registra versión actual/anterior. Si falla, **rollback automático** a la versión anterior.
@@ -70,7 +72,7 @@ Flujo de despliegue en la VM (`deploy/ceres.sh deploy <sha>`): login temporal en
 | 15-nov 01:10 | Deploy `fc41b2c` | Caddy reiniciado, `Referrer-Policy: strict-origin-when-cross-origin`, mismo certificado conservado; teselas OSM visibles en el navegador. |
 | 15-nov 01:16 | Deploy `fc41b2c` con `GEMINI_API_KEY` | `llm_configured: true`, «IA conectada»; `check-llm` desde el contenedor API en la VM: conectado con `gemini-4-hydrogen`. |
 
-No se crearon cuentas de usuario en producción: el login, el aislamiento y el recorrido completo se validan con la suite E2E en CI (PostgreSQL real) antes de cada despliegue.
+En las primeras publicaciones no se crearon cuentas en producción. El 15-nov se preparó la cuenta demo privada solicitada, comprobando sus registros y procedencia; el aislamiento entre propietarios y el recorrido completo se validan con PostgreSQL real y Playwright en CI. El proveedor real nunca se invoca desde la suite automática.
 
 ## Rollback y operación
 

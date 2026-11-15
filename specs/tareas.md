@@ -125,4 +125,4 @@ Estado real de la publicación: ver `despliegue.md`.
 ## Incremento 14 — Fases 7–8: asistente Ceres, pruebas y demo
 
 - [x] Ceres con memoria autorizada, propuestas confirmadas, `consultar_cuaderno`, `simular_escenario` y voz de entrada/salida. **R18**. (101 pytest + 6 E2E; Gemini real: recuerdo de venta y nuevo run con 1000 m³/mes aceptados por validador.)
-- [ ] E2E del recorrido R20, despliegue y guion de demo de 30 segundos.
+- [x] E2E del recorrido R20, despliegue y guion de demo de 30 segundos. (101 pytest + 6 E2E en CI; revisión `06e6a6e`, workflow `43729718465` exitoso; health HTTPS y módulos comprobados; `DEMO.md`. Cuenta privada de dos lotes con 32 registros verificados; coordenadas y acceso fuera de Git.)
