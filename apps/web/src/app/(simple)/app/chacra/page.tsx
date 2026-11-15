@@ -8,7 +8,9 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { NasaBadge } from "@/components/NasaBadge";
 import { useSession } from "@/components/SessionProvider";
+import { HelpProvider } from "@/components/simple/help";
 import { Ndvi } from "@/components/simple/ndvi";
+import { TierraForm } from "@/components/simple/tierra";
 import s from "@/components/simple/simple.module.css";
 import { ApiError, api, fmtNumber } from "@/lib/api";
 import type { Geometry, Parcel } from "@/lib/types";
@@ -28,7 +30,8 @@ export default function Chacra() {
   const { user, loading, activeParcelId, refresh } = useSession();
   const { zones, defaultId } = useZones();
   const [parcels, setParcels] = useState<Parcel[] | null>(null);
-  const [mapOpen, setMapOpen] = useState(false);
+  // El mapa abre de entrada (como en el diseño de escritorio); en el celular se puede cerrar.
+  const [mapOpen, setMapOpen] = useState(true);
   const [drawing, setDrawing] = useState(false);
   const [vertices, setVertices] = useState<[number, number][]>([]);
   const [closed, setClosed] = useState(false);
@@ -87,14 +90,16 @@ export default function Chacra() {
   };
 
   return (
+    <HelpProvider saved={null}>
     <section aria-labelledby="chacra-t">
       <div className={s.moduleHead}>
         <p className={s.stepKicker}>Mi chacra</p>
         <h1 id="chacra-t" className={`${s.q} ${s.display}`}>{active ? active.name || "Mi chacra" : "Tu terreno"}</h1>
-        <p>{user ? "Tus parcelas guardadas. Dibujarla en el mapa es opcional: sirve para medir el área y consultar su verdor desde el satélite." : "Comprueba si tu terreno está en una zona piloto y cuánto mide. Para guardarlo, ingresa."}</p>
+        <p>{user ? "Tus parcelas guardadas. Dibujarla en el mapa es opcional: sirve para medir el área y consultar su verdor desde el satélite." : "Cuéntanos cómo está tu tierra y comprueba cuánto mide. Para guardarlo, ingresa."}</p>
       </div>
 
-      <Ndvi key={active?.id ?? zone?.id} parcelId={active?.id} zone={zone?.id} zoneName={zone?.name} />
+      <div className={s.chacraGrid}>
+      <div className={s.chacraMap}>
       {msg && <div className={s.panel} role="status"><p className={s.panelText}>{msg}</p></div>}
       {err && <div className={s.error} role="alert">{err}</div>}
 
@@ -129,7 +134,7 @@ export default function Chacra() {
         </details>
       )}
 
-      <details className={s.more} open={mapOpen} onToggle={(e) => setMapOpen((e.target as HTMLDetailsElement).open)}>
+      <details className={`${s.more} ${s.mapCard}`} open={mapOpen} onToggle={(e) => setMapOpen((e.target as HTMLDetailsElement).open)}>
         <summary>{active?.geometry ? "Ver mi chacra en el mapa" : "Dibujar mi terreno en el mapa"}</summary>
         <div className={s.moreBody}>
           {mapOpen && (
@@ -168,6 +173,13 @@ export default function Chacra() {
           <p className={s.sub}>Imagen de un día, solo para ubicar y dibujar; no entra en los cálculos. Calles © colaboradores de OpenStreetMap. Un punto GPS no delimita la parcela; el área sale del dibujo.</p>
         </div>
       </details>
+      </div>
+      <div className={s.chacraSide}>
+        <TierraForm parcelId={active?.id} />
+        <Ndvi key={active?.id ?? zone?.id} parcelId={active?.id} zone={zone?.id} zoneName={zone?.name} />
+      </div>
+      </div>
     </section>
+    </HelpProvider>
   );
 }

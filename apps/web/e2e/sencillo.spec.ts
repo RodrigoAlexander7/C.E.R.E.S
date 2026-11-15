@@ -3,7 +3,8 @@ import { expect, test } from "@playwright/test";
 test("mapa opcional: dibujar y medir sin cubrir los controles", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto("/app/chacra");
-  await page.getByText("Dibujar mi terreno en el mapa", { exact: true }).click();
+  // El mapa abre de entrada (diseño de escritorio); en el celular sigue siendo plegable.
+  await expect(page.getByText("Dibujar mi terreno en el mapa", { exact: true })).toBeVisible();
   const canvas = page.locator(".map-wrap canvas");
   await expect(canvas).toBeVisible();
   await page.getByRole("button", { name: "Empezar a dibujar", exact: true }).click();

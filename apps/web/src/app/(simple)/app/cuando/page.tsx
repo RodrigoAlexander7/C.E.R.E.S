@@ -30,7 +30,7 @@ export default function Cuando() {
           ))}
         </div>
       )}
-      {zone && <SowingWindow key={zone.id} zone={zone.id} crops={zone.crops.filter((c) => c.in_catalog).map((c) => ({ id: c.id, name: c.name }))} />}
+      {zone && <SowingWindow key={zone.id} wide zone={zone.id} crops={zone.crops.filter((c) => c.in_catalog).map((c) => ({ id: c.id, name: c.name }))} />}
     </section>
   );
 }

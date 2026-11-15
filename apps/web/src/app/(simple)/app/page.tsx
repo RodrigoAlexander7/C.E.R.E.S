@@ -16,6 +16,7 @@ import s from "@/components/simple/simple.module.css";
 import { SowingWindow } from "@/components/SowingWindow";
 import { ApiError, api, fmtDate, fmtNumber } from "@/lib/api";
 import type { ComparisonResult, Parcel, Profile, Run, Strategy } from "@/lib/types";
+import { readTierra } from "@/lib/tierra";
 import { useZones } from "@/lib/zones";
 
 const PENDING = "ceres:sencillo:pendiente";
@@ -24,13 +25,15 @@ const EMPTY: Answers = { crop: null, status: null, harvest: null, priority: null
 type Patch = Record<string, string | number | null>;
 
 function toProfile(a: Answers, base?: Profile | null): Profile {
+  // Lo que respondiste en «Mi chacra → ¿Cómo está tu tierra?» (sin cuenta) se usa aquí.
+  const t = base ? {} : readTierra();
   return {
     current_crop_id: a.crop ?? "",
     current_status: a.status ?? "cosechado",
     expected_harvest: a.status === "en_campo" ? a.harvest : null,
     planned_next_crop_id: base?.planned_next_crop_id ?? null,
-    water: base?.water ?? { mode: "no_se" },
-    soil: base?.soil ?? {},
+    water: base?.water ?? { mode: "no_se", ...(t.method ? { method: t.method } : {}) },
+    soil: base?.soil ?? (t.salinity_signs ? { salinity_signs: t.salinity_signs } : {}),
     priority: a.priority ?? "equilibrada",
     budget_soles: base?.budget_soles ?? null,
     residue_management: base?.residue_management ?? "no_se",
@@ -55,6 +58,24 @@ function applyPatch(p: Profile, patch: Patch): Profile {
     out.water = { ...out.water, mode: "no_se", allocation_m3: null };
   }
   return out;
+}
+
+/** Resumen para WhatsApp: opciones en el mismo orden, con nivel y cifras; sin datos personales. */
+function shareText(result: ComparisonResult, ordered: Strategy[], zoneName: string, area: number, crop: string): string {
+  const lines = ordered.map((st, i) => {
+    const f = st.simple?.facts;
+    const r = f?.risk;
+    const money = f?.margin_soles != null ? ` · S/ ${fmtNumber(f.margin_soles)}${st.simple?.level === "explorar" ? " (sin validar)" : ""}` : "";
+    const range = r && st.simple?.level !== "explorar" ? ` (probable S/ ${fmtNumber(r.p10_soles)}–${fmtNumber(r.p90_soles)})` : "";
+    const lead = st.risk?.role === "sugerido" ? " ⭐ plan sugerido" : "";
+    return `${i + 1}. ${st.simple?.names ?? st.short} — ${st.simple?.label ?? ""}${money}${range}${lead}`;
+  });
+  return [
+    `CERES · Qué sembrar después de mi ${crop || "cultivo"} (${zoneName}, ${fmtNumber(area, area % 1 ? 1 : 0)} ha, 24 meses):`,
+    ...lines,
+    "Clima: NASA POWER 2015–2025. Precios: MIDAGRI-SISAP (mayorista, nov 2026). Cifras estimadas, no garantizadas.",
+    typeof window !== "undefined" ? `${window.location.origin}/app` : "",
+  ].filter(Boolean).join("\n");
 }
 
 interface View {
@@ -239,6 +260,10 @@ export default function SimpleApp() {
               {view.assumed.length > 0 && <> Lo que no sabías lo completamos con <Term id="supuesto">supuestos</Term> de la zona.</>}
             </p>
             <div style={{ marginTop: 8 }}><NasaBadge product="power" detail="clima diario 2015–2025 · celda ≈ 50 km, no es tu chacra" /></div>
+            <div className={s.shareRow}>
+              <a className={`${s.btn} ${s.btnGhost} ${s.shareBtn}`} href={`https://wa.me/?text=${encodeURIComponent(shareText(result, ordered, zone?.name ?? "", areaHa, cropName(zone, answers.crop)))}`} target="_blank" rel="noreferrer">Compartir por WhatsApp</a>
+              <button className={`${s.btn} ${s.btnGhost} ${s.shareBtn}`} onClick={() => window.print()}>Guardar PDF</button>
+            </div>
           </header>
 
           {err && <div className={s.error} role="alert">{err}</div>}

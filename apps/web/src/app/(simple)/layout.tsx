@@ -8,6 +8,7 @@ import { usePathname } from "next/navigation";
 import { DataFooter } from "@/components/NasaBadge";
 import { useSession } from "@/components/SessionProvider";
 import s from "@/components/simple/simple.module.css";
+import { useZones } from "@/lib/zones";
 
 function Mark() {
   return (
@@ -39,8 +40,30 @@ export default function SimpleLayout({ children }: { children: React.ReactNode }
   const { user, loading, logout } = useSession();
   const path = usePathname();
   const inApp = path === "/app" || path.startsWith("/app/");
+  const { zones, defaultId } = useZones();
+  const pilot = zones.find((z) => z.id === defaultId);
   return (
-    <div className={s.shell}>
+    <div className={`${s.shell} ${inApp ? s.withSide : ""}`}>
+      {inApp && (
+        // Escritorio (≥ 1024 px): barra lateral como en las referencias de diseño.
+        <aside className={s.side} aria-label="Navegación principal">
+          <Link href="/" className={s.sideBrand}><Mark /><span>CERES<small>Tu aliado en la chacra</small></span></Link>
+          <p className={s.sideLabel}>Mi campaña</p>
+          <nav aria-label="Barra lateral">
+            {MODULES.map((m) => (
+              <Link key={m.href} href={m.href} className={s.sideLink} aria-current={path === m.href ? "page" : undefined}>
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={ICONS[m.icon]} /></svg>
+                {m.label}
+              </Link>
+            ))}
+          </nav>
+          <div className={s.sidePilot}>
+            <small>Piloto</small>
+            <b>{zones.length ? zones.map((z) => z.name).join(" · ") : pilot?.name ?? "Majes, Arequipa"}</b>
+            <span>Con datos de NASA POWER, HLS y GIBS</span>
+          </div>
+        </aside>
+      )}
       <header className={s.top}>
         <div className={s.topInner}>
           <Link href="/" className={s.brand}><Mark /> CERES</Link>

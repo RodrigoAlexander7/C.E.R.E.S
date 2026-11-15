@@ -27,7 +27,26 @@
 .skeleton { height: 300px; margin-top: 12px; border-radius: 16px; background: linear-gradient(90deg, #f6f1e6, #ece3d0, #f6f1e6); background-size: 200% 100%; animation: shimmer 1.4s infinite; }
 @keyframes shimmer { to { background-position: -200% 0; } }
 @media (prefers-reduced-motion: reduce) { .skeleton { animation: none; } }
+/* Franja «Mejor mes para sembrar» */
+.banner { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px 12px; align-items: start; background: #1f4d2b; color: #f6f1e6; border-radius: 18px; padding: 14px 16px; margin: -2px 0 16px; }
+.banner small { display: block; font-size: 0.7rem; font-weight: 800; letter-spacing: 0.08em; color: #cfe0c9; }
+.banner b { display: block; font-size: 1.15rem; line-height: 1.25; margin: 2px 0 4px; color: #fff; }
+.banner span { display: block; font-size: 0.86rem; line-height: 1.45; color: #dfead9; }
+.bannerBtn { grid-column: 1 / -1; justify-self: start; font: inherit; min-height: 44px; padding: 8px 16px; border-radius: 999px; border: none; background: #fff; color: #1f4d2b; font-weight: 800; cursor: pointer; }
+.bannerBtn:focus-visible { outline: 3px solid #d9a53a; outline-offset: 2px; }
+.split { display: block; }
+.enso :global(a) { margin: 8px 0 4px; }
+
 @media (min-width: 640px) {
   .card { padding: 22px; }
   .boxes { grid-template-columns: repeat(3, 1fr); }
+  .bannerBtn { grid-column: auto; justify-self: end; align-self: center; }
+  .banner { grid-template-columns: auto minmax(0, 1fr) auto; }
+  .banner b { font-size: 1.35rem; }
+}
+/* Escritorio (Cuándo sembrar): gráfico a la izquierda, cifras y fuente a la derecha. */
+@media (min-width: 900px) {
+  .wide .split { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+  .wide .svg { max-height: 320px; }
+  .wide .boxes { grid-template-columns: 1fr; margin-top: 12px; }
 }

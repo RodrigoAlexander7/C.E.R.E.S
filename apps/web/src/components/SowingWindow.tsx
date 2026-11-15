@@ -5,6 +5,7 @@
 // según el ONI de NOAA. El cliente no recalcula nada: solo muestra.
 
 import { useEffect, useMemo, useState } from "react";
+import { NasaBadge } from "@/components/NasaBadge";
 import { SourceChips } from "@/components/Sources";
 import { ApiError, api, fmtNumber } from "@/lib/api";
 import s from "./sowing.module.css";
@@ -27,7 +28,7 @@ export interface SowingData {
   note: string;
 }
 
-export function SowingWindow({ zone, crops, initialCrop, initialMonth }: { zone: string; crops: { id: string; name: string }[]; initialCrop?: string; initialMonth?: number }) {
+export function SowingWindow({ zone, crops, initialCrop, initialMonth, wide = false }: { zone: string; crops: { id: string; name: string }[]; initialCrop?: string; initialMonth?: number; wide?: boolean }) {
   const [crop, setCrop] = useState(initialCrop && crops.some((c) => c.id === initialCrop) ? initialCrop : crops[0]?.id);
   const [month, setMonth] = useState(initialMonth ?? new Date().getMonth() + 1);
   const [data, setData] = useState<SowingData | null>(null);
@@ -55,7 +56,9 @@ export function SowingWindow({ zone, crops, initialCrop, initialMonth }: { zone:
     if (!rows.length) return null;
     const max = Math.max(...rows.map((m) => m.gross_m3_ha ?? 0));
     const sorted = [...rows].sort((a, b) => (a.gross_m3_ha ?? 0) - (b.gross_m3_ha ?? 0));
-    return { rows, max, best: sorted[0], worst: sorted[sorted.length - 1] };
+    // «Mejor mes»: dentro de la ventana del catálogo, sin frío/calor en ≥ 3 de 10 años y con menos riego.
+    const safe = sorted.filter((m) => m.in_window && !(m.thermal ?? []).some((t) => t.state === "advertencia"));
+    return { rows, max, best: sorted[0], worst: sorted[sorted.length - 1], recommended: safe[0] ?? null };
   }, [data, crop, zone]);
 
   if (err) return <div className={s.card}><p role="alert">{err}</p></div>;
@@ -67,7 +70,18 @@ export function SowingWindow({ zone, crops, initialCrop, initialMonth }: { zone:
   const risky = (m: Month) => (m.thermal ?? []).some((t) => t.state === "advertencia");
 
   return (
-    <div className={s.card}>
+    <div className={`${s.card} ${wide ? s.wide : ""}`}>
+      {view?.recommended && data && (
+        <div className={s.banner}>
+          <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M7 3v3m10-3v3M4 9h16M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm4 9 2 2 4-4" /></svg>
+          <div>
+            <small>{data.crop.short.toUpperCase()}</small>
+            <b>Mejor mes para sembrar {data.crop.short}: {MESES_LARGO[view.recommended.month - 1]}</b>
+            <span>Menos riego dentro de la ventana de siembra ({fmtNumber(view.recommended.gross_m3_ha)} m³/ha) y sin frío ni calor frecuentes en 11 años NASA POWER.</span>
+          </div>
+          {month !== view.recommended.month && <button className={s.bannerBtn} onClick={() => setMonth(view.recommended!.month)}>Ver {MESES_LARGO[view.recommended.month - 1]}</button>}
+        </div>
+      )}
       <div className={s.tabs} role="group" aria-label="Cultivo">
         {crops.map((c) => (
           <button key={c.id} className={s.tab} aria-pressed={crop === c.id} onClick={() => setCrop(c.id)}>{c.name}</button>
@@ -83,7 +97,8 @@ export function SowingWindow({ zone, crops, initialCrop, initialMonth }: { zone:
       {!view || !data ? (
         <div className={s.skeleton} aria-label="Calculando con datos NASA" role="status" />
       ) : (
-        <>
+        <div className={s.split}>
+          <div>
           <svg className={s.svg} viewBox={`0 0 ${W} ${H + 40}`} role="img" aria-label={`Agua de riego por hectárea según el mes de siembra de ${data.crop.short}; el mes elegido es ${MESES_LARGO[month - 1]}`}>
             {data.months.map((m, i) => {
               if (!m.available) return null;
@@ -106,7 +121,9 @@ export function SowingWindow({ zone, crops, initialCrop, initialMonth }: { zone:
             <span><b style={{ color: "#9b2f1f" }}>!</b> Frío o calor en ≥ 3 de cada 10 años</span>
             <span>Miles de m³ por ha</span>
           </div>
+          </div>
 
+          <div>
           {cur && (
             <>
               <div className={s.boxes}>
@@ -151,10 +168,15 @@ export function SowingWindow({ zone, crops, initialCrop, initialMonth }: { zone:
               <p className={s.fine}>{data.enso.definition} {data.enso.limitation} <SourceChips ids={data.enso.source_ids} /></p>
             </details>
           )}
-          <p className={s.fine}>
-            {data.method.etc}. {data.method.net}. {data.method.gross}. {data.method.sowing_day}. {data.note} <SourceChips ids={[...data.source_ids, ...data.crop.window_source_ids, ...data.efficiency.source_ids]} />
-          </p>
-        </>
+          <details className={s.enso} open={wide || undefined}>
+            <summary>¿De dónde sacamos este dato?</summary>
+            <NasaBadge product="power" variant="block" />
+            <p className={s.fine}>
+              {data.method.etc}. {data.method.net}. {data.method.gross}. {data.method.sowing_day}. {data.note} <SourceChips ids={[...data.source_ids, ...data.crop.window_source_ids, ...data.efficiency.source_ids]} />
+            </p>
+          </details>
+          </div>
+        </div>
       )}
     </div>
   );
