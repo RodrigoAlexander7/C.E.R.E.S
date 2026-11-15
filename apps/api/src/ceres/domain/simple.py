@@ -156,6 +156,11 @@ def simplify(result: ComparisonResult, p: ParcelInput, catalog: Catalog) -> None
         lvl = st.simple["level"]
         names = " → ".join(catalog.crop(c).short_name if catalog.crop(c) else catalog.crop_label(c).lower() for c in st.sequence)
         tags: list[str] = []
+        role = (st.risk or {}).get("role")
+        if role == "sugerido":
+            tags.append("Plan sugerido por CERES")
+        elif role == "explorar":
+            tags.append("Mejor ganancia por explorar")
         if st.strategy_id == richest:
             tags.append("Más ganancia estimada")
         if st.strategy_id == thriftiest:
@@ -189,6 +194,12 @@ def simplify(result: ComparisonResult, p: ParcelInput, catalog: Catalog) -> None
             headline = f"Puede funcionar, pero falta un dato: {missing.missing[0] if missing and missing.missing else 'confírmalo con tu asesor'}."
         else:
             headline = (tags[0] + ". " if tags and tags[0] != "Tu plan" else "") + "Cumple con el agua y el suelo que indicaste."
+        if role == "sugerido" and lvl in ("buena", "posible") and not failing:
+            headline = (
+                "La combinación que más deja con tu agua, sin arriesgar de más: cabe en el mes más exigente en la "
+                "mayoría de años NASA y no repite familia de cultivo."
+                + (f" Confirma {st.decisive[0]['label']}." if st.decisive else "")
+            )
 
         margin = _metric(st, "eco.margen")
         water = _metric(st, "agua.bruto_m3") or None
@@ -205,6 +216,10 @@ def simplify(result: ComparisonResult, p: ParcelInput, catalog: Catalog) -> None
                     "water_m3": round(water) if water is not None else None,
                     "first_sowing": sow.isoformat() if sow else None,
                     "cycles": int(_metric(st, "ciclos") or 0),
+                    # Riesgo (Monte Carlo): rango probable y probabilidad de perder; precio de equilibrio.
+                    "risk": {k: st.risk[k] for k in ("mean_soles", "cvar20_soles", "p10_soles", "p90_soles", "p_loss") if k in st.risk}
+                    if st.risk and "mean_soles" in st.risk else None,
+                    "breakeven": (st.risk or {}).get("breakeven"),
                 },
             }
         )
@@ -221,8 +236,12 @@ def simplify(result: ComparisonResult, p: ParcelInput, catalog: Catalog) -> None
             return -((_metric(s, "suelo.familias") or 0) * 10 + (_metric(s, "suelo.leguminosas") or 0))
         return 0.0
 
+    def lead(s: StrategyAssessment) -> int:
+        # Dentro del mismo nivel, el plan sugerido va primero (ya optimizó según la prioridad elegida).
+        return 0 if (s.risk or {}).get("role") == "sugerido" else 1
+
     result.simple_order = [
-        s.strategy_id for s in sorted(sts, key=lambda s: (LEVEL_ORDER[s.simple["level"]], within(s), s.strategy_id))
+        s.strategy_id for s in sorted(sts, key=lambda s: (LEVEL_ORDER[s.simple["level"]], lead(s), within(s), s.strategy_id))
     ]
     result.assumed = sorted(p.assumed)
 

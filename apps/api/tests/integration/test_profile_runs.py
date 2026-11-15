@@ -81,7 +81,9 @@ def test_scenario_creates_new_run_and_keeps_previous(make_client):
     assert first["dataset_sha256"]
     second = c.post(f"/api/v1/parcels/{p['id']}/recommendations", json={"scenario": {"allocation_m3": 6000}}).json()
     assert second["id"] != first["id"]
-    assert set(second["statuses"].values()) == {"no_viable"}
+    # Las plantillas fijas no caben en 6 000 m³/mes; el plan del optimizador (D/E) solo propone lo que cabe.
+    assert {v for k, v in second["statuses"].items() if k in "ABC"} == {"no_viable"}
+    assert all(v != "no_viable" for k, v in second["statuses"].items() if k in ("D", "E"))
     assert second["scenario_label"].startswith("dotación 6,000")
     again = c.get(f"/api/v1/recommendations/{first['id']}").json()
     assert again["result"] == first["result"]  # el resultado anterior no se reescribe
@@ -139,7 +141,9 @@ def test_quick_compare_without_account_saves_nothing(make_client):
     r = c.post("/api/v1/public/quick-compare", json=body)
     assert r.status_code == 200
     data = r.json()
-    assert len(data["result"]["strategies"]) == 3 and data["result"]["simple_order"]
+    ids = [s["strategy_id"] for s in data["result"]["strategies"]]
+    assert ids[:3] == ["A", "B", "C"] and set(ids) <= {"A", "B", "C", "D", "E"} and data["result"]["simple_order"]
+    assert data["result"]["optimizer"]["samples"] == 1000
     assert data["inputs"]["area_ha"] == 5
     with c.container.sessions() as db:
         assert db.scalar(select(func.count()).select_from(m.RecommendationRun)) == 0

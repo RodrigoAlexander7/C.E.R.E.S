@@ -165,8 +165,9 @@ def test_exploratory_strategy_never_ranked(catalog, climate):
 def test_priority_reorders_only_comparable(catalog, climate):
     money = evaluate(base(priority="dinero"), catalog, climate).ordering["ranked"]
     water = evaluate(base(priority="agua"), catalog, climate).ordering["ranked"]
-    assert set(money) == set(water) == {"A", "B"}
-    assert money[0] == "B" and water[0] == "A"
+    tpl = lambda xs: [x for x in xs if x in "ABC"]  # noqa: E731 — plantillas fijas; D/E vienen del optimizador
+    assert set(tpl(money)) == set(tpl(water)) == {"A", "B"}
+    assert tpl(money)[0] == "B" and tpl(water)[0] == "A"
     bal = evaluate(base(priority="equilibrada"), catalog, climate).ordering
     assert bal["ranked"] == [] and bal["tradeoffs"]
 

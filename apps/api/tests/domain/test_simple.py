@@ -133,6 +133,12 @@ def test_simple_order_and_reproducibility(zone, catalog, climate):
     p = set_path(set_path(set_path(BASE, "water.method", "goteo"), "soil.salinity_signs", "sin_signos"), "water.allocation_min_m3", 10**6)
     p = set_path(p, "priority", "dinero")
     r = run(p, zone, catalog, climate)
-    assert r.simple_order[:2] == ["B", "A"]  # buenas primero, por prioridad; exploratoria después
-    assert r.simple_order[-1] == "C"
+    tpl = [x for x in r.simple_order if x in "ABC"]
+    assert tpl[:2] == ["B", "A"]  # buenas primero, por prioridad; exploratoria después
+    assert tpl[-1] == "C"
+    roles = (r.optimizer or {}).get("roles", {})
+    lead = next((k for k, v in roles.items() if v == "sugerido"), None)
+    if lead:  # el plan sugerido encabeza su nivel
+        lvl = {s.strategy_id: s.simple["level"] for s in r.strategies}
+        assert r.simple_order.index(lead) == min(i for i, x in enumerate(r.simple_order) if lvl[x] == lvl[lead])
     assert run(p, zone, catalog, climate).to_dict() == r.to_dict()

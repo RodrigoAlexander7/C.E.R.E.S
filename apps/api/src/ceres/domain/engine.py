@@ -106,6 +106,8 @@ def sequence_for(template: StrategyTemplate, p: ParcelInput, catalog: Catalog) -
         nxt = p.planned_next_crop_id or current
         missing = [] if catalog.crop(nxt) else [f"Ficha agronómica para «{catalog.non_catalog_crops.get(nxt, nxt)}»"]
         return [nxt], missing
+    if template.sequence_rule == "explicita":
+        return list(template.crops), []
     if template.sequence_rule == "alternar":
         # Se turnan los cultivos de la plantilla; si el actual está entre ellos, se empieza por el siguiente.
         crops = list(template.crops)
@@ -132,18 +134,30 @@ class Cycle:
     waited_days: int
 
 
-def build_cycles(seq: list[str], catalog: Catalog, release: date, horizon_end: date) -> tuple[list[Cycle], list[str]]:
-    """Ciclos completos dentro del horizonte; nunca trunca una cosecha."""
+def build_cycles(
+    seq: list[str], catalog: Catalog, release: date, horizon_end: date, plants: tuple = ()
+) -> tuple[list[Cycle], list[str]]:
+    """Ciclos completos dentro del horizonte; nunca trunca una cosecha.
+
+    Con `plants` (plan explícito del optimizador) la secuencia no se repite y cada ciclo se siembra en
+    su fecha, siempre que respete la preparación y la ventana; si no, se usa la primera fecha válida.
+    """
     cycles: list[Cycle] = []
     notes: list[str] = []
     available = release
     i = 0
     while True:
+        if plants and i >= len(seq):
+            break
         crop = catalog.crop(seq[i % len(seq)])
         if crop is None:
             break
         earliest = available + timedelta(days=catalog.prep_days)
-        plant = next_window_date(crop, earliest, horizon_end)
+        wanted = plants[i] if plants and i < len(plants) else None
+        if wanted is not None and wanted >= earliest and any(w.contains(wanted) for w in crop.windows):
+            plant = wanted
+        else:
+            plant = next_window_date(crop, earliest, horizon_end)
         if plant is None:
             notes.append(f"No cabe otra siembra de {crop.name} dentro de su ventana antes del fin del horizonte.")
             break
@@ -204,6 +218,14 @@ def evaluate(p: ParcelInput, catalog: Catalog, climate: ClimateInput) -> Compari
         notes.append(
             "No hay una copia real de NASA POWER disponible: la demanda de agua y la exposición térmica quedan pendientes."
         )
+    optimizer_info = None
+    if strategies and climate.available:
+        from ceres.domain.optimizer import attach
+
+        optimizer_info = attach(
+            strategies, p, catalog, climate, start, horizon_end,
+            lambda t: _assess(t, p, catalog, climate, start, horizon_end),
+        )
 
     ordering = _order(strategies, p.priority)
     viable = [s for s in strategies if s.status == "viable_con_supuestos"]
@@ -228,6 +250,7 @@ def evaluate(p: ParcelInput, catalog: Catalog, climate: ClimateInput) -> Compari
         associations=[_association_card(a) for a in catalog.associations],
         notes=notes,
         blocking=blocking,
+        optimizer=optimizer_info,
     )
     from ceres.domain.simple import simplify
 
@@ -262,7 +285,7 @@ def _assess(
             "Requiere ficha agronómica del cultivo planeado.",
         )
 
-    cycles, cal_notes = build_cycles(seq, catalog, start, horizon_end)
+    cycles, cal_notes = build_cycles(seq, catalog, start, horizon_end, t.plants)
     timeline = _timeline(cycles, catalog, start, horizon_end, p)
 
     if not cycles:

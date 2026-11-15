@@ -192,6 +192,8 @@ class StrategyAssessment:
     rank: int | None = None
     simple: dict[str, Any] = field(default_factory=dict)
     decisive: list[dict[str, Any]] = field(default_factory=list)
+    # Monte Carlo (año NASA, precio, rendimiento) y precio de equilibrio; None sin economía completa.
+    risk: dict[str, Any] | None = None
 
 
 @dataclass
@@ -209,6 +211,8 @@ class ComparisonResult:
     blocking: list[str]
     simple_order: list[str] = field(default_factory=list)
     assumed: list[str] = field(default_factory=list)
+    # Resumen del optimizador (método, reparto de la chacra, precio de cambio); None si no corrió.
+    optimizer: dict[str, Any] | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return _jsonable(asdict(self))

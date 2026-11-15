@@ -145,11 +145,12 @@ class StrategyTemplate:
     id: str
     name: str
     short: str
-    sequence_rule: str  # "declarada" | "alternar"
+    sequence_rule: str  # "declarada" | "alternar" | "explicita" (plan del optimizador)
     cap_status: str | None  # p. ej. "exploratoria"
     rationale: str
     source_ids: tuple[str, ...]
-    crops: tuple[str, ...] = ()  # para "alternar": cultivos que se turnan
+    crops: tuple[str, ...] = ()  # para "alternar": cultivos que se turnan; para "explicita": la secuencia exacta
+    plants: tuple = ()  # para "explicita": fecha de siembra de cada ciclo
 
 
 @dataclass(frozen=True)
