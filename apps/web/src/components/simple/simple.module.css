@@ -100,6 +100,7 @@
 .lvl_buena { --lvl: #3f7d3a; } .lvl_buena .badge { background: var(--s-good-bg); color: var(--s-good); } .lvl_buena .badge b { background: var(--s-good); }
 .lvl_posible { --lvl: var(--s-maize); } .lvl_posible .badge { background: var(--s-maybe-bg); color: var(--s-maybe); } .lvl_posible .badge b { background: #b98411; }
 .lvl_explorar { --lvl: #8b6cc0; } .lvl_explorar .badge { background: var(--s-explore-bg); color: var(--s-explore); } .lvl_explorar .badge b { background: var(--s-explore); }
+.lvl_sin_datos { --lvl: var(--s-line); } .lvl_sin_datos .badge { background: var(--s-sand-2); color: var(--s-ink-2); } .lvl_sin_datos .badge b { background: var(--s-muted); }
 .lvl_no_conviene { --lvl: #c2562f; } .lvl_no_conviene .badge { background: var(--s-no-bg); color: var(--s-no); } .lvl_no_conviene .badge b { background: var(--s-no); }
 .headline { margin: 10px 0 12px; font-size: 1rem; line-height: 1.45; color: var(--s-ink); }
 /* Móvil: filas «concepto … valor»; desde 600 px, tres columnas */
@@ -199,6 +200,7 @@
 @media (min-width: 900px) {
   .topInner, .main { max-width: 980px; }
   .cards { grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; }
+  .cardWide { grid-column: 1 / -1; }
   .names { font-size: 1.2rem; }
 }
 

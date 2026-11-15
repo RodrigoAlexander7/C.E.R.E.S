@@ -171,8 +171,13 @@ def test_priority_reorders_only_comparable(catalog, climate):
     assert bal["ranked"] == [] and bal["tradeoffs"]
 
 
-def test_alfalfa_and_outside_pilot_block(catalog, climate):
-    assert evaluate(base(current_crop_id="alfalfa"), catalog, climate).strategies == []
+def test_alfalfa_is_accepted_as_previous_crop_and_outside_pilot_blocks(catalog, climate):
+    r = evaluate(base(current_crop_id="alfalfa"), catalog, climate)
+    assert r.blocking == [] and r.strategies
+    s = by_id(r)
+    assert s["A"].status == "requiere_datos"  # mantener la alfalfa no se compara (perenne)
+    assert s["B"].timeline and s["C"].timeline  # las alternativas sí se calculan
+    assert any("levantas la alfalfa" in n for n in r.notes)
     r = evaluate(base(in_pilot_zone=False), catalog, climate)
     assert r.strategies == [] and "fuera de las zonas piloto" in r.blocking[0]
 

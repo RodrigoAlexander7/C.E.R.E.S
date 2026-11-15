@@ -76,7 +76,7 @@ export function Wizard({
               </button>
             ))}
           </div>
-          {a.crop === "alfalfa" && <p className={s.wizardNote}>La alfalfa instalada se maneja distinto (cortes, años de vida): por ahora CERES no la compara como un cultivo de campaña.</p>}
+          {a.crop === "alfalfa" && <p className={s.wizardNote}>Comparamos qué sembrar después de levantar la alfalfa. Mantenerla no lo comparamos: es perenne (cortes, años de vida).</p>}
           {zone.crops.some((c) => c.id === a.crop && !c.in_catalog) && a.crop !== "alfalfa" && <p className={s.wizardNote}>Este cultivo aún no tiene ficha en {zone.name}: lo usamos como antecedente y comparamos lo que puedes sembrar después.</p>}
         </>
       )}

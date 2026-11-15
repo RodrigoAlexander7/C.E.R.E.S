@@ -7,7 +7,7 @@ import { METHOD_LABEL, type Zone } from "@/lib/zones";
 import { Sheet, Term } from "./help";
 import s from "./simple.module.css";
 
-const ICON: Record<string, string> = { buena: "✓", posible: "?", explorar: "◇", no_conviene: "✕" };
+const ICON: Record<string, string> = { buena: "✓", posible: "?", explorar: "◇", sin_datos: "…", no_conviene: "✕" };
 const CROP_COLOR: Record<string, string> = { maiz_grano: "#d9a53a", frejol_grano: "#5b9a45", cebolla_roja: "#a2456f", cebolla: "#a2456f", papa: "#8a6a3f" };
 
 export function LevelBadge({ st }: { st: Strategy }) {
@@ -39,6 +39,19 @@ export function OptionCard({
 }: { st: Strategy; result: ComparisonResult; onWhy: () => void; onAnswer: (patch: Record<string, string | number>) => void; busy: boolean }) {
   const f = st.simple?.facts;
   const water = st.decisive?.find((d) => d.id === "agua");
+  if (st.simple?.level === "sin_datos") {
+    // Sin ficha agronómica no hay cifras: una tarjeta ancha y breve, sin «—» que parezcan datos.
+    return (
+      <article className={`${s.card} ${s.cardWide} ${s.lvl_sin_datos}`} aria-labelledby={`opt-${st.strategy_id}`}>
+        <div className={s.cardTop}>
+          <h2 id={`opt-${st.strategy_id}`} className={`${s.names} ${s.display}`}>{st.simple?.names}</h2>
+          <LevelBadge st={st} />
+        </div>
+        <p className={s.headline}>{st.simple?.headline}</p>
+        {st.simple.tags.length > 0 && <div className={s.tags}>{st.simple.tags.map((t) => <span key={t} className={`${s.tag} ${s.tagMuted}`}>{t}</span>)}</div>}
+      </article>
+    );
+  }
   return (
     <article className={`${s.card} ${s[`lvl_${st.simple?.level ?? "posible"}`]}`} aria-labelledby={`opt-${st.strategy_id}`}>
       <div className={s.cardTop}>

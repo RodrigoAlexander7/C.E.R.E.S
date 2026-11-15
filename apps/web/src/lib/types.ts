@@ -83,7 +83,7 @@ export interface Strategy {
   decisive?: Decisive[];
 }
 
-export type SimpleLevel = "buena" | "posible" | "explorar" | "no_conviene";
+export type SimpleLevel = "buena" | "posible" | "explorar" | "sin_datos" | "no_conviene";
 
 export interface SimpleLayer {
   level: SimpleLevel;

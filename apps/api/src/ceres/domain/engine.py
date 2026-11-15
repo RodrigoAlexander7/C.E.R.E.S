@@ -171,9 +171,11 @@ def evaluate(p: ParcelInput, catalog: Catalog, climate: ClimateInput) -> Compari
     notes: list[str] = []
 
     if p.current_crop_id == "alfalfa":
-        blocking.append(
-            "La alfalfa establecida no se compara como un cultivo anual: requiere modelar instalación, edad, cortes y "
-            "obligaciones forrajeras, que están fuera del MVP."
+        # La alfalfa (≈60 % de Majes) se acepta como antecesor: se compara qué sembrar DESPUÉS de levantarla.
+        # Mantenerla o instalarla (perenne: edad, cortes, compromisos forrajeros) sigue fuera del MVP.
+        notes.append(
+            "Suponemos que levantas la alfalfa antes de sembrar; no comparamos mantenerla, porque es perenne "
+            "(edad, cortes y compromisos forrajeros están fuera de esta versión)."
         )
     if not p.in_pilot_zone:
         blocking.append(

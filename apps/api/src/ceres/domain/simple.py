@@ -16,9 +16,10 @@ LEVELS = {
     "buena": "Buena opción",
     "posible": "Posible, confirma",
     "explorar": "Por explorar",
+    "sin_datos": "Requiere datos",
     "no_conviene": "No conviene",
 }
-LEVEL_ORDER = {"buena": 0, "posible": 1, "explorar": 2, "no_conviene": 3}
+LEVEL_ORDER = {"buena": 0, "posible": 1, "explorar": 2, "sin_datos": 3, "no_conviene": 4}
 MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
 
 
@@ -26,7 +27,14 @@ def _fmt(v: float) -> str:
     return f"{v:,.0f}"
 
 
+def _lacks_profile(st: StrategyAssessment) -> bool:
+    """El cultivo planeado no tiene ficha agronómica: no hay nada que estimar (no es «posible»)."""
+    return any(r.rule_id == "CAT-01" for r in st.reasons)
+
+
 def level_of(st: StrategyAssessment, cap: str | None = None) -> str:
+    if _lacks_profile(st):
+        return "sin_datos"
     failing = [r for r in st.reasons if r.state == "no_cumple"]
     # Si solo falla por un supuesto de zona, no es un «no» definitivo: hay que confirmarlo.
     only_assumed = bool(failing) and all(r.assumed_inputs for r in failing)
@@ -155,7 +163,14 @@ def simplify(result: ComparisonResult, p: ParcelInput, catalog: Catalog) -> None
             tags.append("Tu plan")
 
         failing = next((r for r in st.reasons if r.state == "no_cumple"), None)
-        if lvl == "no_conviene" and failing:
+        if lvl == "sin_datos":
+            crop = st.sequence[0] if st.sequence else ""
+            label = catalog.crop_label(crop).lower() if crop else "ese cultivo"
+            why = "es perenne y no la comparamos" if crop == "alfalfa" else f"aún no tenemos su ficha en {zone}, no lo estimamos"
+            headline = f"Seguir con {label}: {why}."
+            # Sin ficha no hay agua ni ganancia que confirmar: ninguna pregunta cambia esta tarjeta.
+            st.decisive = []
+        elif lvl == "no_conviene" and failing:
             headline = _plain_failure(failing.rule_id, st)
         elif lvl == "explorar":
             headline = f"Idea con potencial, pero aún sin validar en {zone}: tómala como exploración."

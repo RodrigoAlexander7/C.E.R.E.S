@@ -56,7 +56,7 @@ export function ProfileForm({ value, onChange, compact = false, zone = null }: {
             <option key={k} value={k}>{v}</option>
           ))}
         </select>
-        {p.current_crop_id === "alfalfa" && <p className="hint">La alfalfa establecida no se compara como cultivo anual en esta versión.</p>}
+        {p.current_crop_id === "alfalfa" && <p className="hint">Comparamos qué sembrar después de levantar la alfalfa; mantenerla (perenne) no se compara en esta versión.</p>}
       </div>
 
       <fieldset>

@@ -102,6 +102,26 @@ def test_water_interval_logic(catalog, climate):
     assert between.status == "requiere_datos" and any(r.rule_id == "AGU-07" for r in between.reasons)
 
 
+def test_after_alfalfa_compares_options_and_plan_requires_data(zone, catalog, climate):
+    # Alfalfa (≈60 % de Majes) ya no bloquea: se compara qué sembrar después de levantarla.
+    p = set_path(set_path(BASE, "current_crop_id", "alfalfa"), "current_status", "cosechado")
+    r = run(p, zone, catalog, climate)
+    assert r.blocking == [] and any("levantas la alfalfa" in n for n in r.notes)
+    lv = levels(r)
+    assert lv["A"] == "sin_datos" and lv["B"] in ("posible", "buena")
+    a = {s.strategy_id: s for s in r.strategies}["A"]
+    assert a.simple["label"] == "Requiere datos" and "perenne" in a.simple["headline"]
+    assert a.decisive == []  # sin ficha no hay pregunta que cambie la tarjeta
+    assert r.simple_order[-1] == "A"
+
+
+def test_non_catalog_plan_is_not_presented_as_possible(zone, catalog, climate):
+    p = set_path(set_path(BASE, "current_crop_id", "papa"), "current_status", "cosechado")
+    a = {s.strategy_id: s for s in run(p, zone, catalog, climate).strategies}["A"]
+    assert a.simple["level"] == "sin_datos"
+    assert a.simple["headline"].startswith("Seguir con papa") and "ficha" in a.simple["headline"]
+
+
 def test_simple_order_and_reproducibility(zone, catalog, climate):
     p = set_path(set_path(set_path(BASE, "water.method", "goteo"), "soil.salinity_signs", "sin_signos"), "water.allocation_min_m3", 10**6)
     p = set_path(p, "priority", "dinero")

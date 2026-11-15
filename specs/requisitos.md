@@ -51,7 +51,7 @@ La aplicación evalúa estrategias con los datos y supuestos disponibles. No gar
 - Respetar la liberación del terreno, ventanas de siembra y ciclos completos. No ignorar una cosecha pendiente al cerrar el horizonte.
 - Cada paso indica por qué se propone: antecedente, ventana/clima histórico, agua, criterio de suelo y prioridad, con los factores que realmente lo sustentan.
 - Fecha desconocida o calendario sin revisar produce un pendiente; no presentar una fecha «óptima» calculada sin respaldo.
-- Alfalfa establecida no se reemplaza automáticamente ni se compara como una anual recién instalada.
+- Alfalfa establecida se acepta como cultivo anterior: se comparan las alternativas para después de levantarla. No se recomienda mantenerla ni instalarla, ni se compara como una anual (perenne: edad, cortes y compromisos forrajeros fuera del MVP); su tarjeta «Tu plan» se muestra como «Requiere datos».
 
 ## R06 — viabilidad y prioridades
 
