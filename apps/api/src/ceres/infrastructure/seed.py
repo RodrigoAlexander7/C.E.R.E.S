@@ -103,6 +103,20 @@ def run_seed(settings: Settings) -> dict:
                 prof = demo_profile(demo, lima_today())
                 repo.add_revision(parcel, prof, demo["note"])
                 repo.add_event(m.CropEvent(parcel_id=parcel.id, crop_id=prof["current_crop_id"], status=prof["current_status"], origin="supuesto_demo"))
+            elif parcel.geometry != demo["polygon"]:
+                # El contorno del demo cambió en data/zonas/<zona>/zona.json (p. ej. a un lote regado verificado):
+                # se actualiza el lote existente. Las observaciones NDVI viejas quedan, filtradas por su hash.
+                poly = demo["polygon"]
+                pt = centroid(poly)
+                d = c.regions.locate_point(pt["lat"], pt["lon"])
+                located = c.zones.zone_of_district(d["code"]) if d else None
+                if located is None or located.id != z.id:
+                    raise RuntimeError(f"El polígono demo de {z.id} no cae en un distrito de la zona")
+                parcel.geometry, parcel.point = poly, pt
+                parcel.area_ha = round(geodesic_area_ha(poly), 4)
+                parcel.region_codes = {"district_code": d["code"], "district_name": d["name"], "provider": d["provenance"]["provider"]}
+                db.flush()
+                zr["demo_geometry_updated"] = True
             latest = repo.runs(parcel.id)[:1]
             # Copia real previamente calculada: el seed no descarga escenas ni usa datos sintéticos.
             import json

@@ -48,7 +48,8 @@
   "demo": {
     "name": "Caso público de demostración — Majes I",
     "note": "Caso de demostración: todos los datos de parcela son supuestos etiquetados",
-    "polygon": {"type": "Polygon", "coordinates": [[[-72.1911, -16.3510], [-72.1890, -16.3510], [-72.1890, -16.3490], [-72.1911, -16.3490], [-72.1911, -16.3510]]]},
+    "polygon": {"type": "Polygon", "coordinates": [[[-72.22464, -16.33777], [-72.22361, -16.33777], [-72.22361, -16.33678], [-72.22464, -16.33678], [-72.22464, -16.33777]]]},
+    "polygon_note": "Lote regado elegido el 15-nov-2026 con la imagen NASA GIBS HLS S30 del 25-oct-2026 y verificado con HLS v2: NDVI mensual 0,56–0,87 (jun–oct 2025). El contorno anterior (cerca de El Pedregal) era suelo sin cultivo (≈ 0,07).",
     "harvest_in_days": 90,
     "soil_analysis_days_ago": 150,
     "profile": {

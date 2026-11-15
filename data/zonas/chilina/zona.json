@@ -49,7 +49,8 @@
   "demo": {
     "name": "Caso público de demostración — Valle de Chilina",
     "note": "Caso de demostración: todos los datos de parcela son supuestos etiquetados",
-    "polygon": {"type": "Polygon", "coordinates": [[[-71.5300, -16.3655], [-71.5291, -16.3655], [-71.5291, -16.3646], [-71.5300, -16.3646], [-71.5300, -16.3655]]]},
+    "polygon": {"type": "Polygon", "coordinates": [[[-71.54005, -16.37664], [-71.53902, -16.37664], [-71.53902, -16.37565], [-71.54005, -16.37565], [-71.54005, -16.37664]]]},
+    "polygon_note": "Lote con cultivo en Cayma elegido el 15-nov-2026 con la imagen NASA GIBS HLS S30 del 25-oct-2026 y verificado con HLS v2: NDVI mensual 0,38–0,73 (jun–oct 2025). El contorno anterior era suelo sin cultivo (≈ 0,05–0,09).",
     "harvest_in_days": null,
     "soil_analysis_days_ago": null,
     "profile": {

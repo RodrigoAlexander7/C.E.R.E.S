@@ -1,5 +1,13 @@
 # HLS real de las parcelas demo
 
+**15-nov-2026 (actualización):** los contornos demo anteriores estaban sobre suelo sin cultivo (NDVI ≈ 0,05–0,09), lo que en la app parecía un dato roto. Se eligieron lotes con cultivo así:
+1. Imagen NASA GIBS `HLS_S30_Nadir_BRDF_Adjusted_Reflectance` del 2026-10-25 (z12; teselas x=1226 Majes y x=1234 Chilina, y=2236). Se ordenaron ventanas de 4×4 píxeles (≈ 150 m) por verdor en color verdadero `(G−R)/(G+R)`.
+2. Para los 4 mejores candidatos de cada zona se leyó HLS v2 real (jun–oct 2025, mismo método y máscara de abajo) y se eligió el que tenía NDVI mensual > 0,3 en más meses y que cae en un distrito de la zona piloto.
+   - **Majes I** (distrito Majes): `[-72.22464, -16.33777]–[-72.22361, -16.33678]`, 10 escenas, 100 % de píxeles válidos, NDVI mensual 0,56–0,87.
+   - **Valle de Chilina** (distrito Cayma): `[-71.54005, -16.37664]–[-71.53902, -16.37565]`, 9 escenas (dos con 21 % y 64 % de píxeles válidos), NDVI mensual 0,38–0,73.
+   - Candidatos descartados: uno sin escenas que cubran el polígono; otros con menos meses sobre 0,3 o fuera de los distritos piloto.
+3. `seed.py` actualiza el contorno del lote demo existente cuando cambia en `zona.json`; las observaciones antiguas quedan en la base filtradas por su hash de contorno.
+
 `demo_ndvi.json` contiene observaciones calculadas en esta sesión sobre los contornos públicos de Majes I y Chilina. Se descargaron las ventanas de bandas HLS v2 y Fmask mediante Planetary Computer; no se simularon valores.
 
 - Fórmula: (NIR − rojo)/(NIR + rojo), mediana de centros de píxel dentro del polígono.
