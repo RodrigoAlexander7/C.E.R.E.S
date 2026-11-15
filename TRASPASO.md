@@ -2,6 +2,22 @@
 
 Este documento es para el agente que continúe. Explica qué se hizo, qué falta, qué decidió el usuario y qué se recomienda.
 
+## Continuación comprobada con Codex (15-nov-2026)
+
+Este apartado actualiza el estado histórico que sigue debajo.
+
+- Repositorio indexado con **codebase-memory-mcp**, proyecto `ceres`, modo `full`: 9 923 nodos y 14 616 relaciones iniciales; sin archivos saltados ni análisis parciales registrados. `deploy/` está excluido por diseño y se revisó directamente. Consultar `index_status` para la generación vigente.
+- El usuario autorizó expresamente usar las herramientas disponibles para leer y editar, incluido `apply_patch`, al no existir Read/Edit/Write en esta sesión.
+- **Cerrados localmente los incrementos 15 y 10:** casillas marcadas con evidencia en `specs/tareas.md`. La cifra correcta es **88 pruebas API**, no 89: todas pasan contra PostgreSQL real; `alembic check` no detecta diferencias de modelo.
+- **Cinco E2E pasan** sobre build de producción: landing, guardado/recarga/recalculado/historial/fuentes/chat/logout/aislamiento, móvil Majes, Chilina con tabla NOAA y navegación, mapa opcional con cuatro vértices y área calculada.
+- Corregidos dos fallos del rediseño: caché del historial se invalida al cambiar run/parcela; mapa vuelve a estar contenido en `.map-wrap` y ya no intercepta los botones.
+- Documentación actualizada a aplicación por módulos sin modo avanzado en `main.md`, R15/R20, diseño §9 y README. Eliminada variable obsoleta `NASA_SNAPSHOT_FILE`; corregidas rutas de fuentes; creada `data/zonas/chilina/REVISION.md`.
+- Caddy ahora permite `microphone=(self)`, igual que Next.js. El script de despliegue ya ejecuta migración, seed y recarga del proxy al cambiar el Caddyfile.
+- Servidores de prueba aislados: API 8001 con claves LLM vacías, web 3001 (`API_ORIGIN=http://127.0.0.1:8001`). Los servidores originales 8000/3000 siguen perteneciendo a la sesión previa; el 8000 tiene LLM real, **no usarlo para E2E**. El nuevo E2E aborta si `/health` declara `llm_configured=true`.
+- Build de producción y pruebas comprobados; publicación y validación de la revisión en Azure se registrarán cuando ocurran. No dar por desplegados estos cambios por estar validados localmente.
+
+Siguiente trabajo funcional: incremento 11 HLS (escenas reales, Fmask y persistencia), después 12–14. La comparación anterior con Earth Engine no se verificó técnicamente en esta continuación: no tratar como hechos que exija una cuenta de servicio, que sea pesado o que la publicación sea incompatible. La elección de catálogo público sigue autorizada por el usuario.
+
 Lee primero, en este orden:
 
 1. `main.md` §11
@@ -20,13 +36,13 @@ Reglas que siguen vigentes:
 
 - **Último commit publicado:** `bfeaae4`. Producción sirve `530b761`.
 - **Commit local sin publicar:** `66b1c25` (zonas piloto + ventana de siembra), más el commit de rediseño que acompaña a este archivo.
-- **No hagas push hasta arreglar las pruebas E2E** (sección 4.1): el CI fallaría y el despliegue no ocurriría.
+- El bloqueo E2E de esta sección histórica quedó resuelto en la continuación de Codex; consultar el apartado actualizado de arriba.
 
 ## 2. Hecho y comprobado
 
 ### Incremento 15 — segundo piloto Valle de Chilina
 
-Backend completo. Pruebas: 89 en pytest, todas en verde. No marqué las casillas de `specs/tareas.md`: márcalas tras volver a comprobar.
+Backend completo. Actualización: 88 pruebas pytest comprobadas con PostgreSQL y casillas de los incrementos 15/10 marcadas en la continuación de Codex.
 
 **Registro de zonas**
 
@@ -63,7 +79,7 @@ Backend completo. Pruebas: 89 en pytest, todas en verde. No marqué las casillas
 
 ### Incremento 10 — ¿Cuándo me conviene sembrar? y años El Niño
 
-Backend y componente hechos. Falta revisión visual completa.
+Backend y componente hechos; comprobados en build de producción y E2E de landing/módulo móvil en la continuación de Codex.
 
 - **Motor:** `domain/engine.py: sowing_window()` reutiliza `_water` y `_thermal`, el mismo cálculo que la comparación. `enso_summary()` agrupa las campañas por fase.
 - **Fases:** `domain/enso.py` aplica la regla NOAA (ONI ≥ +0,5 / ≤ −0,5 °C durante 5 trimestres seguidos). La fase de una campaña es la que cubre al menos el 50 % de sus días.

@@ -1,5 +1,50 @@
 import { expect, test } from "@playwright/test";
 
+test("mapa opcional: dibujar y medir sin cubrir los controles", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto("/app/chacra");
+  await page.getByText("Dibujar mi terreno en el mapa", { exact: true }).click();
+  const canvas = page.locator(".map-wrap canvas");
+  await expect(canvas).toBeVisible();
+  await page.getByRole("button", { name: "Empezar a dibujar", exact: true }).click();
+  // Espera a que termine el zoom inicial; el dibujo no depende de teselas de terceros.
+  await page.waitForTimeout(1500);
+  await canvas.scrollIntoViewIfNeeded();
+  const box = (await canvas.boundingBox())!;
+  expect(box.height).toBeLessThanOrEqual(360);
+  for (const [x, y] of [[0.45, 0.45], [0.55, 0.45], [0.55, 0.55], [0.45, 0.55]]) {
+    await page.mouse.click(box.x + box.width * x, box.y + box.height * y);
+  }
+  await page.getByRole("button", { name: "Terminar (4 puntos)", exact: true }).click();
+  await expect(page.getByRole("status").filter({ hasText: /Mide/ })).toContainText("ha");
+});
+
+test("Chilina: catálogo propio, módulo NASA y fuentes", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto("/app");
+  await page.getByRole("button", { name: "Valle de Chilina", exact: true }).click();
+  await page.getByRole("button", { name: /^Papa/ }).click();
+  await page.getByRole("button", { name: /Sí, ya coseché/ }).click();
+  const comparison = page.waitForResponse(r => r.url().includes("/public/quick-compare") && r.ok());
+  await page.getByRole("button", { name: /Un poco de todo/ }).click();
+  const result = await (await comparison).json();
+  expect(result.inputs.zone_id).toBe("chilina");
+  expect(result.result.climate_snapshot_id).toBe("nasa-power-e7430e42e9be");
+  await expect(page.locator("article")).toHaveCount(3);
+  await expect(page.getByText("Buena opción", { exact: true })).toHaveCount(0);
+  await page.getByRole("navigation", { name: "Módulos" }).getByRole("link", { name: "Cuándo sembrar" }).click();
+  await page.getByRole("button", { name: "Valle de Chilina", exact: true }).click();
+  await page.getByRole("group", { name: "Cultivo", exact: true }).getByRole("button", { name: "Papa", exact: true }).click();
+  await expect(page.getByRole("img", { name: /Agua de riego/ })).toBeVisible();
+  await page.getByRole("button", { name: "Ene", exact: true }).click();
+  await page.getByText(/¿Y en años El Niño\?/).click();
+  await expect(page.getByRole("columnheader", { name: "Fase (NOAA)" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "NOAA-ONI", exact: true })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0);
+  await page.getByRole("navigation", { name: "Módulos" }).getByRole("link", { name: "Mi chacra" }).click();
+  await expect(page.getByRole("heading", { name: "Tu terreno", exact: true })).toBeVisible();
+});
+
 // R15/R16/R20 (pasos 2–3): móvil 375 px, 3 preguntas, opciones útiles sin callejones sin salida,
 // «¿Por qué?» en capas, pregunta decisiva que recalcula, y guardado en cuenta conservando la consulta.
 

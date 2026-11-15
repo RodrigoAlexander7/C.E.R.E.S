@@ -181,14 +181,16 @@ Requisitos R14–R20. Se mantienen la arquitectura limpia, el motor como única 
 | `/app` | Modo sencillo (R15): alta en 3 preguntas, opciones, «¿Por qué?», ayuda contextual. |
 | `/app/cuaderno` | Cuaderno de campo (R17). |
 | `/app/ceres` | Asistente conversacional con voz (R18). |
-| `/avanzado` | Modo avanzado: el mapa y el recorrido técnico actuales. |
-| `/demo`, `/fuentes`, `/ingresar`, `/parcelas/*` | Se conservan. |
+| `/app/cuando` | Ventanas de siembra y comparación histórica por fase ONI. |
+| `/app/chacra` | Parcelas propias, selección activa y mapa opcional con contorno. |
+| `/demo`, `/fuentes`, `/ingresar` | Páginas con el layout sencillo compartido. |
+| `/avanzado`, `/parcelas/*` | Redirecciones de compatibilidad a `/app` y `/app/chacra`. |
 
 La landing y la aplicación usan grupos de rutas de Next.js con layouts propios; la sesión y el registro de fuentes se comparten desde el layout raíz.
 
 ### Motor: supuestos de zona y sensibilidad
 
-- `ZoneDefaults` versionado en `data/catalog/zona_majes.json`: cada valor con unidad, fuente o `supuesto_zona`, fecha y ámbito. Se aplica solo a campos desconocidos y se registra en las entradas congeladas del run (`kind = supuesto_zona`).
+- `ZoneDefaults` versionado en `data/zonas/<zona>/zona.json`: cada valor con unidad, fuente o `supuesto_zona`, fecha y ámbito. Se aplica solo a campos desconocidos y se registra en las entradas congeladas del run (`kind = supuesto_zona`).
 - Nivel sencillo derivado del estado técnico: `viable_con_supuestos` sin supuestos de zona en restricciones obligatorias → «Buena opción»; con ellos o `requiere_datos` → «Posible, confirma X»; `no_viable` → «No conviene»; `exploratoria` → «Por explorar».
 - Sensibilidad: para cada supuesto de zona que afecta a una restricción, evaluar el umbral que cambia el nivel (p. ej., dotación mínima mensual = mes de mayor demanda bruta; salinidad máxima = umbral del cultivo) y producir `decisive_data` con pregunta observable y valor crítico. Cálculo determinista, sin LLM.
 
@@ -208,4 +210,4 @@ Contexto: cuaderno resumido, últimos runs, fichas FTS. Herramientas permitidas 
 
 - `GET /public/sowing-window?crop=…`: por mes de siembra, ETc del ciclo, riego neto y exposición térmica con la instantánea POWER (mismo motor que la comparación).
 - Años El Niño/normales: lista de fases tomada de NOAA (ONI) con fuente registrada; comparación de ETc/temperaturas por campaña.
-- NDVI: tarea fuera de la petición web que lee escenas HLS (COG) para el polígono, enmascara nubes con Fmask y guarda la serie por parcela; requiere credenciales Earthdata en el servidor.
+- NDVI: tarea fuera de la petición web que lee escenas HLS (COG) para el polígono, enmascara nubes con Fmask y guarda la serie por parcela; acceso acordado mediante catálogo público HLS v2 de Planetary Computer, pendiente de verificar escenas y recursos.

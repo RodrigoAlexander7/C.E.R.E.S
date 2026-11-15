@@ -13,7 +13,7 @@
 		X-Frame-Options DENY
 		# Envía solo el origen (sin ruta) a terceros: la política de teselas de OSM exige un Referer válido.
 		Referrer-Policy strict-origin-when-cross-origin
-		Permissions-Policy "geolocation=(self), camera=(), microphone=()"
+		Permissions-Policy "geolocation=(self), camera=(), microphone=(self)"
 		-Server
 	}
 

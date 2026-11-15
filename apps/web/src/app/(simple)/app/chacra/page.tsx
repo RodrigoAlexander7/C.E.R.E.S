@@ -130,7 +130,7 @@ export default function Chacra() {
         <summary>{active?.geometry ? "Ver mi chacra en el mapa" : "Dibujar mi terreno en el mapa"}</summary>
         <div className={s.moreBody}>
           {mapOpen && (
-            <div style={{ height: 360, borderRadius: 16, overflow: "hidden", border: "1px solid #e0d7c3" }}>
+            <div className="map-wrap" style={{ height: 360, borderRadius: 16 }}>
               <MapView
                 focus={focus}
                 regions={[]}

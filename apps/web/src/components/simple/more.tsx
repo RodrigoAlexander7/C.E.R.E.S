@@ -27,6 +27,7 @@ export function MoreDetails({
   const [errs, setErrs] = useState<string[]>([]);
   const [runs, setRuns] = useState<Run[] | null>(null);
   useEffect(() => setDraft(profile), [profile]);
+  useEffect(() => setRuns(null), [saved?.parcelId, saved?.runId]);
 
   const loadRuns = async () => {
     if (!saved || runs) return;

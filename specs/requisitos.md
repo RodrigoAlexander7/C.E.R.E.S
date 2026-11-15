@@ -153,14 +153,14 @@ Origen: `main.md` sección 11. Prevalecen sobre R01–R12 cuando los contradigan
 - Lleva a probar (caso demo y comparación de parcela) sin exigir cuenta.
 - Responsive, accesible por teclado, solo tema claro, respeta `prefers-reduced-motion` y carga sin bloquear por el mapa.
 
-## R15 — modo sencillo y modo avanzado
+## R15 — aplicación sencilla por módulos y detalle progresivo
 
 - Alta en tres preguntas: cultivo actual o último, fecha de cosecha (o «ya coseché») y prioridad. Ubicación por zona o mapa opcional; área declarada aceptada.
 - Resultado: tres opciones con un nivel en lenguaje cotidiano («Buena opción», «Posible, confirma X», «No conviene») y una frase que las justifique; el estado técnico R06 se conserva y se muestra en «¿Por qué?».
 - «¿Por qué?» se abre en capas: razón principal → datos usados y supuestos → detalle técnico y fuentes.
 - Junto a términos difíciles hay un botón de ayuda: primero un glosario fijo y, bajo demanda, explicación de la IA con fuentes.
 - El recorrido completo funciona en un móvil de 375 px con tres preguntas y dos toques hasta ver opciones.
-- El modo avanzado conserva la funcionalidad actual y es accesible desde el modo sencillo.
+- Una sola aplicación sencilla por módulos. «Ver más» permite consultar la misma comparación técnica, editar el perfil completo y recuperar resultados anteriores. El mapa es opcional en «Mi chacra».
 
 ## R16 — supuestos de zona y dato decisivo
 
@@ -199,4 +199,4 @@ Origen: `main.md` sección 11. Prevalecen sobre R01–R12 cuando los contradigan
 3. Abre «¿Por qué?» y llega hasta las fuentes; ve qué dato cambiaría la decisión.
 4. Registra por voz o texto una cosecha y una venta, confirma y ve el cuaderno actualizado.
 5. Conversa con Ceres, que recuerda ese registro y pide una simulación al motor.
-6. Pasa al modo avanzado y encuentra la misma comparación con detalle técnico.
+6. Abre «Ver más» y encuentra la misma comparación con detalle técnico dentro del módulo.

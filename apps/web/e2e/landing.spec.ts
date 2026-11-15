@@ -4,7 +4,7 @@ import { expect, test } from "@playwright/test";
 
 test("landing con datos NASA reales, móvil sin scroll horizontal", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
-  const ctx = page.waitForResponse((r) => r.url().endsWith("/api/v1/public/context") && r.ok());
+  const ctx = page.waitForResponse((r) => new URL(r.url()).pathname === "/api/v1/public/context" && r.ok());
   await page.goto("/");
   const body = await (await ctx).json();
   const yearlyEt0 = body.monthly_climatology.reduce((a: number, m: { et0_mm: number }) => a + m.et0_mm, 0);
@@ -18,16 +18,16 @@ test("landing con datos NASA reales, móvil sin scroll horizontal", async ({ pag
   expect(overflow).toBeLessThanOrEqual(0);
 
   // Interacción del gráfico: cambiar el mes cambia la cifra de ET0 del ciclo.
-  const total = page.locator('[class*="resultBox"] strong').first();
+  const total = page.locator('[class*="boxes"] strong').first();
   await total.scrollIntoViewIfNeeded();
   const before = await total.textContent();
-  await page.getByRole("group", { name: "Mes de siembra" }).getByRole("button", { name: "Nov" }).click();
+  await page.getByRole("group", { name: "Mes de siembra" }).getByRole("button", { name: "Ene", exact: true }).click();
   await expect(total).not.toHaveText(before ?? "");
 
   // Lo próximo está marcado como tal.
   await expect(page.getByText("Próximamente").first()).toBeVisible();
 
-  await page.getByRole("link", { name: "Ver el caso de Majes" }).first().click();
-  await expect(page).toHaveURL(/\/demo$/);
+  await page.getByRole("link", { name: /Ver el caso de Majes/ }).first().click();
+  await expect(page).toHaveURL(/\/demo\?zona=majes$/);
   await expect(page.getByRole("heading", { name: /Caso público de demostración/ })).toBeVisible();
 });

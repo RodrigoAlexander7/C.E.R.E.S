@@ -96,8 +96,8 @@ Estado real de la publicación: ver `despliegue.md`.
 
 ## Incremento 10 — Fase 3: momento NASA
 
-- [ ] `sowing-window` por mes de siembra y gráfico en modo sencillo y landing. **R19**.
-- [ ] Comparación de años El Niño/normales con fuente NOAA registrada. **R19**.
+- [x] `sowing-window` por mes de siembra y gráfico en modo sencillo y landing. **R19**. (`test_sowing_enso.py`, E2E landing y módulo `/app/cuando`; build de producción comprobado el 15-nov-2026.)
+- [x] Comparación de años El Niño/normales con fuente NOAA registrada. **R19**. (ONI con hash, regla de cinco trimestres en dominio y tabla NOAA en E2E Chilina.)
 
 ## Incremento 11 — Fase 4: NDVI de la parcela
 
@@ -116,11 +116,11 @@ Estado real de la publicación: ver `despliegue.md`.
 
 ## Incremento 15 — Segundo piloto: Valle de Chilina (Arequipa ciudad)
 
-- [ ] Identificar con límites SERFOR/INEI los distritos que abarca la campiña del Valle de Chilina y definir cómo se reconoce la zona (distritos o polígono con fuente).
-- [ ] Generalizar el piloto: `PILOT_DISTRICT`, `zona_majes.json`, la instantánea NASA única y la zona del motor pasan a un registro de zonas (`data/zonas/<zona>/`) con clima, supuestos y catálogo por zona; el run congela la zona usada.
-- [ ] Descargar NASA POWER 2015–2025 para Chilina con hash y metadatos; documentar elevación de la celda frente a la real.
-- [ ] Supuestos de zona de Chilina con fuente (junta de usuarios/ALA, método de riego) o como `supuesto_zona`; fichas y calendarios de sus cultivos habituales revisados contra FAO, sin copiar los de Majes.
-- [ ] Modo sencillo, landing y modo avanzado muestran ambas zonas; pruebas por zona (no mezclar clima ni supuestos).
+- [x] Identificar con límites SERFOR/INEI los distritos que abarca la campiña del Valle de Chilina y definir cómo se reconoce la zona (distritos o polígono con fuente). (`zona.json`: Cayma y Alto Selva Alegre como referencia distrital; no catastro. Pruebas de reconocimiento en `test_zones.py`.)
+- [x] Generalizar el piloto: registro `data/zonas/<zona>/` con clima, supuestos y catálogo propios; el run congela la zona usada. (`test_zones.py`: separación y reproducción.)
+- [x] Descargar NASA POWER 2015–2025 para Chilina con hash y metadatos; documentar elevación de la celda frente a la real. (4 018 días, 0 ausentes; carga con hash validada en pruebas; `data/zonas/chilina/REVISION.md`.)
+- [x] Supuestos de zona con fuente o `supuesto_zona`; fichas/calendarios con sus estados bibliográficos, inferidos o desconocidos. (`zona.json`, `catalogo.json`, `REVISION.md`; sin revisión agronómica local ni economía inventada.)
+- [x] Aplicación sencilla por módulos, landing y demo muestran ambas zonas; «Ver más» integra el detalle técnico (sustituye el modo avanzado por decisión posterior). (88 pytest y 5 E2E, incluido Chilina sin mezclar clima ni supuestos; 15-nov-2026.)
 
 ## Incremento 14 — Fases 7–8: asistente Ceres, pruebas y demo
 

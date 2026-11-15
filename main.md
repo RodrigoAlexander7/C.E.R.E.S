@@ -141,13 +141,13 @@ Decisión del usuario tras evaluar el MVP: la versión actual es rigurosa pero c
 2. **Nunca un callejón sin salida.** Ante un dato desconocido se usa un **supuesto típico de la zona** con fuente o marcado como supuesto, visible y editable, y se dice **qué dato cambiaría la decisión**, preguntado de forma observable («¿ves costras blancas en tu chacra?»). La regla «un dato desconocido no es cero» se mantiene: el supuesto se etiqueta, no se presenta como medición.
 3. **El motor calcula; la IA explica, pregunta y propone.** Las cifras salen del motor o de los registros del agricultor. La IA puede extraer datos de texto/voz y proponerlos, pero solo se guardan con confirmación.
 4. **Lo propio vale más que lo supuesto.** Rendimientos, precios, costos y ganancias registrados por el agricultor sustituyen a los supuestos de demostración en sus cálculos.
-5. **Rigor disponible, no impuesto.** La interfaz actual se conserva como **modo avanzado** para asesores, con correcciones.
+5. **Rigor disponible, no impuesto.** Una sola aplicación sencilla, organizada por módulos; el detalle técnico, el perfil completo y el historial se abren con «Ver más» dentro de cada módulo.
 
 ### Superficies del producto
 
 - **Landing pública** que explica la propuesta con datos reales y distingue lo disponible de lo próximo.
 - **Modo sencillo** (nueva interfaz, primero para móvil): alta en 3 preguntas (qué sembraste, cuándo cosechas, qué te importa más), tres opciones en lenguaje cotidiano («Buena opción», «Posible, confirma X», «No conviene»), «¿Por qué?» en capas, botón de IA junto a términos difíciles (glosario fijo primero, IA bajo demanda) y mapa opcional.
-- **Modo avanzado**: el recorrido actual (mapa, perfil completo, comparación técnica, simulación, fuentes).
+- **Módulos**: «Qué sembrar», «Cuándo sembrar» y «Mi chacra», ampliados con Cuaderno y Ceres cuando estén implementados. Mapa opcional en «Mi chacra»; comparación técnica, perfil completo e historial en «Ver más». Las rutas antiguas redirigen a la aplicación.
 - **Cuaderno de campo**: campañas (cultivo, hectáreas, fechas, rendimiento), ventas, costos y ganancia declarada por campaña/mes; resúmenes del tipo «el año pasado en este mes…».
 - **Registro por chat y voz**: texto o audio → extracción estructurada → tarjeta «¿Guardo esto?» → registro `declarado (chat, confirmado)`. Revisión mensual dentro de la app y notificaciones opcionales del navegador; el agente pregunta lo que falta. El audio no se conserva, solo la transcripción confirmada.
 - **Asistente conversacional «Ceres»** (el usuario lo llamó modo «Jarvis»; se usa un nombre propio): conversación sobre qué sembrar con memoria del cuaderno, simulaciones pedidas al motor, respuestas con fuentes y voz de salida del navegador. Distingue «ganancia que declaraste» de «margen estimado».
@@ -164,5 +164,5 @@ Además de Majes I, CERES tendrá un segundo piloto en la **campiña del Valle d
 ### Decisiones pendientes del usuario
 
 - Canal de las preguntas mensuales: por defecto, revisión al abrir la app + notificaciones del navegador; WhatsApp/SMS sigue fuera de alcance.
-- Cuenta gratuita de NASA Earthdata para HLS (fase 4), o confirmar un catálogo público alternativo.
+- Acceso HLS decidido: verificar el catálogo público de Microsoft Planetary Computer para las parcelas piloto; el usuario autorizó esta alternativa sin cuenta Earthdata.
 - Valores típicos de Majes I (dotación, eficiencia, salinidad, calendario, precios): deben obtenerse de AUTODEMA, Junta de Usuarios, Agencia Agraria o SIEA antes de presentarlos como «típicos»; si no se consiguen, se muestran como supuestos de zona.
