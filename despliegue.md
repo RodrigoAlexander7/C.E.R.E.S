@@ -8,12 +8,13 @@ Actualizado el 15 de noviembre de 2026 (UTC). Este documento distingue infraestr
 
 | Elemento | Estado comprobado |
 |---|---|
-| Versión en servicio | `5687357637f27c0c29290ab1d8ea826b021aa4a6` (anterior registrada: `7e2efbf…`) |
+| Versión en servicio | `fc41b2ccac330f6574d432681723d7f617d0c937` (anterior registrada: `19ec89e…`) |
 | HTTPS | Certificado Let's Encrypt (emisor YE2) para el FQDN, válido hasta el 12-feb-2027, renovación automática por Caddy. HTTP → HTTPS 308; HSTS. |
 | Puertos públicos | Solo 80/443. Desde Internet: 22, 3000, 5432 y 8000 **cerrados** (comprobado desde GitHub y desde fuera). |
 | Base de datos | PostgreSQL 16.15 en red interna Docker, volumen con nombre fijo `ceres_pgdata`; datos conservados entre 4 despliegues y un rollback. |
 | Datos | Seed aplicado: 23 fuentes, instantánea NASA `nasa-power-6182bcf32295` (SHA-256 `6182bcf3…`), caso demo. |
-| Asistente IA | **«IA no conectada»**: no hay `OPENAI_API_KEY`/`OPENAI_MODEL` configuradas (ver «Pendiente»). |
+| Asistente IA | Proveedor: **Google Gemini** (`gemini-4-hydrogen`, variable `GEMINI_MODEL` ya configurada en GitHub). Conexión y 4 preguntas reales validadas en local. **En producción sigue «IA no conectada» hasta cargar el secret `GEMINI_API_KEY`** (ver «Pendiente»). |
+| Mapa base | Teselas OSM cargando en producción (comprobado en navegador el 15-nov). El 403 «Access blocked» se debía a `Referrer-Policy: same-origin`, que impedía enviar el Referer que exige la política de OSM; ahora `strict-origin-when-cross-origin` (solo el origen, nunca rutas con IDs). No tenía relación con los certificados. |
 | Memoria | Reposo: ~165 MiB entre los 4 contenedores; tras 200 peticiones concurrentes: api 115, web 48, caddy 23, db 21 MiB; 457 MiB disponibles de 887. Carga ligera: 200/200 OK, p50 0,76 s, p95 1,46 s (medido desde Perú). No es una prueba de capacidad; el chat con LLM y varios usuarios simultáneos no se han medido. |
 
 Infraestructura (creada antes por este chat, sin cambios en esta fase): suscripción **Azure for Students** con límite de gasto **On**; `rodrygo-resource-group`; `ceres-vm` `Standard_B2ats_v2` en `northcentralus`, Ubuntu 24.04, Docker 29.1.3, Compose 2.40.3, swap 2 GiB; IP `64.236.243.209`; NSG solo 80/443. `vm-inti-ley` y demás recursos de otros proyectos no se han tocado.
@@ -26,7 +27,7 @@ Internet ──443/80──▶ caddy (TLS, cabeceras) ──/api/*──▶ api 
 ```
 
 - Archivos en `/opt/ceres`: `compose.yml`, `Caddyfile`, `ceres.sh`, `.env` (600, solo en el servidor), `state/`, `backups/`, `deployments.log`.
-- `.env` contiene `POSTGRES_PASSWORD` (generada en la VM con `openssl rand`, nunca salió de ella), `CERES_DOMAIN`, `CERES_REGISTRY` y, si se configuran, `OPENAI_API_KEY`/`OPENAI_MODEL`.
+- `.env` contiene `POSTGRES_PASSWORD` (generada en la VM con `openssl rand`, nunca salió de ella), `CERES_DOMAIN`, `CERES_REGISTRY` y, si se configuran, `GEMINI_API_KEY`/`GEMINI_MODEL` (u `OPENAI_API_KEY`/`OPENAI_MODEL` como alternativa).
 - Límites: db 256 MiB, api 384 MiB, web 256 MiB, caddy 128 MiB; logs `json-file` 10 MiB × 3; PostgreSQL con `shared_buffers=48MB`, `max_connections=25`.
 - La red `internal` no tiene salida; la API también está en `egress` para llamar a NASA/SERFOR/OpenAI y recibir de Caddy.
 
@@ -61,6 +62,8 @@ Flujo de despliegue en la VM (`deploy/ceres.sh deploy <sha>`): login temporal en
 | 15-nov 00:41 | `deploy` con `tag=5687357…` | Vuelta a la última versión sin reconstruir imágenes. |
 | 15-nov 00:43–00:45 | `backup` + `restore` (confirmado) | Restauración completa de la base viva desde `ceres-20261115T004255Z-manual.dump` (con respaldo `pre-restore` automático); API healthy y demo servida después. |
 | 15-nov 00:47 | Carga ligera + `status` | 200/200 OK; memoria registrada arriba. |
+| 15-nov 01:05 | Deploy `19ec89e` (Gemini + Referer) | OK, pero la cabecera seguía en `same-origin`: Caddy no recargaba el `Caddyfile` montado. **Bug corregido** en `fc41b2c`: el despliegue reinicia Caddy si cambia el hash del archivo. |
+| 15-nov 01:10 | Deploy `fc41b2c` | Caddy reiniciado, `Referrer-Policy: strict-origin-when-cross-origin`, mismo certificado conservado; teselas OSM visibles en el navegador. |
 
 No se crearon cuentas de usuario en producción: el login, el aislamiento y el recorrido completo se validan con la suite E2E en CI (PostgreSQL real) antes de cada despliegue.
 
@@ -92,7 +95,13 @@ gh workflow run deploy.yml -R RodrigoAlexander7/C.E.R.E.S -f action=restore -f b
 
 ## Pendiente (requiere al usuario)
 
-1. **Asistente IA real.** En GitHub → Settings → Environments → `production`: crear el *secret* `OPENAI_API_KEY` y la *variable* `OPENAI_MODEL` (un modelo al que tenga acceso esa clave). Luego ejecutar Deploy con `action = deploy` y el `tag` actual: el valor se escribe en `/opt/ceres/.env` como parámetro protegido. Verificar con la página de una parcela o con `action = status` (`llm_configured: true`). Las llamadas a OpenAI se facturan aparte; no las cubre el crédito Azure.
+1. **Asistente IA real (Gemini).** Cargar la clave como *secret* del entorno `production` (la variable `GEMINI_MODEL=gemini-4-hydrogen` ya está). Desde la raíz del repositorio, sin mostrar la clave:
+
+   ```bash
+   grep '^GEMINI_API_KEY=' .env | cut -d= -f2- | tr -d '\n' | gh secret set GEMINI_API_KEY --env production -R RodrigoAlexander7/C.E.R.E.S
+   ```
+
+   Después ejecutar Deploy con `action = deploy` y `tag` = SHA en servicio: la clave se escribe en `/opt/ceres/.env` como parámetro protegido. Comprobar `llm_configured: true` en `/api/v1/health`. Las llamadas a Gemini se facturan/limitan según la cuenta de Google AI, no con el crédito Azure. El modelo `gemini-4-hydrogen` devolvió 503 por alta demanda en una prueba con razonamiento activado; por eso se usa `GEMINI_THINKING_BUDGET=0` y hay reintentos ante 429/503.
 2. **Copia de respaldos fuera de la VM.** Hoy los respaldos están solo en el disco de `ceres-vm`. No hay un destino externo autorizado (crear una cuenta de Storage tendría costo). Indicar un destino para automatizar la copia.
 3. **Revisión agronómica local** y medición de capacidad con usuarios reales (ver `data/catalog/REVISION.md`).
 
