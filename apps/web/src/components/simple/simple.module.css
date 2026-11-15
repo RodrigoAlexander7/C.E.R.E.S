@@ -156,6 +156,20 @@
 .marketMini span { display: inline-flex; align-items: center; gap: 4px; }
 .marketMini i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
 
+/* Cuaderno: voz primero */
+.capture { display: grid; gap: 12px; }
+.voiceRow { display: flex; align-items: center; gap: 14px; }
+.micBig { width: 76px; height: 76px; border-radius: 50%; border: none; background: var(--s-forest); color: #fff; display: grid; place-items: center; cursor: pointer; flex: none; box-shadow: 0 16px 30px -16px rgba(19, 34, 26, 0.7); }
+.micBig[data-on="true"] { background: var(--s-no); animation: pulseMic 1.2s ease-in-out infinite; }
+.micBig:focus-visible { outline: 3px solid var(--s-maize); outline-offset: 3px; }
+@keyframes pulseMic { 50% { box-shadow: 0 0 0 10px rgba(155, 47, 31, 0.15); } }
+.captureText { display: grid; gap: 4px; }
+.captureText span { font-size: 0.8rem; color: var(--s-muted); font-weight: 700; }
+.captureText textarea { font: inherit; border-radius: 14px; border: 1.5px solid var(--s-line); padding: 10px 12px; resize: vertical; }
+.voicePanel { background: linear-gradient(160deg, #eef4e8 0%, #fff 70%); }
+.agendaRow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 0; border-top: 1px dashed var(--s-line); }
+@media (prefers-reduced-motion: reduce) { .micBig[data-on="true"] { animation: none; } }
+
 /* Plan sugerido, riesgo y viabilidad antes que ganancia */
 .cardLead { border: 2px solid var(--s-forest); box-shadow: 0 22px 44px -30px rgba(19, 34, 26, 0.65); }
 .cardLead::before { height: 7px; background: var(--s-forest); }

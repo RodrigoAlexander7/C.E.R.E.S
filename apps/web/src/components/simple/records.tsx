@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import type { Zone } from "@/lib/zones";
+import { Icon, Tip } from "./icons";
 import s from "./simple.module.css";
 
 export type Data = Record<string, string | number | boolean | null> & { kind: string };
@@ -74,9 +75,20 @@ export function CaptureInput({ onSend, busy, label = "Cuenta lo que hiciste" }: 
       r.start(1000); setRecording(true); timer.current = setTimeout(() => r.state === "recording" && r.stop(), 119000);
     } catch { setErr("No se pudo usar el micrófono. Puedes escribir el mismo mensaje."); }
   };
-  return <form onSubmit={async e => { e.preventDefault(); try { const sent = await onSend({ text }); if (sent !== false) setText(""); } catch { setErr("No se pudo enviar; tu texto se conserva."); } }} style={{ display: "grid", gap: 10 }}>
-    <label style={{ display: "grid", gap: 6 }}>{label}<textarea value={text} onChange={e => setText(e.target.value)} maxLength={6000} rows={3} placeholder="Ej.: coseché 4 toneladas y vendí 1000 kg a S/ 1,20" /></label>
-    <div className={s.answerRow}><button className={`${s.btn} ${s.btnPrimary}`} disabled={busy || recording || text.trim().length < 2}>Enviar texto</button><button type="button" className={`${s.btn} ${s.btnGhost}`} disabled={busy} onClick={record}>{recording ? "Terminar grabación" : "Grabar audio"}</button></div>
-    <small>Audio de hasta 2 minutos, enviado a la IA para procesarlo y descartado después; no se guarda.</small>{err && <p role="alert">{err}</p>}
+  // Voz primero: un botón grande para hablar; escribir queda como alternativa.
+  return <form onSubmit={async e => { e.preventDefault(); try { const sent = await onSend({ text }); if (sent !== false) setText(""); } catch { setErr("No se pudo enviar; tu texto se conserva."); } }} className={s.capture}>
+    <div className={s.voiceRow}>
+      <button type="button" className={s.micBig} data-on={recording} disabled={busy} onClick={record} aria-label={recording ? "Terminar grabación" : "Grabar audio"}>
+        <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{recording ? <rect x="7" y="7" width="10" height="10" rx="2" /> : <path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3Zm-6 9a6 6 0 0 0 12 0M12 18v3" />}</svg>
+      </button>
+      <div>
+        <b>{recording ? "Te escucho… toca para terminar" : "Toca y cuéntalo con tu voz"}</b>
+        <span className={s.sub} style={{ margin: 0, display: "block" }}>Ej.: «coseché 4 toneladas y vendí 1000 kg a un sol veinte»</span>
+      </div>
+      <Tip className={s.qHelp} tip="Audio de hasta 2 minutos. La IA lo convierte en registros y tú confirmas. El audio no se guarda."><Icon name="question" size={14} /></Tip>
+    </div>
+    <label className={s.captureText}><span>{label}</span><textarea value={text} onChange={e => setText(e.target.value)} maxLength={6000} rows={2} placeholder="O escríbelo aquí" /></label>
+    <div className={s.answerRow}><button className={`${s.btn} ${s.btnPrimary}`} disabled={busy || recording || text.trim().length < 2}>Enviar texto</button></div>
+    {err && <p role="alert">{err}</p>}
   </form>;
 }

@@ -28,6 +28,7 @@ test("R20: captura confirmada, agenda, memoria de Ceres y run nuevo", async ({ p
   await expect(page.locator("article")).toHaveCount(2);
   await page.reload();
   await expect(page.locator("article")).toHaveCount(2);
+  await page.getByText("Registrar con formulario", { exact: true }).click(); // formulario plegado: voz primero
   await page.getByLabel("Tipo de registro").selectOption("agenda");
   await page.getByRole("button",{name:"Nuevo registro"}).click();
   await page.getByLabel("Labor o recordatorio").fill("Confirmar turno de riego");
