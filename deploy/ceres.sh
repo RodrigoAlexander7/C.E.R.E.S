@@ -222,6 +222,9 @@ cmd_status() {
   tail -n 5 "$LOG" 2>/dev/null || true
 }
 
+# Compose exige CERES_TAG para interpolar las imágenes: por defecto, la versión en servicio.
+export CERES_TAG=${CERES_TAG:-$(current_tag)}
+
 case ${1:-} in
   deploy) shift; cmd_deploy "$@" ;;
   rollback) shift; cmd_rollback "$@" ;;
