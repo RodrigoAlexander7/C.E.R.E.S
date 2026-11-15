@@ -13,7 +13,7 @@ Actualizado el 15 de noviembre de 2026 (UTC). Este documento distingue infraestr
 | Puertos públicos | Solo 80/443. Desde Internet: 22, 3000, 5432 y 8000 **cerrados** (comprobado desde GitHub y desde fuera). |
 | Base de datos | PostgreSQL 16.15 en red interna Docker, volumen con nombre fijo `ceres_pgdata`; datos conservados entre 4 despliegues y un rollback. |
 | Datos | Seed aplicado: 23 fuentes, instantánea NASA `nasa-power-6182bcf32295` (SHA-256 `6182bcf3…`), caso demo. |
-| Asistente IA | Proveedor: **Google Gemini** (`gemini-4-hydrogen`, variable `GEMINI_MODEL` ya configurada en GitHub). Conexión y 4 preguntas reales validadas en local. **En producción sigue «IA no conectada» hasta cargar el secret `GEMINI_API_KEY`** (ver «Pendiente»). |
+| Asistente IA | **IA conectada** con Google Gemini `gemini-4-hydrogen` (secret `GEMINI_API_KEY` y variable `GEMINI_MODEL` en el entorno `production`, cargados el 15-nov 01:14 UTC). `check-llm` ejecutado dentro del contenedor API en la VM: **conectado**, respuesta JSON según esquema. Las 4 preguntas de la demo (incluida una inyección) se validaron con el proveedor real en local; en producción no se hicieron preguntas con cuentas reales. |
 | Mapa base | Teselas OSM cargando en producción (comprobado en navegador el 15-nov). El 403 «Access blocked» se debía a `Referrer-Policy: same-origin`, que impedía enviar el Referer que exige la política de OSM; ahora `strict-origin-when-cross-origin` (solo el origen, nunca rutas con IDs). No tenía relación con los certificados. |
 | Memoria | Reposo: ~165 MiB entre los 4 contenedores; tras 200 peticiones concurrentes: api 115, web 48, caddy 23, db 21 MiB; 457 MiB disponibles de 887. Carga ligera: 200/200 OK, p50 0,76 s, p95 1,46 s (medido desde Perú). No es una prueba de capacidad; el chat con LLM y varios usuarios simultáneos no se han medido. |
 
@@ -64,6 +64,7 @@ Flujo de despliegue en la VM (`deploy/ceres.sh deploy <sha>`): login temporal en
 | 15-nov 00:47 | Carga ligera + `status` | 200/200 OK; memoria registrada arriba. |
 | 15-nov 01:05 | Deploy `19ec89e` (Gemini + Referer) | OK, pero la cabecera seguía en `same-origin`: Caddy no recargaba el `Caddyfile` montado. **Bug corregido** en `fc41b2c`: el despliegue reinicia Caddy si cambia el hash del archivo. |
 | 15-nov 01:10 | Deploy `fc41b2c` | Caddy reiniciado, `Referrer-Policy: strict-origin-when-cross-origin`, mismo certificado conservado; teselas OSM visibles en el navegador. |
+| 15-nov 01:16 | Deploy `fc41b2c` con `GEMINI_API_KEY` | `llm_configured: true`, «IA conectada»; `check-llm` desde el contenedor API en la VM: conectado con `gemini-4-hydrogen`. |
 
 No se crearon cuentas de usuario en producción: el login, el aislamiento y el recorrido completo se validan con la suite E2E en CI (PostgreSQL real) antes de cada despliegue.
 
@@ -95,13 +96,7 @@ gh workflow run deploy.yml -R RodrigoAlexander7/C.E.R.E.S -f action=restore -f b
 
 ## Pendiente (requiere al usuario)
 
-1. **Asistente IA real (Gemini).** Cargar la clave como *secret* del entorno `production` (la variable `GEMINI_MODEL=gemini-4-hydrogen` ya está). Desde la raíz del repositorio, sin mostrar la clave:
-
-   ```bash
-   grep '^GEMINI_API_KEY=' .env | cut -d= -f2- | tr -d '\n' | gh secret set GEMINI_API_KEY --env production -R RodrigoAlexander7/C.E.R.E.S
-   ```
-
-   Después ejecutar Deploy con `action = deploy` y `tag` = SHA en servicio: la clave se escribe en `/opt/ceres/.env` como parámetro protegido. Comprobar `llm_configured: true` en `/api/v1/health`. Las llamadas a Gemini se facturan/limitan según la cuenta de Google AI, no con el crédito Azure. El modelo `gemini-4-hydrogen` devolvió 503 por alta demanda en una prueba con razonamiento activado; por eso se usa `GEMINI_THINKING_BUDGET=0` y hay reintentos ante 429/503.
+1. **Asistente IA (Gemini): configurado.** Para rotar la clave: actualizar el secret `GEMINI_API_KEY` del entorno `production` y ejecutar Deploy con `action = deploy` y `tag` = SHA en servicio (la clave llega a `/opt/ceres/.env` como parámetro protegido). Las llamadas a Gemini se facturan/limitan según la cuenta de Google AI, no con el crédito Azure. El modelo devolvió 503 por alta demanda en una prueba con razonamiento activado; por eso `GEMINI_THINKING_BUDGET=0` y reintentos ante 429/503. Si la demanda persiste, cambiar `GEMINI_MODEL` (p. ej. a un modelo *flash*) y redesplegar.
 2. **Copia de respaldos fuera de la VM.** Hoy los respaldos están solo en el disco de `ceres-vm`. No hay un destino externo autorizado (crear una cuenta de Storage tendría costo). Indicar un destino para automatizar la copia.
 3. **Revisión agronómica local** y medición de capacidad con usuarios reales (ver `data/catalog/REVISION.md`).
 
