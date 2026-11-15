@@ -204,7 +204,7 @@ Origen: `main.md` sección 11. Prevalecen sobre R01–R12 cuando los contradigan
 ## R21 — precios de mercado y plan sugerido (optimización)
 
 - Precios mayoristas MIDAGRI-SISAP citados (mercado, período, mediana, rango, tendencia). Precio en chacra = mayorista × factor chacra declarado como supuesto; nunca se presenta el mayorista como precio en chacra ni como precio a la cosecha.
-- «Plan sugerido por CERES»: secuencia de cultivos y fechas que maximiza `(1 − β)·E[M] + β·CVaR₂₀(M)` (β = 0,5, prudente) respetando ventana, ciclo completo, preparación, agua del mes más exigente en ≥ 9 de 11 años NASA POWER, rotación (no repetir familia en ciclos seguidos), sal (FAO-29) y riesgo térmico (< 3 de 10 años).
+- «Plan sugerido por CERES»: secuencia de cultivos y fechas que maximiza `(1 − β)·E[M] + β·CVaR₂₀(M)` (β = 0,5, prudente) respetando ventana, ciclo completo, preparación, agua del mes más exigente en ≥ 9 de 11 años NASA POWER, rotación (repetir familia en ciclos seguidos rinde 10 % menos, supuesto), sal (FAO-29) y riesgo térmico (< 3 de 10 años).
 - Método reproducible y sin LLM: programación dinámica (K mejores caminos) y Monte Carlo con semilla fija y números aleatorios comunes; precios de equilibrio y de cambio por bisección.
 - El plan sugerido usa solo cultivos validados en la zona; el mejor plan con cultivos por explorar se muestra aparte y nunca mejor que «Por explorar».
 - Cada opción muestra rango probable de ganancia, probabilidad de perder y el precio en chacra con el que no pierde. El plan sugerido pasa por las mismas reglas del motor que las demás opciones.

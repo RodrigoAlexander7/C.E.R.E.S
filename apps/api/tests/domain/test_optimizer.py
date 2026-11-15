@@ -39,8 +39,9 @@ def brute_force(arcs, start, prep, first_family):
         nonlocal best
         best = max(best, total)
         for a in arcs:
-            if a.plant >= avail + timedelta(days=prep) and a.family != fam:
-                dfs(a.harvest + timedelta(days=1), a.family, total + a.value_ha)
+            if a.plant >= avail + timedelta(days=prep):
+                own = a.value_repeat_ha if a.family == fam else a.value_ha
+                dfs(a.harvest + timedelta(days=1), a.family, total + own)
 
     dfs(start, first_family, 0.0)
     return best
@@ -60,16 +61,25 @@ def test_plan_respects_water_rotation_window_and_horizon(majes):
     p = make(majes)  # agua típica de la zona: 9 375 m³/mes para 5 ha
     r = optimize(p, majes.catalog, majes.climate, START, END)
     hi = p.water.bounds()[1]
+    # Con el agua típica ya no deja la chacra casi vacía: repetir familia se permite (rinde 10 % menos).
+    assert r.best and len(r.best.cycles) >= 2
     for plan in [x for x in (r.best, r.explore) if x] + r.candidates:
-        fams = [majes.catalog.crop(c).family for c in plan.sequence]
-        assert all(a != b for a, b in zip(fams, fams[1:]))  # no repite familia en ciclos seguidos
-        assert majes.catalog.crop(plan.sequence[0]).family != "Poaceae"  # el antecedente era maíz
         for cid, d in plan.cycles:
             crop = majes.catalog.crop(cid)
             assert any(w.contains(d) for w in crop.windows)
             assert d + timedelta(days=crop.cycle_days - 1) <= END
             prof = cycle_profile(majes.climate, crop, d)
             assert prof.peak_net_mm * prof.ratio_ok / p.water.efficiency * 10 * 5 <= hi + 1e-6
+
+
+def test_repeating_family_costs_yield(majes):
+    p = make(majes, water={"mode": "no_se", "allocation_min_m3": 10**6})
+    d = Draws.make(n=200)
+    once = simulate([("frejol_grano", date(2027, 3, 1))], p, majes.catalog, majes.climate, d, None)
+    twice = simulate([("frejol_grano", date(2027, 3, 1)), ("frejol_grano", date(2028, 3, 1))], p, majes.catalog, majes.climate, d, None)
+    second = [b - a for a, b in zip(once, twice)]
+    # el segundo frejol seguido rinde menos que el primero (antecedente maíz: otra familia)
+    assert sum(second) / len(second) < sum(once) / len(once)
 
 
 def test_validated_plan_never_uses_exploratory_crops(majes):

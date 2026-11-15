@@ -201,8 +201,7 @@ def simplify(result: ComparisonResult, p: ParcelInput, catalog: Catalog) -> None
             headline = (tags[0] + ". " if tags and tags[0] != "Tu plan" else "") + "Cumple con el agua y el suelo que indicaste."
         if role == "sugerido" and lvl in ("buena", "posible") and not failing:
             headline = (
-                "La combinación que más deja con tu agua, sin arriesgar de más: cabe en el mes más exigente en la "
-                "mayoría de años NASA y no repite familia de cultivo."
+                "Lo que más te deja con tu agua, sin arriesgar de más."
             )
 
         margin = _metric(st, "eco.margen")

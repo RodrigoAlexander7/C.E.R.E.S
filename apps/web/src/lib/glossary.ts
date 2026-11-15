@@ -53,7 +53,7 @@ export const GLOSSARY: Record<string, Term> = {
   },
   plan_sugerido: {
     title: "Plan sugerido por CERES",
-    text: "Entre todas las combinaciones de cultivos y meses de siembra de los próximos 24 meses, la que más deja en promedio sin arriesgar de más (pesa igual el promedio y el 20 % de campañas malas). Solo usa cultivos validados en tu zona, respeta tu agua del mes más exigente en 9 de cada 10 años NASA, no repite familia de cultivo y descarta meses con frío o calor frecuente.",
+    text: "Entre todas las combinaciones de cultivos y meses de siembra de los próximos 24 meses, la que más deja en promedio sin arriesgar de más (pesa igual el promedio y el 20 % de campañas malas). Solo usa cultivos validados en tu zona, respeta tu agua del mes más exigente en 9 de cada 10 años NASA, castiga repetir el mismo tipo de cultivo y descarta meses con frío o calor frecuente.",
     source: "NASA-POWER",
   },
   precio_mayorista: {

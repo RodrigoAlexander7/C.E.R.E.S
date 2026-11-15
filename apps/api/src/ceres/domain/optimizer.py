@@ -8,7 +8,8 @@ Problema. Para una chacra de área A y un horizonte de 24 meses se elige una sec
 
 sujeto a: ventana de siembra; ciclo completo dentro del horizonte; preparación entre ciclos;
 agua del mes más exigente ≤ dotación en ≥ 9 de 11 años NASA POWER (restricción de oportunidad);
-dos ciclos seguidos no repiten familia botánica; sal (FAO-29); riesgo de frío/calor < 3 de 10 años.
+repetir familia botánica en ciclos seguidos rinde 10 % menos (supuesto); sal (FAO-29); riesgo de
+frío/calor < 3 de 10 años.
 
 Método.
 1. Precálculo por (cultivo, día de siembra) del riego neto mensual con NASA POWER + FAO-56 y de la
@@ -44,6 +45,9 @@ SEED = 20261115
 BETA_PRUDENT = 0.5
 CVAR_ALPHA = 0.2
 THERMAL_MAX_SHARE = 0.3
+# Repetir la familia botánica del ciclo anterior (monocultivo): −10 % de rendimiento por más plagas y
+# enfermedades. Supuesto de demostración sin cuantificación local (verificar con el asesor).
+REPEAT_YIELD = 0.9
 WATER_YEARS_OK = 9 / 11
 # Familias de cultivos sin ficha que pueden ser el antecedente (para la regla de rotación).
 NON_CATALOG_FAMILY = {"alfalfa": "Fabaceae", "maiz_chala": "Poaceae"}
@@ -214,6 +218,7 @@ class Arc:
     plant: date
     harvest: date
     value_ha: float
+    value_repeat_ha: float  # si repite la familia del ciclo anterior (monocultivo: rinde menos)
 
 
 def _arcs(p: ParcelInput, catalog: Catalog, climate, crops: list[str], start: date, end: date, alloc_hi: float | None) -> list[Arc]:
@@ -227,7 +232,9 @@ def _arcs(p: ParcelInput, catalog: Catalog, climate, crops: list[str], start: da
         ec = crop_econ(crop, p) if crop else None
         if ec is None:
             continue
-        value = ec.yield_t_ha * ec.salinity * mean_yield_factor * 1000 * ec.price - ec.cost - trans
+        gross = ec.yield_t_ha * ec.salinity * mean_yield_factor * 1000 * ec.price
+        value = gross - ec.cost - trans
+        value_repeat = gross * REPEAT_YIELD - ec.cost - trans
         for d in _grid(start, end):
             if not any(w.contains(d) for w in crop.windows):
                 continue
@@ -241,7 +248,7 @@ def _arcs(p: ParcelInput, catalog: Catalog, climate, crops: list[str], start: da
                 peak_m3 = prof.peak_net_mm * prof.ratio_ok / eff * MM_HA_TO_M3 * p.area_ha
                 if peak_m3 > alloc_hi:
                     continue
-            arcs.append(Arc(cid, crop.family, crop.is_legume, d, harvest, value))
+            arcs.append(Arc(cid, crop.family, crop.is_legume, d, harvest, value, value_repeat))
     arcs.sort(key=lambda a: a.plant)
     return arcs
 
@@ -260,10 +267,10 @@ def best_paths(arcs: list[Arc], start: date, prep_days: int, first_family: str |
             cands.append((0.0, ()))
         earliest = avail + timedelta(days=prep_days)
         for a in arcs[bisect.bisect_left(plants, earliest):]:
-            if a.family == fam:
-                continue  # rotación: no repetir familia botánica en ciclos seguidos
+            # Rotación: repetir familia se permite, pero rinde menos (supuesto); así no se deja la chacra vacía.
+            own = a.value_repeat_ha if a.family == fam else a.value_ha
             for v, path in solve(a.harvest + timedelta(days=1), a.family, leg or a.legume):
-                cands.append((a.value_ha + v, (a, *path)))
+                cands.append((own + v, (a, *path)))
         cands.sort(key=lambda x: (-x[0], len(x[1]), tuple((c.plant, c.crop) for c in x[1])))
         out, seen = [], set()
         for v, path in cands:
@@ -309,6 +316,7 @@ def simulate(cycles: list[tuple[str, date]], p: ParcelInput, catalog: Catalog, c
     trans = catalog.transition_cost_soles_ha or 0.0
     ly, hy = catalog.scenario_low[0], catalog.scenario_high[0]
     info = []
+    prev_family = _family_of(p.current_crop_id, catalog)
     for cid, plant in cycles:
         crop = catalog.crop(cid)
         ec = crop_econ(crop, p) if crop else None
@@ -316,11 +324,13 @@ def simulate(cycles: list[tuple[str, date]], p: ParcelInput, catalog: Catalog, c
             return None
         prof = cycle_profile(climate, crop, plant)
         peak = prof.peak_net_mm / eff * MM_HA_TO_M3 * p.area_ha if eff else None
-        info.append((ec, prof, peak, (price_mult or {}).get(cid, 1.0)))
+        rep = REPEAT_YIELD if crop.family == prev_family else 1.0
+        prev_family = crop.family
+        info.append((ec, prof, peak, (price_mult or {}).get(cid, 1.0), rep))
     out = []
     for s in range(len(draws.year_u)):
         m = 0.0
-        for k, (ec, prof, peak, pm_extra) in enumerate(info):
+        for k, (ec, prof, peak, pm_extra, rep) in enumerate(info):
             k8 = k % len(draws.year_u[s])
             water_f = 1.0
             if alloc_hi is not None and peak and prof.year_ratios:
@@ -330,7 +340,7 @@ def simulate(cycles: list[tuple[str, date]], p: ParcelInput, catalog: Catalog, c
                     water_f = alloc_hi / need  # falta de agua: el rendimiento baja en proporción (Ky ≈ 1, supuesto)
             yf = ly + (hy - ly) * draws.yield_u[s][k8]
             pm = math.exp(ec.sigma * draws.price_z[s][k8] - ec.sigma**2 / 2) * pm_extra
-            m += p.area_ha * (ec.yield_t_ha * ec.salinity * water_f * yf * 1000 * ec.price * pm - ec.cost - trans)
+            m += p.area_ha * (ec.yield_t_ha * ec.salinity * rep * water_f * yf * 1000 * ec.price * pm - ec.cost - trans)
         out.append(m)
     return out
 
@@ -576,7 +586,7 @@ def attach(strategies: list, p: ParcelInput, catalog: Catalog, climate, start: d
         "assumptions": [
             "Precio log-normal con σ por cultivo (supuesto de demostración); precio de hoy, no el de la cosecha.",
             "Si en un año NASA el mes más exigente supera tu agua, el rendimiento baja en proporción (Ky ≈ 1, supuesto).",
-            "Dos ciclos seguidos no repiten familia botánica.",
+            "Repetir familia de cultivo en ciclos seguidos rinde 10 % menos (monocultivo; supuesto por verificar).",
         ],
     }
 
