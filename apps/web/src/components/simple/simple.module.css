@@ -118,6 +118,42 @@
 .cardQ { margin-top: 14px; padding: 12px; border-radius: 16px; background: var(--s-maybe-bg); }
 .cardQ p { margin: 0 0 4px; font-weight: 700; color: #5c4000; }
 .cardQ small { display: block; color: #6b5420; margin-bottom: 10px; line-height: 1.4; }
+/* Plan sugerido, riesgo y viabilidad antes que ganancia */
+.cardLead { border: 2px solid var(--s-forest); box-shadow: 0 22px 44px -30px rgba(19, 34, 26, 0.65); }
+.cardLead::before { height: 7px; background: var(--s-forest); }
+.leadKicker, .exploreKicker { margin: 4px 0 8px; font-size: 0.74rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--s-forest); }
+.exploreKicker { color: var(--s-explore); }
+.leadBody { display: grid; gap: 4px; }
+.waterLink { display: inline-block; margin: -4px 0 12px; font-size: 0.86rem; font-weight: 700; color: #6b4a00; text-decoration: underline; text-underline-offset: 3px; }
+.portfolio { display: grid; gap: 4px; margin: 0 0 12px; padding: 10px 12px; border-radius: 14px; background: var(--s-sage); font-size: 0.9rem; line-height: 1.45; }
+.portfolio b { color: var(--s-forest); }
+.switchLine { margin: 0 0 12px; font-size: 0.88rem; line-height: 1.45; color: var(--s-ink-2); }
+.factMuted strong { color: var(--s-muted); font-size: 0.95rem; font-weight: 600; }
+.factMuted span { color: var(--s-muted); }
+.riskLine, .breakeven { margin: 10px 0 0; font-size: 0.84rem; line-height: 1.45; color: var(--s-ink-2); }
+.breakeven { margin-top: 4px; }
+.tagLead { background: var(--s-forest); color: #fff; }
+.questionsGrid { display: grid; gap: 14px; }
+.question { padding-top: 12px; border-top: 1px dashed var(--s-line); scroll-margin-top: 80px; }
+.question:first-child { border-top: none; padding-top: 0; }
+.k_mercado { background: #f4e6cf; color: #6b4a00; }
+.srOnly { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+
+/* Precios de esta semana (MIDAGRI-SISAP) */
+.marketList { display: grid; gap: 10px; }
+.marketRow { border: 1px solid var(--s-line); border-radius: 16px; padding: 12px; display: grid; gap: 8px; background: var(--s-sand); }
+.marketHead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+.marketMain { font-size: 0.92rem; }
+.marketMain strong { font-family: var(--font-display), serif; font-size: 1.1rem; }
+.marketMain small { color: var(--s-muted); }
+.marketTrend { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; color: var(--s-ink-2); font-size: 0.8rem; font-weight: 700; }
+.trendUp { color: var(--s-good); } .trendDown { color: var(--s-no); } .trendFlat { color: var(--s-muted); }
+.marketOthers { display: flex; flex-wrap: wrap; gap: 6px; font-size: 0.78rem; color: var(--s-ink-2); }
+.marketOthers span { background: #fff; border-radius: 999px; padding: 3px 9px; border: 1px solid var(--s-line); }
+.marketOwn { display: grid; gap: 8px; font-size: 0.86rem; line-height: 1.4; }
+.priceForm { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.priceForm input { font: inherit; min-height: 44px; width: 170px; max-width: 100%; border-radius: 999px; border: 1.5px solid var(--s-line); padding: 0 14px; background: #fff; }
+
 .cardActions { display: flex; gap: 8px; margin-top: 14px; }
 .cardActions .btn { flex: 1; }
 
@@ -200,8 +236,22 @@
 @media (min-width: 900px) {
   .topInner, .main { max-width: 980px; }
   .cards { grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; }
-  .cardWide { grid-column: 1 / -1; }
+  .cardWide, .cardLead { grid-column: 1 / -1; }
   .names { font-size: 1.2rem; }
+  /* En columnas angostas las cifras van en filas «concepto … valor», como en el celular. */
+  .card:not(.cardLead) .facts { grid-template-columns: minmax(0, 1fr); gap: 0; background: var(--s-sand); padding: 4px 12px; }
+  .card:not(.cardLead) .fact { flex-direction: row-reverse; justify-content: space-between; align-items: baseline; background: none; border-radius: 0; padding: 8px 0; border-bottom: 1px solid var(--s-sand-2); }
+  .card:not(.cardLead) .fact:last-child { border-bottom: none; }
+  .card:not(.cardLead) .fact span { font-size: 0.8rem; }
+  .cardLead .names { font-size: 1.5rem; }
+  .leadBody { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+  .questionsGrid { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+  .question { border-top: none; padding-top: 0; }
+  .marketList { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+}
+/* ≥ 1200 px: la comparación aprovecha más ancho */
+@media (min-width: 1200px) {
+  .main:has(.cards), .shell:has(.cards) .topInner { max-width: 1160px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

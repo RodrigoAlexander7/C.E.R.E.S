@@ -81,6 +81,7 @@ export interface Strategy {
   rank: number | null;
   simple?: SimpleLayer;
   decisive?: Decisive[];
+  risk?: (RiskFacts & { role?: "sugerido" | "explorar" | null }) | { role?: "sugerido" | "explorar" | null } | null;
 }
 
 export type SimpleLevel = "buena" | "posible" | "explorar" | "sin_datos" | "no_conviene";
@@ -91,7 +92,62 @@ export interface SimpleLayer {
   names: string;
   headline: string;
   tags: string[];
-  facts: { margin_soles: number | null; margin_kind: string | null; water_m3: number | null; first_sowing: string | null; cycles: number };
+  facts: {
+    margin_soles: number | null;
+    margin_kind: string | null;
+    water_m3: number | null;
+    first_sowing: string | null;
+    cycles: number;
+    risk?: RiskFacts | null;
+    breakeven?: { crop_id: string; price_soles_kg: number | null; current_soles_kg: number } | null;
+  };
+}
+
+/** Monte Carlo (año NASA, precio y rendimiento): rango probable y probabilidad de perder. */
+export interface RiskFacts { mean_soles: number; cvar20_soles: number; p10_soles: number; p90_soles: number; p_loss: number }
+
+export interface OptimizerInfo {
+  method: string;
+  objective: string;
+  samples: number;
+  seed: number;
+  beta: number;
+  candidates: number;
+  roles: Record<string, "sugerido" | "explorar">;
+  portfolio: {
+    lots: { share: number; area_ha: number; sequence: string[]; cycles: [string, string][] }[];
+    stats: RiskFacts & { score_soles: number };
+    gain_vs_single: number;
+  } | null;
+  switch: { crop_id: string; price_soles_kg: number; current_soles_kg: number; lead: string; rival: string } | null;
+  note: string;
+  assumptions: string[];
+}
+
+export interface MarketStat {
+  market: string;
+  product: string;
+  median_soles_kg: number;
+  low_soles_kg: number;
+  high_soles_kg: number;
+  days: number;
+  first: string;
+  last: string;
+  trend_soles_kg_week: number | null;
+  series: { date: string; soles_kg: number }[];
+  source_id: string;
+}
+
+export interface PriceItem {
+  crop_id: string;
+  crop_name: string;
+  product: string | null;
+  farmgate_soles_kg: number | null;
+  farmgate_factor: number | null;
+  factor_status: string | null;
+  economics_status: string;
+  markets: MarketStat[];
+  note: string | null;
 }
 
 export interface Decisive {
@@ -101,7 +157,7 @@ export interface Decisive {
   detail: string;
   critical_value?: number;
   unit?: string;
-  answers: { label: string; patch: Record<string, string | number> }[];
+  answers: { label: string; patch: Record<string, string | number | null> }[];
   source_ids: string[];
 }
 
@@ -135,6 +191,7 @@ export interface ComparisonResult {
   associations: Association[];
   notes: string[];
   blocking: string[];
+  optimizer?: OptimizerInfo | null;
   simple_order?: string[];
   assumed?: string[];
 }

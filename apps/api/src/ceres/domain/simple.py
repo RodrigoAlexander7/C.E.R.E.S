@@ -186,7 +186,12 @@ def simplify(result: ComparisonResult, p: ParcelInput, catalog: Catalog) -> None
                 headline += f" Además, confirma {st.decisive[0]['label']}."
         elif lvl == "posible" and failing and st.decisive:
             # Falla solo por un supuesto de zona: decirlo así, sin presentarlo como un «no» definitivo.
-            headline = f"{_plain_failure(failing.rule_id, st).rstrip('.')} si recibes el agua típica de la zona ({zone}); confirma {st.decisive[0]['label']}."
+            cause = (
+                f"si recibes el agua típica de la zona ({zone})"
+                if "water.allocation" in failing.assumed_inputs
+                else f"si riegas como es típico en la zona ({zone})"
+            )
+            headline = f"{_plain_failure(failing.rule_id, st).rstrip('.')} {cause}; confirma {st.decisive[0]['label']}."
         elif lvl == "posible" and st.decisive:
             headline = f"Puede funcionar; confirma {st.decisive[0]['label']}."
         elif lvl == "posible":
@@ -198,7 +203,6 @@ def simplify(result: ComparisonResult, p: ParcelInput, catalog: Catalog) -> None
             headline = (
                 "La combinación que más deja con tu agua, sin arriesgar de más: cabe en el mes más exigente en la "
                 "mayoría de años NASA y no repite familia de cultivo."
-                + (f" Confirma {st.decisive[0]['label']}." if st.decisive else "")
             )
 
         margin = _metric(st, "eco.margen")

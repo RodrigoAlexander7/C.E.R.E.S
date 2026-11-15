@@ -60,13 +60,24 @@ test("modo sencillo en móvil: 3 preguntas → opciones → por qué → guardar
   await compared;
 
   const cards = page.locator("article");
-  await expect(cards).toHaveCount(3);
+  // 3 plantillas + el plan sugerido por CERES (D) y el mejor por explorar (E) cuando el optimizador los encuentra.
+  const count = await cards.count();
+  expect(count).toBeGreaterThanOrEqual(3);
+  expect(count).toBeLessThanOrEqual(5);
   // Ningún callejón sin salida: cada opción tiene un nivel en palabras simples y un titular.
   const badges = await cards.locator("span[class*=badge]").allInnerTexts();
   for (const label of badges) expect(label).toMatch(/Buena opción|Posible, confirma|Por explorar|No conviene/);
   expect(badges.join(" ")).not.toContain("No conviene"); // con «no sé» nada se descarta solo por un supuesto
   await expect(page.getByText("Requiere datos")).toHaveCount(0);
-  await expect(cards.filter({ hasText: "Cebolla" }).getByText("Por explorar")).toBeVisible();
+  const onion = cards.filter({ hasText: "Cebolla" });
+  await expect(onion.getByText("Por explorar")).toBeVisible();
+  await expect(onion.getByText(/Ganancia estimada · sin validar/)).toBeVisible(); // viabilidad antes que ganancia
+  await expect(cards.first().getByText("Plan sugerido por CERES").first()).toBeVisible();
+  await expect(cards.first().getByText(/Rango probable/)).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Precios de esta semana" })).toBeVisible();
+  await expect(page.getByText(/clima diario 2015–2025/).first()).toBeVisible(); // sello NASA POWER
+  // Una sola pregunta de agua para toda la chacra (no una por tarjeta).
+  await expect(page.getByText("¿Cuánta agua te llega al mes en la época de más riego?")).toHaveCount(1);
   expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0);
 
   // Pregunta decisiva observable → recalcula.
@@ -74,7 +85,7 @@ test("modo sencillo en móvil: 3 preguntas → opciones → por qué → guardar
   await page.getByRole("button", { name: "Goteo" }).click();
   await recalculated;
   const again = page.waitForResponse((r) => r.url().includes("/api/v1/public/quick-compare") && r.ok());
-  await cards.first().getByRole("button", { name: "Sí, al menos eso" }).click();
+  await page.locator("#agua").getByRole("button", { name: / o más$/ }).click();
   await again;
   await expect(cards.first().getByText(/Buena opción|Posible, confirma/)).toBeVisible();
 
@@ -105,7 +116,7 @@ test("modo sencillo en móvil: 3 preguntas → opciones → por qué → guardar
   await page.getByRole("button", { name: "Crear cuenta" }).click();
   await expect(page).toHaveURL(/\/app$/);
   await expect(page.getByText("Guardado en tu cuenta")).toBeVisible({ timeout: 20_000 });
-  await expect(cards).toHaveCount(3);
+  expect(await cards.count()).toBeGreaterThanOrEqual(3);
 
   // Con cuenta, la IA ofrece conversar sobre este resultado.
   await page.getByRole("button", { name: "Pregúntale a la IA" }).click();

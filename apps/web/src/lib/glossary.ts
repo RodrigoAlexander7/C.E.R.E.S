@@ -46,4 +46,19 @@ export const GLOSSARY: Record<string, Term> = {
     title: "Supuesto",
     text: "Un valor que usamos porque no lo sabías. Siempre lo marcamos y puedes cambiarlo. Tus propios datos siempre valen más que un supuesto.",
   },
+  riesgo: {
+    title: "Rango probable y probabilidad de perder",
+    text: "Simulamos 1 000 campañas posibles: en cada una tomamos un año real de clima NASA POWER (que cambia el agua que pide el cultivo), un precio de venta que sube o baja y un rendimiento algo mejor o peor. El rango probable deja fuera el 10 % peor y el 10 % mejor. «Probabilidad de perder» es la parte de esas campañas que terminaron con ganancia negativa. No es un pronóstico: el precio de hoy no garantiza el de tu cosecha.",
+    source: "NASA-POWER",
+  },
+  plan_sugerido: {
+    title: "Plan sugerido por CERES",
+    text: "Entre todas las combinaciones de cultivos y meses de siembra de los próximos 24 meses, la que más deja en promedio sin arriesgar de más (pesa igual el promedio y el 20 % de campañas malas). Solo usa cultivos validados en tu zona, respeta tu agua del mes más exigente en 9 de cada 10 años NASA, no repite familia de cultivo y descarta meses con frío o calor frecuente.",
+    source: "NASA-POWER",
+  },
+  precio_mayorista: {
+    title: "Precio mayorista y precio en chacra",
+    text: "El precio mayorista es lo que se paga en el mercado mayorista de la ciudad (MIDAGRI-SISAP). En la chacra te pagan menos: hay flete, merma y la ganancia del acopiador. Por eso usamos una fracción del mayorista; si nos dices cuánto te pagan, usamos tu precio.",
+    source: "MIDAGRI-SISAP",
+  },
 };

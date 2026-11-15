@@ -46,6 +46,6 @@ test("R20: captura confirmada, agenda, memoria de Ceres y run nuevo", async ({ p
   const after=await (await page.request.get(`/api/v1/parcels/${pid}/recommendations`)).json();
   expect(after.items).toHaveLength(before.items.length+1);
   await page.getByText("Ver comparación del escenario",{exact:true}).click();
-  await expect(page.locator(".strategy-card")).toHaveCount(3);
+  await expect(page.locator(".strategy-card").nth(2)).toBeVisible();
   expect(await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth)).toBeLessThanOrEqual(0);
 });

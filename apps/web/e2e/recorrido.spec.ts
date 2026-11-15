@@ -8,7 +8,7 @@ test("recorrido sencillo, historial inmutable y aislamiento", async ({ page, bro
   await page.getByRole("button", { name: /^Maíz Amarillo duro/ }).click();
   await page.getByRole("button", { name: /Sí, ya coseché/ }).click();
   await page.getByRole("button", { name: /Un poco de todo/ }).click();
-  await expect(page.locator("article")).toHaveCount(3);
+  await expect(page.locator("article").nth(2)).toBeVisible(); // 3 plantillas (+ plan sugerido y por explorar)
   await page.getByRole("button", { name: "Crear cuenta y guardar" }).click();
   await page.getByRole("button", { name: "Regístrate" }).click();
   await page.getByLabel("Email").fill(`e2e-rec-${Date.now()}@ceres.test`);
@@ -25,7 +25,7 @@ test("recorrido sencillo, historial inmutable y aislamiento", async ({ page, bro
   const history = page.locator("details").filter({ has: page.locator("summary", { hasText: /^Resultados anteriores$/ }) });
   await expect(history.locator("li")).toHaveCount(1);
   const created = page.waitForResponse(r => r.url().endsWith(`/parcels/${pid}/recommendations`) && r.request().method() === "POST" && r.ok());
-  await page.locator("article").first().getByRole("button", { name: "No, recibo menos" }).click();
+  await page.locator("#agua").getByRole("button", { name: /^Menos de/ }).click();
   await created;
   await history.locator("summary").click();
   await history.locator("summary").click();
@@ -33,7 +33,7 @@ test("recorrido sencillo, historial inmutable y aislamiento", async ({ page, bro
   const original = await (await page.request.get(`/api/v1/recommendations/${firstId}`)).json();
   expect(original.inputs.profile.water.allocation_max_m3).toBeFalsy();
   await page.getByText("Detalle técnico de la comparación", { exact: true }).click();
-  await expect(page.locator(".strategy-card")).toHaveCount(3);
+  expect(await page.locator(".strategy-card").count()).toBeGreaterThanOrEqual(3);
   await page.getByText("¿Por qué este estado? Reglas, datos faltantes y fuentes", { exact: true }).click();
   await page.getByRole("button", { name: "NASA-POWER", exact: true }).first().click();
   await expect(page.locator("dialog[open]")).toContainText("NASA Langley Research Center");

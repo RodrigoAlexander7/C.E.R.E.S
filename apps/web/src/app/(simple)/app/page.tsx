@@ -9,7 +9,8 @@ import { NasaBadge } from "@/components/NasaBadge";
 import { useSession } from "@/components/SessionProvider";
 import { HelpProvider, Sheet, Term } from "@/components/simple/help";
 import { MoreDetails } from "@/components/simple/more";
-import { GlobalQuestions, OptionCard, WhySheet } from "@/components/simple/results";
+import { MarketPanel } from "@/components/simple/market";
+import { GlobalQuestions, OptionCard, WhySheet, countQuestions } from "@/components/simple/results";
 import { PRIORITY_NAME, Wizard, cropName, type Answers } from "@/components/simple/wizard";
 import s from "@/components/simple/simple.module.css";
 import { SowingWindow } from "@/components/SowingWindow";
@@ -20,7 +21,7 @@ import { useZones } from "@/lib/zones";
 const PENDING = "ceres:sencillo:pendiente";
 const EMPTY: Answers = { crop: null, status: null, harvest: null, priority: null };
 
-type Patch = Record<string, string | number>;
+type Patch = Record<string, string | number | null>;
 
 function toProfile(a: Answers, base?: Profile | null): Profile {
   return {
@@ -164,6 +165,18 @@ export default function SimpleApp() {
     compute(applyPatch(view.profile, patch), areaHa);
   };
 
+  // Tu precio en chacra reemplaza al supuesto (mayorista × factor) en todas las opciones.
+  const onPrice = (cropId: string, price: number | null) => {
+    if (!view) return;
+    const rest = (view.profile.economic_overrides ?? []).filter((o) => o.crop_id !== cropId);
+    const prev = (view.profile.economic_overrides ?? []).find((o) => o.crop_id === cropId);
+    const next = price == null ? (prev ? { ...prev, price_soles_kg: null } : null) : { ...(prev ?? { crop_id: cropId }), price_soles_kg: price };
+    const keep = next && (next.price_soles_kg != null || next.yield_t_ha != null || next.variable_cost_soles_ha != null);
+    compute({ ...view.profile, economic_overrides: keep ? [...rest, next] : rest }, areaHa);
+  };
+  const ownPrices = Object.fromEntries((view?.profile.economic_overrides ?? []).filter((o) => o.price_soles_kg != null).map((o) => [o.crop_id, o.price_soles_kg as number]));
+  const cropLabel = (id: string) => zone?.crops.find((c) => c.id === id)?.name.toLowerCase() ?? id;
+
   const save = async () => {
     if (!view || !zone) return;
     if (!user) {
@@ -239,15 +252,24 @@ export default function SimpleApp() {
             </section>
           ) : (
             <>
-              {result.strategies.some((x) => x.decisive?.some((d) => d.id !== "agua")) && (
-                <a href="#afinar" className={s.nudge}>Responde {result.strategies.flatMap((x) => x.decisive ?? []).filter((d, i, arr) => d.id !== "agua" && arr.findIndex((y) => y.id === d.id) === i).length} pregunta(s) rápida(s) para afinar estas opciones ↓</a>
+              {countQuestions(result) > 0 && (
+                <a href="#preguntas" className={s.nudge}>Responde {countQuestions(result) === 1 ? "1 pregunta rápida" : `${countQuestions(result)} preguntas rápidas`} para afinar estas opciones ↓</a>
               )}
               <div className={s.cards}>
                 {ordered.map((st) => (
-                  <OptionCard key={st.strategy_id} st={st} result={result} onWhy={() => setWhy(st)} onAnswer={onAnswer} busy={busy} />
+                  <OptionCard key={st.strategy_id} st={st} result={result} onWhy={() => setWhy(st)} busy={busy} cropLabel={cropLabel} />
                 ))}
               </div>
-              <GlobalQuestions result={result} onAnswer={onAnswer} busy={busy} />
+              <GlobalQuestions result={result} area={areaHa} onAnswer={onAnswer} busy={busy} />
+              {zone && (
+                <MarketPanel
+                  zone={zone.id}
+                  cropIds={[...new Set(ordered.flatMap((x) => x.sequence))]}
+                  ownPrices={ownPrices}
+                  onPrice={onPrice}
+                  busy={busy}
+                />
+              )}
               {zone && (
                 <details className={s.sowSection}>
                   <summary>¿Cuándo me conviene sembrar? <span aria-hidden="true">▾</span></summary>
