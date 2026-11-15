@@ -1,7 +1,7 @@
 """Límites administrativos referenciales (SERFOR, capas INEI) con caché local y procedencia.
 
 IDs públicos: `dep:04`, `prov:0405`, `dist:040520`. Los códigos se conservan como texto.
-Son límites referenciales, no catastro. La zona piloto se reconoce por el distrito de Majes (Caylloma).
+Son límites referenciales, no catastro. Las zonas piloto se reconocen por los distritos de su `zona.json` (registro `data/zonas/`).
 """
 
 from __future__ import annotations
@@ -23,11 +23,6 @@ FIELDS = {
     "dist": "IDDPTO,NOMBDEP,IDPROV,NOMBPROV,IDDIST,NOMBDIST,FUENTE,FECREG",
 }
 TOLERANCE = {"dep": 0.01, "prov": 0.004, "dist": 0.0015}
-PILOT_DISTRICT = "040520"  # Majes, Caylloma, Arequipa (Irrigación Majes I)
-PILOT_NOTE = (
-    "Zona piloto: Irrigación Majes I (Pampa de Majes), distrito de Majes, Caylloma. El límite de la irrigación no está "
-    "cargado; se usa el distrito como referencia. No confundir con el valle de Majes (Castilla) ni con Majes Siguas II."
-)
 
 
 class RegionsUnavailable(RuntimeError):
@@ -91,9 +86,11 @@ def download_demo_package(settings: Settings) -> dict:
 
 
 class RegionsService:
-    def __init__(self, settings: Settings) -> None:
+    def __init__(self, settings: Settings, pilot_districts: dict[str, str] | None = None) -> None:
         self.settings = settings
         self._cache: dict[str, dict] = {}
+        # código de distrito → zona piloto (registro `data/zonas/`)
+        self.pilot_districts = pilot_districts or {}
 
     def _load(self, rel: str) -> dict | None:
         if rel in self._cache:
@@ -105,8 +102,12 @@ class RegionsService:
         self._cache[rel] = data
         return data
 
-    @staticmethod
-    def _node(level: str, props: dict, geometry: dict | None, meta: dict) -> dict:
+    def _pilot(self, level: str, code: str) -> str | None:
+        """Zona piloto del nodo: el distrito exacto, o la provincia/departamento que contiene uno."""
+        n = {"dep": 2, "prov": 4, "dist": 6}[level]
+        return next((z for d, z in self.pilot_districts.items() if d[:n] == code), None)
+
+    def _node(self, level: str, props: dict, geometry: dict | None, meta: dict) -> dict:
         if level == "dep":
             code, name, parent = props["IDDPTO"], props["NOMBDEP"], None
         elif level == "prov":
@@ -119,7 +120,8 @@ class RegionsService:
             "code": code,
             "name": name.title(),
             "parent_id": parent,
-            "pilot": level == "dist" and code == PILOT_DISTRICT or (level == "prov" and code == PILOT_DISTRICT[:4]) or (level == "dep" and code == PILOT_DISTRICT[:2]),
+            "pilot": self._pilot(level, code) is not None,
+            "zone_id": self._pilot(level, code) if level == "dist" else None,
             "geometry": geometry,
             "provenance": {"provider": meta.get("provider"), "source_update": meta.get("source_update"), "fetched_at": meta.get("fetched_at"), "note": meta.get("note")},
         }
@@ -155,15 +157,6 @@ class RegionsService:
         if level == "dist":
             return []
         raise KeyError(region_id)
-
-    def pilot_district(self) -> dict | None:
-        try:
-            for n in self.children(f"prov:{PILOT_DISTRICT[:4]}"):
-                if n["code"] == PILOT_DISTRICT:
-                    return n
-        except RegionsUnavailable:
-            return None
-        return None
 
     def locate_point(self, lat: float, lon: float) -> dict | None:
         """Devuelve el distrito precargado que contiene el punto (solo con datos locales)."""

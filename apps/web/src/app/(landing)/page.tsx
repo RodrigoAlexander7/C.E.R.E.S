@@ -2,33 +2,18 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { SowingWindow } from "@/components/SowingWindow";
 import { api } from "@/lib/api";
 import type { Strategy, Status } from "@/lib/types";
+import { useZones } from "@/lib/zones";
 import s from "./landing.module.css";
 
 // ---------------------------------------------------------------- datos
 
 interface Clim { month: number; et0_mm: number | null; rain_mm: number | null; t_min_c: number | null; t_max_c: number | null; years: number }
-interface PublicContext { monthly_climatology: Clim[]; nasa: { period: { start: string; end: string }; days: number; sha256: string } | null }
-interface CatalogCrop { id: string; name: string; cycle_days: number }
+interface PublicContext { zone_id: string; monthly_climatology: Clim[]; nasa: { period: { start: string; end: string }; days: number; sha256: string; cell_elevation_m: number | null } | null }
 
-const MESES = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
-const MESES_LARGO = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
-const DIM = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 const fmt = (v: number, d = 0) => v.toLocaleString("es-PE", { maximumFractionDigits: d, minimumFractionDigits: d });
-
-/** Reparte un ciclo de `days` días que empieza el 1 del mes `start` (0-11) entre los meses. */
-function cycleShares(start: number, days: number): number[] {
-  const share = new Array(12).fill(0);
-  let m = start, left = days;
-  while (left > 0) {
-    const take = Math.min(DIM[m], left);
-    share[m] += take / DIM[m];
-    left -= take;
-    m = (m + 1) % 12;
-  }
-  return share;
-}
 
 function useReveal<T extends HTMLElement>() {
   const ref = useRef<T>(null);
@@ -150,13 +135,13 @@ const SIMPLE_CLS: Record<string, string> = { buena: s.pillGood, posible: s.pillM
 const CROP_COLOR: Record<string, string> = { maiz_grano: "#d9a53a", frejol_grano: "#5b9a45", cebolla_roja: "#a2456f" };
 const SHORT: Record<string, string> = { maiz_grano: "Maíz", frejol_grano: "Frejol", cebolla_roja: "Cebolla" };
 
-function PhonePreview({ strategies }: { strategies: Strategy[] | null }) {
+function PhonePreview({ strategies, zoneName, nameOf }: { strategies: Strategy[] | null; zoneName: string; nameOf: (id: string) => string }) {
   return (
-    <div className={s.phone} aria-label="Vista previa del modo sencillo con el caso demo de Majes">
+    <div className={s.phone} aria-label={`Vista previa del modo sencillo con el caso demo de ${zoneName}`}>
       <div className={s.phoneScreen}>
-        <div className={s.phoneTop}><span>CERES</span><span>Caso demo · Majes I</span></div>
+        <div className={s.phoneTop}><span>CERES</span><span>Caso demo · {zoneName}</span></div>
         <p className={s.phoneTitle}>Tus 3 opciones</p>
-        <p className={s.phoneSub}>Después del maíz que cosechas</p>
+        <p className={s.phoneSub}>Comparación real del motor</p>
         {!strategies &&
           [0, 1, 2].map((i) => <div key={i} className={`${s.opt} ${s.skeleton}`} style={{ height: 96 }} />)}
         {strategies?.map((st) => {
@@ -167,7 +152,7 @@ function PhonePreview({ strategies }: { strategies: Strategy[] | null }) {
           return (
             <div key={st.strategy_id} className={s.opt}>
               <div className={s.optHead}>
-                <span className={s.optName}>{st.sequence.map((c) => SHORT[c] ?? c).join(" → ")}</span>
+                <span className={s.optName}>{st.sequence.map(nameOf).join(" → ")}</span>
                 <span className={`${s.pill} ${lvl.cls}`}>{lvl.label}</span>
               </div>
               <p className={s.optLine}>
@@ -190,10 +175,10 @@ function PhonePreview({ strategies }: { strategies: Strategy[] | null }) {
 }
 
 /** Razón principal en lenguaje llano, construida solo con datos del resultado del motor. */
-function plainReason(st: Strategy): string {
+function plainReason(st: Strategy, nameOf: (id: string) => string): string {
   const blocking = st.reasons.find((r) => r.state === "no_cumple" || r.state === "falta_dato");
   if (blocking) return blocking.message;
-  const crops = st.sequence.map((c) => (SHORT[c] ?? c).toLowerCase()).join(" y ");
+  const crops = st.sequence.map((c) => nameOf(c).toLowerCase()).join(" y ");
   const fam = st.metrics[`${st.strategy_id}.suelo.familias`]?.value;
   const waterOk = st.reasons.some((r) => r.rule_id === "AGU-05");
   const margin = st.metrics[`${st.strategy_id}.eco.margen`]?.value;
@@ -205,81 +190,15 @@ function plainReason(st: Strategy): string {
 
 // ---------------------------------------------------------------- gráfico «¿cuándo sembrar?»
 
-function SowingChart({ clim, crops }: { clim: Clim[] | null; crops: CatalogCrop[] }) {
-  const [crop, setCrop] = useState("frejol_grano");
-  const [start, setStart] = useState(2);
-  const cycle = crops.find((c) => c.id === crop)?.cycle_days ?? 95;
-
-  const calc = useMemo(() => {
-    if (!clim || clim.some((c) => c.et0_mm == null)) return null;
-    const et0 = clim.map((c) => c.et0_mm as number);
-    const rain = clim.map((c) => c.rain_mm ?? 0);
-    const totals = Array.from({ length: 12 }, (_, m) => {
-      const sh = cycleShares(m, cycle);
-      return { et0: sh.reduce((a, f, i) => a + f * et0[i], 0), rain: sh.reduce((a, f, i) => a + f * rain[i], 0) };
-    });
-    return { et0, shares: cycleShares(start, cycle), totals };
-  }, [clim, cycle, start]);
-
-  if (!calc) return <div className={`${s.chartCard} ${s.skeleton}`} style={{ height: 420 }} aria-label="Cargando datos NASA" />;
-
-  const max = Math.max(...calc.et0);
-  const cur = calc.totals[start];
-  const sorted = [...calc.totals.keys()].sort((a, b) => calc.totals[a].et0 - calc.totals[b].et0);
-  const best = sorted[0], worst = sorted[11];
-  const diff = (1 - calc.totals[best].et0 / calc.totals[worst].et0) * 100;
-  const W = 600, H = 220, bw = W / 12;
-
-  return (
-    <div className={s.chartCard}>
-      <div className={s.cropTabs} role="group" aria-label="Cultivo">
-        {crops.map((c) => (
-          <button key={c.id} className={s.month} aria-pressed={crop === c.id} onClick={() => setCrop(c.id)}>
-            {SHORT[c.id] ?? c.name} · {c.cycle_days} d
-          </button>
-        ))}
-      </div>
-      <p className={s.chartQ}>¿En qué mes siembras?</p>
-      <div className={s.months} role="group" aria-label="Mes de siembra">
-        {MESES.map((m, i) => (
-          <button key={m} className={s.month} aria-pressed={start === i} onClick={() => setStart(i)}>{m}</button>
-        ))}
-      </div>
-      <svg className={s.chartSvg} viewBox={`0 0 ${W} ${H + 36}`} role="img" aria-label={`Evapotranspiración de referencia mensual promedio 2015–2025; el ciclo de ${SHORT[crop]} sembrado en ${MESES_LARGO[start]} cubre los meses resaltados`}>
-        {calc.et0.map((v, i) => {
-          const h = (v / max) * (H - 30);
-          const inCycle = calc.shares[i] > 0;
-          return (
-            <g key={i}>
-              <rect x={i * bw + 6} y={H - h} width={bw - 12} height={h} rx="7" fill={inCycle ? (calc.shares[i] > 0.999 ? "#1f4d2b" : "#5b9a45") : "#dfe9d6"} />
-              <title>{`${MESES_LARGO[i]}: ${Math.round(v)} mm${inCycle ? ` · ${Math.round(calc.shares[i] * 100)} % del mes dentro del ciclo` : ""}`}</title>
-              <text x={i * bw + bw / 2} y={H - h - 8} textAnchor="middle" fontSize="17" fill={inCycle ? "#13221a" : "#8a9384"} fontWeight="700">{Math.round(v)}</text>
-              <text x={i * bw + bw / 2} y={H + 26} textAnchor="middle" fontSize="18" fill="#66705f">{MESES[i]}</text>
-            </g>
-          );
-        })}
-      </svg>
-      <div className={s.legend}><span><i style={{ background: "#1f4d2b" }} />Mes completo del ciclo</span><span><i style={{ background: "#5b9a45" }} />Mes parcial</span><span><i style={{ background: "#dfe9d6" }} />Resto del año · ET0 en mm</span></div>
-      <div className={s.resultRow}>
-        <div className={s.resultBox}><strong>{fmt(cur.et0)} mm</strong><span>pide la atmósfera durante el ciclo (ET0)</span></div>
-        <div className={s.resultBox}><strong>{fmt(cur.rain)} mm</strong><span>de lluvia promedio en esos meses</span></div>
-      </div>
-      <p className={s.insight}>
-        Sembrando {SHORT[crop].toLowerCase()} en <b>{MESES_LARGO[best]}</b>, la atmósfera pide cerca de <b>{fmt(diff)} % menos</b> agua que sembrando en {MESES_LARGO[worst]}. Casi todo tendrá que venir del canal.
-      </p>
-      <p className={s.fine}>
-        Promedios mensuales de NASA POWER (2015–2025) en la celda de Majes; ET0 calculada por CERES con FAO-56. Es demanda de la atmósfera, no el riego del cultivo: la app completa aplica el coeficiente de cada etapa (ETc = Kc × ET0) y la lluvia efectiva. Clima histórico, no pronóstico.
-      </p>
-    </div>
-  );
-}
-
 // ---------------------------------------------------------------- página
 
 export default function Landing() {
+  const { zones, defaultId } = useZones();
+  const [zoneId, setZoneId] = useState<string | null>(null);
+  const zone = zones.find((z) => z.id === (zoneId ?? defaultId)) ?? null;
   const [ctx, setCtx] = useState<PublicContext | null>(null);
   const [strategies, setStrategies] = useState<Strategy[] | null>(null);
-  const [crops, setCrops] = useState<CatalogCrop[]>([]);
+  const sowingCrops = useMemo(() => (zone?.crops ?? []).filter((c) => c.in_catalog).map((c) => ({ id: c.id, name: c.name })), [zone]);
   const [r1, c1] = useReveal<HTMLDivElement>();
   const [r2, c2] = useReveal<HTMLDivElement>();
   const [r3, c3] = useReveal<HTMLDivElement>();
@@ -287,11 +206,21 @@ export default function Landing() {
   const [r5, c5] = useReveal<HTMLDivElement>();
   const [r6, c6] = useReveal<HTMLDivElement>();
 
+  const zid = zone?.id;
   useEffect(() => {
-    api<PublicContext>("/public/context").then(setCtx).catch(() => setCtx(null));
-    api<{ run: { result: { strategies: Strategy[] } } | null }>("/public/demo").then((d) => setStrategies(d.run?.result.strategies ?? [])).catch(() => setStrategies([]));
-    api<{ crops: CatalogCrop[] }>("/catalog").then((c) => setCrops(c.crops)).catch(() => {});
-  }, []);
+    if (!zid) return;
+    setStrategies(null);
+    api<PublicContext>(`/public/context?zone=${zid}`).then(setCtx).catch(() => setCtx(null));
+    api<{ run: { result: { strategies: Strategy[] } } | null }>(`/public/demo?zone=${zid}`).then((d) => setStrategies(d.run?.result.strategies ?? [])).catch(() => setStrategies([]));
+  }, [zid]);
+  const zoneTabs = zones.length > 1 && (
+    <div className={s.zoneTabs} role="group" aria-label="Zona piloto">
+      {zones.map((z) => (
+        <button key={z.id} className={s.zoneTab} aria-pressed={z.id === zone?.id} onClick={() => setZoneId(z.id)}>{z.name}</button>
+      ))}
+    </div>
+  );
+  const shortName = (id: string) => zone?.crops.find((c) => c.id === id)?.name ?? SHORT[id] ?? id;
 
   const yearly = useMemo(() => {
     const c = ctx?.monthly_climatology;
@@ -302,14 +231,15 @@ export default function Landing() {
   }, [ctx]);
 
   const reasonB = strategies?.find((x) => x.strategy_id === "B");
-  const layerReason = reasonB ? plainReason(reasonB) : null;
+  const layerReason = reasonB ? plainReason(reasonB, shortName) : null;
+  const zoneName = zone?.name ?? "Majes I";
   const layerSources = Array.from(new Set(reasonB?.reasons.flatMap((r) => r.source_ids) ?? [])).slice(0, 5);
 
   return (
     <div className={s.page}>
       <header className={s.nav}>
         <div className={`${s.container} ${s.navInner}`}>
-          <Link href="/" className={s.brand} aria-label="CERES, inicio"><BrandMark /> CERES <span>Majes</span></Link>
+          <Link href="/" className={s.brand} aria-label="CERES, inicio"><BrandMark /> CERES <span>Arequipa</span></Link>
           <nav className={s.navLinks} aria-label="Secciones">
             <a href="#como">Cómo funciona</a>
             <a href="#nasa">Datos NASA</a>
@@ -328,15 +258,16 @@ export default function Landing() {
         <section className={s.hero}>
           <div className={`${s.container} ${s.heroGrid}`}>
             <div>
-              <span className={s.eyebrow}><span className={s.eyebrowDot} />NASA Space Apps 2026 · Pampa de Majes, Arequipa</span>
+              <span className={s.eyebrow}><span className={s.eyebrowDot} />NASA Space Apps 2026 · Majes I y Valle de Chilina, Arequipa</span>
               <h1 className={`${s.display} ${s.h1}`}>Decide qué sembrar después, con <em>datos de la NASA</em> y tus propias cuentas.</h1>
               <p className={s.lead}>
                 CERES compara tu siguiente siembra con dos alternativas según el agua del canal, el clima de los últimos 11 años y lo que te importa más. Primero ves opciones claras; después, el porqué. La decisión es tuya.
               </p>
               <div className={s.heroCtas}>
-                <Link href="/demo" className={`${s.btn} ${s.btnPrimary}`}>Ver el caso de Majes</Link>
+                <Link href={`/demo?zona=${zone?.id ?? "majes"}`} className={`${s.btn} ${s.btnPrimary}`}>Ver el caso de {zoneName}</Link>
                 <Link href="/app" className={`${s.btn} ${s.btnGhost}`}>Probar con mi chacra</Link>
               </div>
+              {zoneTabs}
               <div className={s.trust}>
                 <span><Check />Clima NASA POWER 2015–2025</span>
                 <span><Check />Método FAO-56 verificado</span>
@@ -344,8 +275,8 @@ export default function Landing() {
               </div>
             </div>
             <div className={s.visual}>
-              <div className={s.fieldCard}><FieldIllustration /><span className={s.fieldLabel}>Irrigación Majes I</span></div>
-              <PhonePreview strategies={strategies} />
+              <div className={s.fieldCard}><FieldIllustration /><span className={s.fieldLabel}>{zone?.zone ?? "Irrigación Majes I"}</span></div>
+              <PhonePreview strategies={strategies} zoneName={zoneName} nameOf={shortName} />
               {yearly && (
                 <div className={`${s.chip} ${s.chipNasa}`}>
                   <small>NASA POWER · demanda anual</small>
@@ -383,7 +314,7 @@ export default function Landing() {
                 </div>
               </div>
               <p className={s.dataNote}>
-                Promedios 2015–2025 de NASA POWER{ctx?.nasa ? ` (${fmt(ctx.nasa.days)} días, sin datos faltantes)` : ""} para la celda regional de Majes; ET0 calculada por CERES con FAO-56. <Link href="/fuentes">Ver fuente y procedencia</Link>.
+                Promedios 2015–2025 de NASA POWER{ctx?.nasa ? ` (${fmt(ctx.nasa.days)} días, sin datos faltantes)` : ""} para la celda regional de {zoneName}{ctx?.nasa?.cell_elevation_m != null ? ` (celda a ${fmt(ctx.nasa.cell_elevation_m)} m; el campo está a unos ${fmt(zone?.elevation_m?.value ?? 0)} m)` : ""}; ET0 calculada por CERES con FAO-56. <Link href="/fuentes">Ver fuente y procedencia</Link>.
               </p>
             </div>
           </div>
@@ -428,7 +359,10 @@ export default function Landing() {
                 El mismo cultivo no pide la misma agua en cualquier mes. Con 11 años de datos diarios de la NASA, CERES calcula cuánta agua exigirá cada ciclo según la fecha de siembra. Prueba cambiando el mes.
               </p>
             </div>
-            <SowingChart clim={ctx?.monthly_climatology ?? null} crops={crops.length ? crops : [{ id: "frejol_grano", name: "Frejol", cycle_days: 95 }]} />
+            <div>
+              {zoneTabs}
+              {zone && <SowingWindow zone={zone.id} crops={sowingCrops} initialMonth={3} />}
+            </div>
           </div>
         </section>
 
@@ -554,10 +488,10 @@ export default function Landing() {
         <section className={s.section}>
           <div className={s.container}>
             <div className={s.final}>
-              <h2 className={`${s.display} ${s.h2}`}>Mira cómo decide CERES con un caso real de Majes.</h2>
+              <h2 className={`${s.display} ${s.h2}`}>Mira cómo decide CERES en {zoneName}.</h2>
               <p>Explora la comparación pública con datos NASA, o crea tu cuenta para guardar tu parcela y preguntarle a la IA.</p>
               <div className={s.finalCtas}>
-                <Link href="/demo" className={`${s.btn} ${s.btnLight}`}>Ver el caso de Majes</Link>
+                <Link href={`/demo?zona=${zone?.id ?? "majes"}`} className={`${s.btn} ${s.btnLight}`}>Ver el caso de {zoneName}</Link>
                 <Link href="/app" className={`${s.btn} ${s.btnGhost}`}>Probar con mi chacra</Link>
               </div>
             </div>
@@ -569,8 +503,8 @@ export default function Landing() {
         <div className={`${s.container}`}>
           <div className={s.footGrid}>
             <div>
-              <Link href="/" className={s.brand}><BrandMark /> CERES <span>Majes</span></Link>
-              <p style={{ marginTop: 12, lineHeight: 1.6 }}>Apoyo a decisiones de cultivo para la Irrigación Majes I. Proyecto para el NASA Space Apps Challenge 2026 — «Field Shift: Adapting Farms with NASA Data».</p>
+              <Link href="/" className={s.brand}><BrandMark /> CERES <span>Arequipa</span></Link>
+              <p style={{ marginTop: 12, lineHeight: 1.6 }}>Apoyo a decisiones de cultivo para la Irrigación Majes I y la campiña del Valle de Chilina. Proyecto para el NASA Space Apps Challenge 2026 — «Field Shift: Adapting Farms with NASA Data».</p>
             </div>
             <div>
               <h5>Producto</h5>

@@ -9,20 +9,21 @@ import { useCallback, useEffect, useState } from "react";
 import { useSession } from "@/components/SessionProvider";
 import { HelpProvider, Sheet, Term } from "@/components/simple/help";
 import { GlobalQuestions, OptionCard, WhySheet } from "@/components/simple/results";
-import { CROP_NAME, PRIORITY_NAME, Wizard, type Answers } from "@/components/simple/wizard";
+import { PRIORITY_NAME, Wizard, cropName, type Answers } from "@/components/simple/wizard";
 import s from "@/components/simple/simple.module.css";
+import { SowingWindow } from "@/components/SowingWindow";
 import { ApiError, api, fmtDate, fmtNumber } from "@/lib/api";
 import type { ComparisonResult, Parcel, Profile, Run, Strategy } from "@/lib/types";
+import { useZones } from "@/lib/zones";
 
 const PENDING = "ceres:sencillo:pendiente";
-const MAJES_I = { lat: -16.35, lon: -72.19 }; // ubicación aproximada de la zona piloto (no delimita el lote)
 const EMPTY: Answers = { crop: null, status: null, harvest: null, priority: null };
 
 type Patch = Record<string, string | number>;
 
 function toProfile(a: Answers, base?: Profile | null): Profile {
   return {
-    current_crop_id: a.crop ?? "maiz_grano",
+    current_crop_id: a.crop ?? "",
     current_status: a.status ?? "cosechado",
     expected_harvest: a.status === "en_campo" ? a.harvest : null,
     planned_next_crop_id: base?.planned_next_crop_id ?? null,
@@ -64,11 +65,15 @@ interface View {
 export default function SimpleApp() {
   const router = useRouter();
   const { user, loading, activeParcelId, refresh } = useSession();
+  const { zones, defaultId } = useZones();
+  const [zoneId, setZoneId] = useState<string | null>(null);
+  const zone = zones.find((z) => z.id === (zoneId ?? defaultId)) ?? null;
   const [mode, setMode] = useState<"loading" | "wizard" | "results">("loading");
   const [answers, setAnswers] = useState<Answers>(EMPTY);
   const [step, setStep] = useState(0);
   const [view, setView] = useState<View | null>(null);
-  const [area, setArea] = useState(5);
+  const [area, setArea] = useState<number | null>(null);
+  const areaHa = area ?? zone?.default_area_ha?.value ?? 1;
   const [saved, setSaved] = useState<{ parcelId: string; runId: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -80,29 +85,33 @@ export default function SimpleApp() {
     if (!run.result || !run.inputs) return;
     setView({ result: run.result, assumed: run.inputs.assumed ?? [], area: run.inputs.area_ha, profile: run.inputs.profile });
     setArea(run.inputs.area_ha);
+    if (run.inputs.zone_id) setZoneId(run.inputs.zone_id);
     setAnswers(fromProfile(run.inputs.profile));
     setSaved({ parcelId, runId: run.id });
     setMode("results");
   }, []);
 
-  const createSaved = useCallback(async (profile: Profile, areaHa: number) => {
-    const p = await api<Parcel>("/parcels", { method: "POST", json: { name: "Mi chacra (Majes I)", point: MAJES_I, area_ha: areaHa, profile } });
+  const createSaved = useCallback(async (profile: Profile, areaHa: number, zoneIdForSave: string) => {
+    const z = zones.find((x) => x.id === zoneIdForSave);
+    if (!z?.center) throw new ApiError(0, "zona", "No se pudo ubicar la zona piloto");
+    // Punto aproximado de la zona: reconoce la zona, no delimita el lote (el área es la declarada).
+    const p = await api<Parcel>("/parcels", { method: "POST", json: { name: `Mi chacra (${z.name})`, point: { lat: z.center.lat, lon: z.center.lon }, area_ha: areaHa, profile } });
     const run = await api<Run>(`/parcels/${p.id}/recommendations`, { method: "POST", json: {} });
     await refresh();
     showRun(run, p.id);
-  }, [refresh, showRun]);
+  }, [refresh, showRun, zones]);
 
   // Arranque: guardado pendiente tras login → parcela activa con resultado → asistente.
   useEffect(() => {
-    if (loading) return;
+    if (loading || !zones.length) return;
     (async () => {
       try {
         const pending = sessionStorage.getItem(PENDING);
         if (user && pending) {
           sessionStorage.removeItem(PENDING);
-          const { profile, area: a } = JSON.parse(pending) as { profile: Profile; area: number };
+          const { profile, area: a, zone: zp } = JSON.parse(pending) as { profile: Profile; area: number; zone?: string };
           setBusy(true);
-          await createSaved(profile, a);
+          await createSaved(profile, a, zp ?? defaultId);
           return;
         }
         if (user && activeParcelId) {
@@ -119,7 +128,8 @@ export default function SimpleApp() {
       }
       setMode((m) => (m === "loading" ? "wizard" : m));
     })();
-  }, [loading, user, activeParcelId, createSaved, showRun]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, user, activeParcelId, zones.length]);
 
   const compute = async (profile: Profile, areaHa: number) => {
     setBusy(true);
@@ -130,7 +140,7 @@ export default function SimpleApp() {
         const run = await api<Run>(`/parcels/${saved.parcelId}/recommendations`, { method: "POST", json: {} });
         showRun(run, saved.parcelId);
       } else {
-        const r = await api<{ result: ComparisonResult; inputs: { assumed: string[]; area_ha: number } }>("/public/quick-compare", { method: "POST", json: { profile, area_ha: areaHa } });
+        const r = await api<{ result: ComparisonResult; inputs: { assumed: string[]; area_ha: number } }>("/public/quick-compare", { method: "POST", json: { profile, area_ha: areaHa, zone_id: zone?.id } });
         setView({ result: r.result, assumed: r.inputs.assumed, area: r.inputs.area_ha, profile });
         setMode("results");
       }
@@ -144,26 +154,26 @@ export default function SimpleApp() {
 
   const onWizardDone = (a: Answers) => {
     setAnswers(a);
-    compute(toProfile(a, view?.profile), area);
+    compute(toProfile(a, view?.profile), areaHa);
   };
 
   const onAnswer = (patch: Patch) => {
     if (!view) return;
-    compute(applyPatch(view.profile, patch), area);
+    compute(applyPatch(view.profile, patch), areaHa);
   };
 
   const save = async () => {
-    if (!view) return;
+    if (!view || !zone) return;
     if (!user) {
       try {
-        sessionStorage.setItem(PENDING, JSON.stringify({ profile: view.profile, area }));
+        sessionStorage.setItem(PENDING, JSON.stringify({ profile: view.profile, area: areaHa, zone: zone.id }));
       } catch {}
       router.push("/ingresar?volver=/app");
       return;
     }
     setBusy(true);
     try {
-      await createSaved(view.profile, area);
+      await createSaved(view.profile, areaHa, zone.id);
     } catch (e) {
       setErr(e instanceof ApiError ? e.message : "No se pudo guardar");
     } finally {
@@ -194,21 +204,23 @@ export default function SimpleApp() {
         <div className={s.loading} role="status"><span className={s.spin} aria-hidden="true" />Preparando tus opciones…</div>
       )}
 
-      {mode === "wizard" && !busy && <Wizard key={step} initial={answers} startStep={step} onDone={onWizardDone} />}
+      {mode === "wizard" && !busy && zone && (
+        <Wizard key={`${step}-${zone.id}`} initial={answers} startStep={step} onDone={onWizardDone} zone={zone} zones={saved ? [zone] : zones} onZone={(id) => { setZoneId(id); setArea(null); setView(null); }} />
+      )}
 
       {mode === "results" && result && view && (
         <>
           <header className={s.resultHead}>
             <p className={s.stepKicker}>{saved ? "Guardado en tu cuenta" : "Tus opciones"}</p>
-            <h1 className={`${s.h1} ${s.display}`}>Qué sembrar después {CROP_NAME[answers.crop ?? ""] ? `del ${CROP_NAME[answers.crop ?? ""]}` : ""}</h1>
+            <h1 className={`${s.h1} ${s.display}`}>Qué sembrar después {cropName(zone, answers.crop) ? `de tu ${cropName(zone, answers.crop)}` : ""}</h1>
             <div className={s.chips}>
-              <button className={s.chip} onClick={() => edit(0)}>{(CROP_NAME[answers.crop ?? ""] ?? "Cultivo").replace(/^./, (c) => c.toUpperCase())} ✎</button>
+              <button className={s.chip} onClick={() => edit(0)}>{(cropName(zone, answers.crop) || "Cultivo").replace(/^./, (c) => c.toUpperCase())} ✎</button>
               <button className={s.chip} onClick={() => edit(1)}>{harvestLabel} ✎</button>
               <button className={s.chip} onClick={() => edit(2)}>{PRIORITY_NAME[answers.priority ?? "equilibrada"]} ✎</button>
-              <button className={s.chip} onClick={() => { setAreaDraft(String(area)); setAreaOpen(true); }} disabled={!!saved}>{fmtNumber(area, area % 1 ? 1 : 0)} ha{saved ? "" : " ✎"}</button>
+              <button className={s.chip} onClick={() => { setAreaDraft(String(areaHa)); setAreaOpen(true); }} disabled={!!saved}>{fmtNumber(areaHa, areaHa % 1 ? 1 : 0)} ha{saved ? "" : " ✎"}</button>
             </div>
             <p className={s.sub}>
-              Majes I · clima <Term id="nasa">NASA</Term> 2015–2025 · {result.horizon_start ? `de ${fmtDate(result.horizon_start)} a ${fmtDate(result.horizon_end)}` : ""}.
+              {zone?.name} · clima <Term id="nasa">NASA</Term> 2015–2025 · {result.horizon_start ? `de ${fmtDate(result.horizon_start)} a ${fmtDate(result.horizon_end)}` : ""}.
               {view.assumed.length > 0 && <> Lo que no sabías lo completamos con <Term id="supuesto">supuestos</Term> de la zona.</>}
             </p>
           </header>
@@ -233,6 +245,17 @@ export default function SimpleApp() {
                 ))}
               </div>
               <GlobalQuestions result={result} onAnswer={onAnswer} busy={busy} />
+              {zone && (
+                <details className={s.sowSection}>
+                  <summary>¿Cuándo me conviene sembrar? <span aria-hidden="true">▾</span></summary>
+                  <SowingWindow
+                    zone={zone.id}
+                    crops={zone.crops.filter((c) => c.in_catalog).map((c) => ({ id: c.id, name: c.name }))}
+                    initialCrop={ordered.flatMap((x) => x.sequence).find((c) => zone.crops.some((z) => z.id === c && z.in_catalog))}
+                    initialMonth={ordered[0]?.simple?.facts.first_sowing ? Number(ordered[0].simple.facts.first_sowing.slice(5, 7)) : undefined}
+                  />
+                </details>
+              )}
             </>
           )}
 
@@ -250,7 +273,7 @@ export default function SimpleApp() {
           </div>
           <p className={s.sub} style={{ textAlign: "center" }}>Fechas orientativas. El clima es histórico, no un pronóstico. La decisión es tuya.</p>
 
-          <WhySheet st={why} profile={view.profile} assumed={view.assumed} area={view.area} onClose={() => setWhy(null)} advancedHref={saved ? `/parcelas/${saved.parcelId}` : "/avanzado"} />
+          <WhySheet st={why} profile={view.profile} assumed={view.assumed} area={view.area} zone={zone} onClose={() => setWhy(null)} advancedHref={saved ? `/parcelas/${saved.parcelId}` : "/avanzado"} />
           <Sheet open={areaOpen} onClose={() => setAreaOpen(false)} title="¿Cuántas hectáreas tiene tu lote?">
             <form onSubmit={(e) => { e.preventDefault(); const v = Number(areaDraft.replace(",", ".")); if (v > 0 && v <= 10000) { setArea(v); setAreaOpen(false); compute(view.profile, v); } }}>
               <label htmlFor="area" className={s.sub} style={{ display: "block", marginTop: 0 }}>Cambia márgenes y volúmenes; no la viabilidad por hectárea.</label>

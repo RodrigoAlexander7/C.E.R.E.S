@@ -4,11 +4,12 @@ import Link from "next/link";
 import { SourceChips } from "@/components/Sources";
 import { fmtDate, fmtNumber } from "@/lib/api";
 import type { ComparisonResult, Decisive, Profile, Strategy } from "@/lib/types";
+import { METHOD_LABEL, type Zone } from "@/lib/zones";
 import { Sheet, Term } from "./help";
 import s from "./simple.module.css";
 
 const ICON: Record<string, string> = { buena: "✓", posible: "?", explorar: "◇", no_conviene: "✕" };
-const CROP_COLOR: Record<string, string> = { maiz_grano: "#d9a53a", frejol_grano: "#5b9a45", cebolla_roja: "#a2456f" };
+const CROP_COLOR: Record<string, string> = { maiz_grano: "#d9a53a", frejol_grano: "#5b9a45", cebolla_roja: "#a2456f", cebolla: "#a2456f", papa: "#8a6a3f" };
 
 export function LevelBadge({ st }: { st: Strategy }) {
   const lvl = st.simple?.level ?? "posible";
@@ -107,21 +108,25 @@ export function GlobalQuestions({ result, onAnswer, busy }: { result: Comparison
 const MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
 
 /** «¿Por qué?» en tres capas: frase → lo que usamos → detalle técnico con fuentes. */
-export function WhySheet({ st, profile, assumed, area, onClose, advancedHref }: { st: Strategy | null; profile: Profile | null; assumed: string[]; area: number; onClose: () => void; advancedHref: string }) {
+export function WhySheet({ st, profile, assumed, area, zone, onClose, advancedHref }: { st: Strategy | null; profile: Profile | null; assumed: string[]; area: number; zone: Zone | null; onClose: () => void; advancedHref: string }) {
   const w = profile?.water;
   const used: { text: React.ReactNode; kind: "tuyo" | "zona" | "nasa" | "demo"; label: string }[] = [];
+  const typical = zone?.water_m3_ha_year?.value ?? null;
+  const method = zone?.default_method?.value ?? "";
+  const eff = Number(zone?.efficiency_by_method?.[method] ?? 0);
   if (st && profile) {
-    used.push({ kind: "nasa", label: "NASA", text: <>Clima de 11 años (2015–2025) para las fechas de siembra de esta opción. <Term id="nasa">¿Qué es?</Term></> });
-    if (assumed.includes("water.allocation")) used.push({ kind: "zona", label: "Supuesto de zona", text: <>No indicaste cuánta agua recibes: usamos el <Term id="agua_tipica">agua típica de Majes</Term> ({fmtNumber((22500 / 12) * area)} m³ al mes para {fmtNumber(area, area % 1 ? 1 : 0)} ha).</> });
+    used.push({ kind: "nasa", label: "NASA", text: <>Clima de 11 años (2015–2025) de la celda de {zone?.name ?? "tu zona"} para las fechas de siembra de esta opción. <Term id="nasa">¿Qué es?</Term></> });
+    if (assumed.includes("water.allocation") && typical != null) used.push({ kind: "zona", label: "Supuesto de zona", text: <>No indicaste cuánta agua recibes: usamos el <Term id="agua_tipica">agua típica de {zone?.name}</Term> ({fmtNumber((typical / 12) * area)} m³ al mes para {fmtNumber(area, area % 1 ? 1 : 0)} ha). {zone?.water_m3_ha_year?.label}</> });
     else if (w?.allocation_min_m3 != null) used.push({ kind: "tuyo", label: "Tu respuesta", text: <>Recibes al menos {fmtNumber(w.allocation_min_m3)} m³ al mes.</> });
     else if (w?.allocation_max_m3 != null) used.push({ kind: "tuyo", label: "Tu respuesta", text: <>Recibes menos de {fmtNumber(w.allocation_max_m3 + 1)} m³ al mes.</> });
     else if (w?.allocation_m3 != null) used.push({ kind: "tuyo", label: "Tu dato", text: <>Recibes {fmtNumber(w.allocation_m3)} m³ al mes.</> });
-    if (assumed.includes("water.efficiency")) used.push({ kind: "zona", label: "Supuesto de zona", text: <>Riego por aspersión (<Term id="eficiencia">eficiencia</Term> 75 %), porque no indicaste cómo riegas.</> });
+    if (assumed.includes("water.efficiency")) used.push({ kind: "zona", label: "Supuesto de zona", text: <>Riego por {METHOD_LABEL[method] ?? method} (<Term id="eficiencia">eficiencia</Term> {fmtNumber(eff * 100)} %), porque no indicaste cómo riegas.</> });
     else if (w?.method) used.push({ kind: "tuyo", label: "Tu respuesta", text: <>Riegas por {w.method === "aspersion" ? "aspersión" : w.method}.</> });
     const signs = profile.soil?.salinity_signs;
     if (profile.soil?.ece_ds_m != null) used.push({ kind: "tuyo", label: "Tu análisis", text: <>Sal del suelo medida: CE {profile.soil.ece_ds_m} dS/m.</> });
     else if (signs) used.push({ kind: "tuyo", label: "Tu observación", text: <>{signs === "con_signos" ? "Ves signos de sal en tu chacra." : "No ves signos de sal en tu chacra."} Una observación no reemplaza un análisis.</> });
     else used.push({ kind: "zona", label: "Sin dato", text: <>No sabemos si tu suelo tiene <Term id="sal">sal</Term>.</> });
+    if (st.simple?.facts.margin_soles == null) used.push({ kind: "zona", label: "Sin dato", text: <>No hay precios ni rendimientos locales verificados: la ganancia queda pendiente hasta que registres los tuyos.</> });
     if (st.simple?.facts.margin_kind === "supuesto_demo") used.push({ kind: "demo", label: "Ejemplo", text: <>Precios, rendimientos y costos de ejemplo, no de tu chacra. Con tus números el resultado será más fiel.</> });
   }
   const icon: Record<string, string> = { cumple: "✓", no_cumple: "✕", falta_dato: "?", advertencia: "!", informacion: "i" };

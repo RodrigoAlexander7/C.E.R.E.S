@@ -206,3 +206,13 @@
   .spin { animation: none; }
   .btn:active { transform: none; }
 }
+
+/* Zona piloto */
+.zoneRow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 14px; font-size: 0.9rem; color: var(--s-muted); font-weight: 600; }
+.zoneBtn { font: inherit; min-height: 40px; padding: 6px 14px; border-radius: 999px; border: 1.5px solid var(--s-line); background: #fff; color: var(--s-ink-2); font-weight: 700; cursor: pointer; }
+.zoneBtn[aria-pressed="true"] { background: var(--s-forest); border-color: var(--s-forest); color: #fff; }
+.zoneBtn:focus-visible { outline: 3px solid var(--s-maize); outline-offset: 2px; }
+.sowSection { margin-top: 18px; }
+.sowSection > summary { cursor: pointer; list-style: none; display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 52px; padding: 12px 16px; border-radius: 18px; background: #fff; border: 1px solid var(--s-line); font-weight: 700; }
+.sowSection > summary::-webkit-details-marker { display: none; }
+.sowSection[open] > summary { margin-bottom: 10px; }

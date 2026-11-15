@@ -84,6 +84,24 @@ class EconomicOverride:
     yield_t_ha: float | None = None
     price_soles_kg: float | None = None
     variable_cost_soles_ha: float | None = None
+    # «perfil»: escrito en el perfil; «cuaderno»: derivado de los registros del agricultor (R17).
+    origin: Literal["perfil", "cuaderno"] = "perfil"
+    note: str = ""
+
+
+@dataclass(frozen=True)
+class ZoneContext:
+    """Zona piloto con la que se evalúa: textos y fuentes de sus supuestos (sin valores de otra zona)."""
+
+    id: str = "majes"
+    name: str = "Majes I"
+    nasa_source_id: str = "NASA-POWER"
+    zone_source_id: str = "ZONA-MAJES"
+    water_label: str | None = None  # p. ej. «22 500 m³/ha/año (AUTODEMA 2023)»; None si no hay valor típico
+    water_source_ids: tuple[str, ...] = ()
+    local_water_source_ids: tuple[str, ...] = ("AGUA-LOCAL",)
+    default_method: str | None = None
+    default_efficiency: float | None = None
 
 
 @dataclass(frozen=True)
@@ -103,7 +121,7 @@ class ParcelInput:
     reference_date: date = field(default_factory=date.today)
     # Campos completados con supuestos de zona (p. ej. "water.allocation", "water.efficiency").
     assumed: frozenset[str] = frozenset()
-    zone_label: str = "Majes I"
+    zone: ZoneContext = field(default_factory=ZoneContext)
 
     def validate(self) -> None:
         if not (self.area_ha > 0):

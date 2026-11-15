@@ -46,8 +46,7 @@ class Settings(BaseSettings):
     llm_max_question_chars: int = 600
 
     # Datos y caché.
-    data_dir: Path = REPO_ROOT / "data"
-    nasa_snapshot_file: str = "nasa/power_daily_majes_2015_2025.json"
+    data_dir: Path = REPO_ROOT / "data"  # zonas piloto en data/zonas/<zona>/ (clima, supuestos, catálogo)
     regions_live_fetch: bool = True
     regions_timeout_seconds: float = 20.0
 

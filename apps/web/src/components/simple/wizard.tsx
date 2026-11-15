@@ -5,6 +5,7 @@
 
 import { useMemo, useState } from "react";
 import type { Profile } from "@/lib/types";
+import type { Zone } from "@/lib/zones";
 import s from "./simple.module.css";
 
 export interface Answers {
@@ -14,14 +15,10 @@ export interface Answers {
   priority: Profile["priority"] | null;
 }
 
-const CROPS: { id: string; name: string; hint: string; color: string }[] = [
-  { id: "maiz_grano", name: "Maíz", hint: "Amarillo duro, para grano", color: "#f3e3b5" },
-  { id: "frejol_grano", name: "Frejol", hint: "Grano seco", color: "#dcebd0" },
-  { id: "cebolla_roja", name: "Cebolla", hint: "Roja, para bulbo", color: "#efd6e1" },
-  { id: "maiz_chala", name: "Maíz chala", hint: "Para forraje", color: "#ecdfc3" },
-  { id: "papa", name: "Papa", hint: "", color: "#eadfd2" },
-  { id: "alfalfa", name: "Alfalfa", hint: "Instalada", color: "#d9e8d0" },
-];
+const COLOR: Record<string, string> = {
+  maiz_grano: "#f3e3b5", frejol_grano: "#dcebd0", cebolla_roja: "#efd6e1", cebolla: "#efd6e1", maiz_chala: "#ecdfc3",
+  papa: "#eadfd2", alfalfa: "#d9e8d0", ajo: "#ece6f3",
+};
 
 const PRIORITIES: { id: Profile["priority"]; name: string; hint: string }[] = [
   { id: "dinero", name: "Ganar más", hint: "Lo que más margen deja" },
@@ -32,7 +29,10 @@ const PRIORITIES: { id: Profile["priority"]; name: string; hint: string }[] = [
 
 const MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
 
-export function Wizard({ initial, startStep = 0, onDone }: { initial: Answers; startStep?: number; onDone: (a: Answers) => void }) {
+export function Wizard({
+  initial, startStep = 0, onDone, zone, zones, onZone,
+}: { initial: Answers; startStep?: number; onDone: (a: Answers) => void; zone: Zone; zones: Zone[]; onZone: (id: string) => void }) {
+  const CROPS = zone.crops.filter((c) => c.id !== "otro");
   const [a, setA] = useState<Answers>(initial);
   const [step, setStep] = useState(startStep);
   const months = useMemo(() => {
@@ -57,18 +57,27 @@ export function Wizard({ initial, startStep = 0, onDone }: { initial: Answers; s
 
       {step === 0 && (
         <>
+          {zones.length > 1 && (
+            <div className={s.zoneRow} role="group" aria-label="Tu zona">
+              <span>Tu zona:</span>
+              {zones.map((z) => (
+                <button key={z.id} className={s.zoneBtn} aria-pressed={z.id === zone.id} onClick={() => { if (z.id !== zone.id) { setA({ ...a, crop: null }); onZone(z.id); } }}>{z.name}</button>
+              ))}
+            </div>
+          )}
           <h1 id="wq" className={`${s.q} ${s.display}`}>¿Qué sembraste último?</h1>
           <p className={s.qHint}>Lo que tienes ahora en tu chacra o lo último que cosechaste.</p>
           <div className={s.choices}>
             {CROPS.map((c) => (
               <button key={c.id} className={s.choice} aria-pressed={a.crop === c.id} onClick={() => pick({ crop: c.id }, 1)}>
-                <span className={s.dot} style={{ background: c.color, color: "#13221a" }} aria-hidden="true">{c.name[0]}</span>
+                <span className={s.dot} style={{ background: COLOR[c.id] ?? "#ece3d0", color: "#13221a" }} aria-hidden="true">{c.name[0]}</span>
                 <strong>{c.name}</strong>
                 {c.hint && <span>{c.hint}</span>}
               </button>
             ))}
           </div>
           {a.crop === "alfalfa" && <p className={s.wizardNote}>La alfalfa instalada se maneja distinto (cortes, años de vida): por ahora CERES no la compara como un cultivo de campaña.</p>}
+          {zone.crops.some((c) => c.id === a.crop && !c.in_catalog) && a.crop !== "alfalfa" && <p className={s.wizardNote}>Este cultivo aún no tiene ficha en {zone.name}: lo usamos como antecedente y comparamos lo que puedes sembrar después.</p>}
         </>
       )}
 
@@ -117,11 +126,11 @@ export function Wizard({ initial, startStep = 0, onDone }: { initial: Answers; s
         {step > 0 ? <button className={s.linkBtn} onClick={() => setStep(step - 1)}>← Atrás</button> : <span />}
       </div>
       <p className={s.wizardNote}>
-        Sin estudios de suelo ni formularios: lo que no sepas lo suponemos con valores típicos de Majes I y te lo decimos. Calculamos para un lote de 5 ha; puedes cambiarlo después.
+        Sin estudios de suelo ni formularios: lo que no sepas lo suponemos con valores típicos de {zone.name} y te lo decimos. Calculamos para un lote de {zone.default_area_ha?.value ?? 1} ha; puedes cambiarlo después.
       </p>
     </section>
   );
 }
 
-export const CROP_NAME: Record<string, string> = Object.fromEntries(CROPS.map((c) => [c.id, c.name.toLowerCase()]));
+export const cropName = (zone: Zone | null, id: string | null) => (zone?.crops.find((c) => c.id === id)?.name ?? "").toLowerCase();
 export const PRIORITY_NAME: Record<string, string> = Object.fromEntries(PRIORITIES.map((p) => [p.id, p.name]));

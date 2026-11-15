@@ -1,0 +1,8 @@
+{
+  "provider": "NOAA Climate Prediction Center",
+  "request_url": "https://www.cpc.ncep.noaa.gov/data/indices/oni.ascii.txt",
+  "fetched_at": "2026-11-15T13:49:36+00:00",
+  "sha256": "118c563331335c8649cdc2677e6be7ae89d1259d901345fcddbc2857af280f7f",
+  "bytes": 23050,
+  "note": "Archivo bruto sin modificar. Fases El Niño/La Niña según la definición operativa de NOAA: ONI ≥ +0,5 °C (≤ −0,5 °C) durante al menos 5 trimestres móviles consecutivos."
+}

@@ -1,0 +1,6 @@
+{
+  "version": "zonas-2026-11-15.2",
+  "default": "majes",
+  "zones": ["majes", "chilina"],
+  "note": "Registro de zonas piloto. Cada zona tiene su carpeta con zona.json (límites, supuestos con fuente), su catálogo revisado y su propia instantánea NASA POWER con hash. Nada se comparte entre zonas salvo los métodos (FAO-56, FAO 29)."
+}

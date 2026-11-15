@@ -18,9 +18,9 @@ export const GLOSSARY: Record<string, Term> = {
     source: "NASA-POWER",
   },
   agua_tipica: {
-    title: "Agua típica de Majes",
-    text: "Si no sabes cuánta agua recibes, usamos 22 500 m³ por hectárea al año, el consumo de riego que AUTODEMA reportó para Majes en 2023, repartido igual cada mes. Es un supuesto: confírmalo con tu Junta de Usuarios.",
-    source: "AUTODEMA-INDICADORES-2023",
+    title: "Agua típica de la zona",
+    text: "Si no sabes cuánta agua recibes, usamos un valor típico de tu zona repartido igual cada mes. En Majes I: 22 500 m³ por hectárea al año, el consumo que AUTODEMA reportó en 2023. En el Valle de Chilina: unos 23 000 m³ por hectárea al año, calculados con el volumen de la Comisión Pampas Nuevas de Chilina (ANA 2022) y las hectáreas de su canal (ANA 2025). Es un supuesto: confírmalo con tu junta o comisión de usuarios.",
+    source: "ZONA-MAJES",
   },
   eficiencia: {
     title: "Eficiencia del riego",
@@ -39,7 +39,7 @@ export const GLOSSARY: Record<string, Term> = {
   },
   nasa: {
     title: "Clima NASA",
-    text: "Usamos 11 años (2015–2025) de datos diarios de NASA POWER para la zona de Majes: temperatura, humedad, viento y sol. Sirven para comparar fechas de siembra; no son un pronóstico.",
+    text: "Usamos 11 años (2015–2025) de datos diarios de NASA POWER para la celda de tu zona: temperatura, humedad, viento y sol. Sirven para comparar fechas de siembra; no son un pronóstico. En el Valle de Chilina la celda está unos 900 m más alta que el valle, así que es más fría y exagera las heladas.",
     source: "NASA-POWER",
   },
   supuesto: {

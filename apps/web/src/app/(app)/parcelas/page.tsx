@@ -44,7 +44,7 @@ export default function Parcels() {
             <dl className="kv">
               <dt>Área</dt><dd>{fmtNumber(p.area_ha, 2)} ha <span className="tag">{p.area_origin === "geodesica" ? "calculada del dibujo" : "declarada"}</span></dd>
               <dt>Distrito</dt><dd>{p.region_codes.district_name ?? "—"}</dd>
-              <dt>Zona piloto</dt><dd>{p.in_pilot_zone ? "Sí (Majes I)" : "No: sin fichas locales"}</dd>
+              <dt>Zona piloto</dt><dd>{p.in_pilot_zone ? `Sí (${p.zone_id === "chilina" ? "Valle de Chilina" : "Majes I"})` : "No: sin fichas locales"}</dd>
               <dt>Creada</dt><dd>{fmtDateTime(p.created_at)}</dd>
             </dl>
             <Link className="btn btn-secondary" href={`/parcelas/${p.id}`}>Abrir perfil y comparación</Link>

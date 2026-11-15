@@ -17,6 +17,7 @@ def parcel(p: m.Parcel, active: bool = False) -> dict:
         "area_origin": p.area_origin,
         "region_codes": p.region_codes,
         "in_pilot_zone": p.in_pilot_zone,
+        "zone_id": p.zone_id,
         "active_revision_id": p.active_revision_id,
         "is_active": active,
         "is_public_demo": p.is_public_demo,

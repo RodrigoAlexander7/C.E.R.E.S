@@ -151,7 +151,7 @@ export interface Run {
   dataset_snapshot_id: string | null;
   dataset_sha256?: string | null;
   created_at: string;
-  inputs?: { profile: Profile; effective_profile?: Profile; assumed?: string[]; zone_version?: string | null; area_ha: number; in_pilot_zone: boolean; reference_date: string };
+  inputs?: { profile: Profile; effective_profile?: Profile; assumed?: string[]; zone_id?: string | null; zone_version?: string | null; area_ha: number; in_pilot_zone: boolean; reference_date: string };
   result?: ComparisonResult;
   profile_changed?: boolean;
 }
@@ -202,6 +202,7 @@ export interface Parcel {
   area_origin: "geodesica" | "declarada";
   region_codes: { district_code?: string; district_name?: string; provider?: string; source_update?: string; note?: string };
   in_pilot_zone: boolean;
+  zone_id?: string | null;
   active_revision_id: string | null;
   is_active: boolean;
   is_public_demo: boolean;
@@ -265,6 +266,8 @@ export const CROP_LABELS: Record<string, string> = {
   maiz_grano: "Maíz amarillo duro (grano)",
   frejol_grano: "Frejol canario (grano seco)",
   cebolla_roja: "Cebolla roja",
+  cebolla: "Cebolla (bulbo seco)",
+  ajo: "Ajo",
   papa: "Papa",
   alfalfa: "Alfalfa",
   maiz_chala: "Maíz chala (forraje)",

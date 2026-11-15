@@ -15,12 +15,13 @@ from sqlalchemy.orm import Session as DbSession
 from ceres.application.assistant import answer_question, build_context
 from ceres.application.recommendations import apply_scenario, evaluate_frozen, frozen_inputs
 from ceres.bootstrap import Container, build_container
-from ceres.domain.engine import ENGINE_VERSION
+from ceres.domain.engine import ENGINE_VERSION, enso_summary, sowing_window
 from ceres.domain.model import InvalidInput
 from ceres.infrastructure.db import models as m
 from ceres.infrastructure.db.repositories import ParcelRepo, PublicRepo, SessionRepo, UserRepo
 from ceres.infrastructure.geometry import GeometryError, centroid, geodesic_area_ha, validate_polygon
-from ceres.infrastructure.regions import PILOT_DISTRICT, PILOT_NOTE, RegionsUnavailable
+from ceres.infrastructure.regions import RegionsUnavailable
+from ceres.infrastructure.zones import ZoneRuntime
 from ceres.infrastructure.security import hash_password, new_token, token_hash, verify_password
 from ceres.presentation import serializers as ser
 from ceres.presentation.deps import (
@@ -61,6 +62,32 @@ def _today(c: Container):
     return c.extra.get("today", lima_today)()
 
 
+def _zone(c: Container, zone_id: str | None) -> ZoneRuntime:
+    z = c.zone(zone_id)
+    if z is None:
+        raise ApiError(404, "zona_desconocida", "Esa zona piloto no existe")
+    return z
+
+
+def _pilot_note(c: Container) -> str:
+    return "Zonas piloto: " + " ".join(f"{z.data['zone']}. {z.data.get('recognition', '')}" for z in c.zones.zones.values())
+
+
+def _located(c: Container, d: dict | None) -> dict:
+    z = c.zones.zone_of_district(d["code"]) if d else None
+    return {"in_pilot_zone": z is not None, "zone_id": z.id if z else None, "zone_name": z.name if z else None}
+
+
+def _check_crops(z: ZoneRuntime, profile: dict) -> None:
+    for key in ("current_crop_id", "planned_next_crop_id"):
+        v = profile.get(key)
+        if v and not z.catalog.knows(v):
+            raise ApiError(422, "cultivo_de_otra_zona", f"El cultivo «{v}» no está en el catálogo de {z.name}")
+    for o in profile.get("economic_overrides") or []:
+        if not z.catalog.crop(o["crop_id"]):
+            raise ApiError(422, "cultivo_de_otra_zona", f"El cultivo «{o['crop_id']}» no tiene ficha en {z.name}")
+
+
 public = APIRouter(prefix="/api/v1")
 private = APIRouter(prefix="/api/v1")
 
@@ -84,13 +111,14 @@ def health(response: Response, c: Container = Depends(container), db: DbSession 
         "llm_configured": c.llm.configured,
         "engine_version": ENGINE_VERSION,
         "catalog_version": c.catalog.version,
+        "zones": {z.id: {"catalog": z.catalog.version, "nasa_snapshot": z.snapshot.snapshot_id if z.snapshot else None} for z in c.zones.zones.values()},
     }
 
 
 @public.get("/regions")
 def regions(c: Container = Depends(container)):
     try:
-        return {"items": c.regions.departments(), "pilot_note": PILOT_NOTE}
+        return {"items": c.regions.departments(), "pilot_note": _pilot_note(c)}
     except RegionsUnavailable as exc:
         raise ApiError(503, "limites_no_disponibles", str(exc))
 
@@ -98,7 +126,7 @@ def regions(c: Container = Depends(container)):
 @public.get("/regions/{region_id}/children")
 def region_children(region_id: str, c: Container = Depends(container)):
     try:
-        return {"items": c.regions.children(region_id), "pilot_note": PILOT_NOTE}
+        return {"items": c.regions.children(region_id), "pilot_note": _pilot_note(c)}
     except KeyError:
         raise not_found()
     except RegionsUnavailable as exc:
@@ -110,7 +138,7 @@ def region_locate(lat: float, lon: float, c: Container = Depends(container)):
     if not (-90 <= lat <= 90 and -180 <= lon <= 180):
         raise ApiError(422, "coordenadas_invalidas", "Coordenadas fuera de rango")
     d = c.regions.locate_point(lat, lon)
-    return {"district": d, "in_pilot_zone": bool(d and d["code"] == PILOT_DISTRICT)}
+    return {"district": d, **_located(c, d)}
 
 
 @public.post("/geometry/area")
@@ -126,30 +154,41 @@ def geometry_area(body: AreaRequest, c: Container = Depends(container)):
         "method": "Área geodésica WGS84 (pyproj.Geod) del polígono dibujado",
         "centroid": ctr,
         "district": d,
-        "in_pilot_zone": bool(d and d["code"] == PILOT_DISTRICT),
+        **_located(c, d),
     }
 
 
+@public.get("/public/zones")
+def public_zones(c: Container = Depends(container)):
+    return {"default": c.zones.default_id, "version": c.zones.version, "items": [z.public() for z in c.zones.zones.values()]}
+
+
 @public.get("/public/context")
-def public_context(c: Container = Depends(container)):
+def public_context(zone: str | None = None, c: Container = Depends(container)):
+    z = _zone(c, zone)
     return {
-        "pilot_note": PILOT_NOTE,
-        "nasa": c.snapshot.public_summary() if c.snapshot else None,
-        "nasa_error": c.nasa_error,
-        "monthly_climatology": c.climatology,
-        "climatology_note": "Promedios 2015–2025 de la celda NASA POWER; ET0 FAO-56 calculada por CERES. Histórico, no pronóstico.",
+        "zone_id": z.id,
+        "zone_name": z.name,
+        "pilot_note": f"{z.data['zone']}. {z.data.get('recognition', '')}",
+        "nasa": z.snapshot.public_summary() | {"source_id": z.climate.source_id} if z.snapshot else None,
+        "nasa_error": z.nasa_error,
+        "monthly_climatology": z.climatology,
+        "climatology_note": f"Promedios 2015–2025 de la celda NASA POWER de {z.name}; ET0 FAO-56 calculada por CERES. Histórico, no pronóstico.",
     }
 
 
 @public.get("/catalog")
-def catalog(c: Container = Depends(container)):
-    cat = c.catalog
+def catalog(zone: str | None = None, c: Container = Depends(container)):
+    z = _zone(c, zone)
+    cat = z.catalog
     return {
+        "zone_id": z.id,
         "version": cat.version,
         "crops": [
             {
                 "id": cr.id,
                 "name": cr.name,
+                "short": cr.short_name,
                 "family": cr.family,
                 "is_legume": cr.is_legume,
                 "cycle_days": cr.cycle_days,
@@ -193,9 +232,9 @@ def source(source_id: str, db: DbSession = Depends(get_db), auth: Auth | None = 
 
 
 @public.get("/public/demo")
-def public_demo(db: DbSession = Depends(get_db)):
+def public_demo(zone: str | None = None, db: DbSession = Depends(get_db), c: Container = Depends(container)):
     repo = PublicRepo(db)
-    p = repo.demo_parcel()
+    p = repo.demo_parcel(_zone(c, zone).id)
     if p is None:
         raise ApiError(404, "demo_no_cargada", "El caso de demostración no está cargado (ejecuta el seed)")
     run = repo.latest_run(p.id)
@@ -206,20 +245,72 @@ def public_demo(db: DbSession = Depends(get_db)):
     }
 
 
+METHOD_LABEL = {"goteo": "goteo", "aspersion": "aspersión", "gravedad": "gravedad"}
+
+
+@public.get("/public/sowing-window")
+def sowing_window_view(crop: str, zone: str | None = None, method: str | None = None, c: Container = Depends(container)):
+    """«¿Cuándo me conviene sembrar?» (R19): mismo motor que la comparación, por mes de siembra y por hectárea."""
+    z = _zone(c, zone)
+    cr = z.catalog.crop(crop)
+    if cr is None:
+        raise ApiError(404, "cultivo_sin_ficha", f"Ese cultivo no tiene ficha en el catálogo de {z.name}")
+    eff_table = z.data.get("efficiency_by_method") or {}
+    default = (z.data.get("default_method") or {}).get("value")
+    chosen = method if method in eff_table else default
+    if chosen not in eff_table:
+        raise ApiError(422, "metodo_desconocido", "Indica el método de riego (goteo, aspersión o gravedad)")
+    months = sowing_window(cr, z.climate, eff_table[chosen], c.enso_phases)
+    if not months:
+        raise ApiError(503, "nasa_no_disponible", f"No hay copia real de NASA POWER para {z.name}")
+    return {
+        "zone_id": z.id,
+        "zone_name": z.name,
+        "crop": {"id": cr.id, "name": cr.name, "short": cr.short_name, "cycle_days": cr.cycle_days, "windows": [w.label() for w in cr.windows], "window_status": cr.window_status, "window_source_ids": list(cr.window_source_ids)},
+        "efficiency": {
+            "method": chosen,
+            "label": METHOD_LABEL.get(chosen, chosen),
+            "value": eff_table[chosen],
+            "kind": "declarado" if method in eff_table else "supuesto_zona",
+            "source_ids": ["FAO-EFICIENCIA"] + ([] if method in eff_table else [z.data["zone_source_id"]]),
+        },
+        "months": months,
+        "enso": {
+            "available": c.oni is not None,
+            "summary": enso_summary(months) if c.oni else [],
+            "oni": c.oni.public_summary() if c.oni else None,
+            "source_ids": ["NOAA-ONI"],
+            "definition": "Fase de cada campaña: El Niño o La Niña si al menos la mitad de sus días cae en un episodio NOAA (ONI ≥ +0,5 °C o ≤ −0,5 °C durante 5 trimestres móviles seguidos); si no, neutro.",
+            "limitation": "El ONI mide el Pacífico central (Niño 3.4). El «Niño costero» de Perú (Niño 1+2), como el de 2017, puede no figurar como El Niño en este índice. Con 11 años hay pocas campañas por fase: es una comparación descriptiva, no un pronóstico.",
+        },
+        "method": {
+            "etc": "ETc = Kc FAO-56 por etapa × ET0 Penman–Monteith diaria (NASA POWER 2015–2025), promedio de cada día del año",
+            "net": "Riego neto = ETc − lluvia efectiva mensual (FAO); omite reserva del suelo y lavado de sales",
+            "gross": f"Riego bruto = neto ÷ eficiencia {eff_table[chosen]:g}; 1 mm × 1 ha = 10 m³",
+            "sowing_day": "Siembra el día 15 de cada mes",
+        },
+        "source_ids": [z.climate.source_id, "FAO56-PM", "FAO56-KC", "FAO56-T11", "FAO-TM3-PE", "FAO-EFICIENCIA"],
+        "note": "Clima histórico de 11 años, no pronóstico. Cambiar el mes de siembra cambia la demanda de agua y el riesgo térmico. "
+        + ("Las ventanas de siembra del catálogo son supuestos de demostración." if cr.window_status == "supuesto_demo" else ""),
+    }
+
+
 @public.get("/public/zone")
-def public_zone(c: Container = Depends(container)):
-    return c.zone
+def public_zone(zone: str | None = None, c: Container = Depends(container)):
+    return _zone(c, zone).data
 
 
 @public.post("/public/quick-compare")
 def quick_compare(body: QuickCompare, request: Request, c: Container = Depends(container)):
-    """Comparación del modo sencillo SIN cuenta: no guarda nada (R15). Zona piloto Majes I."""
+    """Comparación del modo sencillo SIN cuenta: no guarda nada (R15). En la zona piloto elegida."""
     if c.quick_limiter and not c.quick_limiter.hit(request.client.host if request.client else "?"):
         raise ApiError(429, "demasiadas_consultas", "Demasiadas consultas seguidas; espera un momento")
+    z = _zone(c, body.zone_id)
     profile = body.profile.model_dump(mode="json")
-    inputs = frozen_inputs(profile, body.area_ha, True, _today(c), c.zone)
+    _check_crops(z, profile)
+    inputs = frozen_inputs(profile, body.area_ha, True, _today(c), z)
     try:
-        result = evaluate_frozen(inputs, c.catalog, c.climate)
+        result = evaluate_frozen(inputs, z)
     except InvalidInput as exc:
         raise ApiError(422, "entrada_invalida", str(exc))
     return {
@@ -315,16 +406,22 @@ def create_parcel(body: ParcelCreate, repo: ParcelRepo = Depends(parcel_repo), a
     else:
         raise ApiError(422, "terreno_incompleto", "Dibuja el terreno o indica su ubicación y área. Un punto GPS no delimita la parcela.")
     district = c.regions.locate_point(point["lat"], point["lon"])
-    in_pilot = bool(district and district["code"] == PILOT_DISTRICT)
+    zone = c.zones.zone_of_district(district["code"]) if district else None
+    in_pilot = zone is not None
+    profile = body.profile.model_dump(mode="json")
+    if zone:
+        _check_crops(zone, profile)
     region_codes = (
         {"district_code": district["code"], "district_name": district["name"], "provider": district["provenance"]["provider"], "source_update": district["provenance"]["source_update"]}
         if district
         else {"note": "Fuera de los distritos precargados"}
     )
     parcel = repo.add(
-        m.Parcel(name=body.name, geometry=geometry, point=point, area_ha=round(area, 4), area_origin=origin, region_codes=region_codes, in_pilot_zone=in_pilot)
+        m.Parcel(
+            name=body.name, geometry=geometry, point=point, area_ha=round(area, 4), area_origin=origin,
+            region_codes=region_codes, in_pilot_zone=in_pilot, zone_id=zone.id if zone else None,
+        )
     )
-    profile = body.profile.model_dump(mode="json")
     repo.add_revision(parcel, profile, "Perfil inicial")
     repo.add_event(
         m.CropEvent(parcel_id=parcel.id, crop_id=profile["current_crop_id"], status=profile["current_status"], expected_harvest=body.profile.expected_harvest, origin="declarado")
@@ -377,9 +474,12 @@ def list_revisions(parcel_id: str, repo: ParcelRepo = Depends(parcel_repo)):
 
 
 @private.post("/parcels/{parcel_id}/profile-revisions", status_code=201)
-def add_revision(parcel_id: str, body: RevisionCreate, repo: ParcelRepo = Depends(parcel_repo)):
+def add_revision(parcel_id: str, body: RevisionCreate, repo: ParcelRepo = Depends(parcel_repo), c: Container = Depends(container)):
     p = _get_parcel(repo, parcel_id)
-    rev = repo.add_revision(p, body.profile.model_dump(mode="json"), body.note)
+    profile = body.profile.model_dump(mode="json")
+    if p.zone_id and c.zone(p.zone_id):
+        _check_crops(c.zone(p.zone_id), profile)
+    rev = repo.add_revision(p, profile, body.note)
     return ser.revision(rev)
 
 
@@ -390,8 +490,10 @@ def list_events(parcel_id: str, repo: ParcelRepo = Depends(parcel_repo)):
 
 
 @private.post("/parcels/{parcel_id}/crop-events", status_code=201)
-def add_event(parcel_id: str, body: CropEventCreate, repo: ParcelRepo = Depends(parcel_repo)):
+def add_event(parcel_id: str, body: CropEventCreate, repo: ParcelRepo = Depends(parcel_repo), c: Container = Depends(container)):
     p = _get_parcel(repo, parcel_id)
+    if p.zone_id and c.zone(p.zone_id):
+        _check_crops(c.zone(p.zone_id), {"current_crop_id": body.crop_id})
     if body.supersedes_id and body.supersedes_id not in {e.id for e in repo.crop_events(p.id)}:
         raise not_found()
     if body.status == "cosechado" and body.actual_harvest is None:
@@ -456,14 +558,20 @@ def add_management(parcel_id: str, body: ManagementCreate, repo: ParcelRepo = De
 # ------------------------------------------------------------------ resultados
 
 
+def own_economics(repo: ParcelRepo, p: m.Parcel, zone: ZoneRuntime) -> list[dict]:
+    """Rendimientos, precios y costos propios del cuaderno de campo (se completa en el incremento 12)."""
+    return []
+
+
 def create_run(c: Container, repo: ParcelRepo, p: m.Parcel, scenario: dict | None) -> m.RecommendationRun:
     rev = repo.revision(p.active_revision_id) if p.active_revision_id else None
     if rev is None:
         raise ApiError(409, "perfil_incompleto", "Completa el perfil de la parcela antes de comparar")
     profile, label = apply_scenario(rev.data, scenario)
-    inputs = frozen_inputs(profile, p.area_ha, p.in_pilot_zone, _today(c), c.zone)
+    zone = c.zone(p.zone_id) or c.zones.default  # fuera de zona: el motor bloquea y lo explica
+    inputs = frozen_inputs(profile, p.area_ha, p.in_pilot_zone, _today(c), zone, own_economics(repo, p, zone))
     try:
-        result = evaluate_frozen(inputs, c.catalog, c.climate)
+        result = evaluate_frozen(inputs, zone)
     except InvalidInput as exc:
         raise ApiError(422, "entrada_invalida", str(exc))
     data = result.to_dict()
@@ -475,7 +583,7 @@ def create_run(c: Container, repo: ParcelRepo, p: m.Parcel, scenario: dict | Non
         engine_version=result.engine_version,
         catalog_version=result.catalog_version,
         dataset_snapshot_id=result.climate_snapshot_id,
-        dataset_sha256=c.snapshot.sha256 if (c.snapshot and result.climate_snapshot_id) else None,
+        dataset_sha256=zone.snapshot.sha256 if (zone.snapshot and result.climate_snapshot_id) else None,
         result=data,
     )
     run.assessments = [m.StrategyAssessmentRow(strategy_id=s["strategy_id"], status=s["status"], rank=s["rank"], data=s) for s in data["strategies"]]
@@ -509,8 +617,9 @@ def reproduce_run(run_id: str, repo: ParcelRepo = Depends(parcel_repo), c: Conta
     r = repo.run(run_id)
     if r is None:
         raise not_found()
-    same_versions = r.catalog_version == c.catalog.version and r.dataset_snapshot_id == c.climate.snapshot_id and r.engine_version == ENGINE_VERSION
-    again = evaluate_frozen(r.inputs, c.catalog, c.climate).to_dict()
+    zone = c.zone(r.inputs.get("zone_id")) or c.zones.default
+    same_versions = r.catalog_version == zone.catalog.version and r.dataset_snapshot_id == zone.climate.snapshot_id and r.engine_version == ENGINE_VERSION
+    again = evaluate_frozen(r.inputs, zone).to_dict()
     return {"same_versions": same_versions, "identical": again == r.result}
 
 
@@ -563,7 +672,7 @@ def ask(conv_id: str, body: MessageCreate, repo: ParcelRepo = Depends(parcel_rep
     parcel_summary = {
         "area_ha": parcel.area_ha,
         "area_origen": parcel.area_origin,
-        "zona_piloto": parcel.in_pilot_zone,
+        "zona_piloto": (c.zone(parcel.zone_id).name if parcel.zone_id and c.zone(parcel.zone_id) else None),
         "distrito": parcel.region_codes.get("district_name"),
         "perfil_usado": {k: profile.get(k) for k in ("current_crop_id", "current_status", "expected_harvest", "planned_next_crop_id", "water", "soil", "priority", "budget_soles", "residue_management")},
     }

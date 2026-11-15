@@ -242,8 +242,10 @@ class PublicRepo:
         rows = self.db.scalars(select(m.EvidenceFragment).where(m.EvidenceFragment.id.in_(ids), m.EvidenceFragment.is_public.is_(True)))
         return [{"id": f.id, "source_id": f.source_id, "title": f.title, "text": f.text} for f in rows]
 
-    def demo_parcel(self) -> m.Parcel | None:
-        return self.db.scalar(select(m.Parcel).where(m.Parcel.is_public_demo.is_(True), m.Parcel.deleted_at.is_(None)))
+    def demo_parcel(self, zone_id: str) -> m.Parcel | None:
+        return self.db.scalar(
+            select(m.Parcel).where(m.Parcel.is_public_demo.is_(True), m.Parcel.zone_id == zone_id, m.Parcel.deleted_at.is_(None))
+        )
 
     def latest_run(self, parcel_id: str) -> m.RecommendationRun | None:
         return self.db.scalar(

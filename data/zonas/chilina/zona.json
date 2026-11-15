@@ -1,0 +1,67 @@
+{
+  "id": "chilina",
+  "version": "zona-chilina-2026-11-15.1",
+  "name": "Valle de Chilina",
+  "zone": "Campiña del Valle de Chilina (río Chili, ciudad de Arequipa)",
+  "region": "Distritos de Cayma y Alto Selva Alegre, provincia y departamento de Arequipa",
+  "districts": ["040103", "040102"],
+  "recognition": "Se reconoce por los distritos de Cayma (040103, margen derecha) y Alto Selva Alegre (040102, margen izquierda), donde cae el 80 % de las 36 parcelas agrícolas de OpenStreetMap junto al río (comprobado con los límites SERFOR/INEI el 15-nov-2026). El extremo sur (cerca de los puentes Chilina y Grau) entra en Arequipa (040101) y Yanahuara (040126), que no se incluyen por ser casi enteramente urbanos. Los distritos son una referencia, no el límite de la campiña.",
+  "center": {"lat": -16.362, "lon": -71.535, "note": "Centroide de las parcelas agrícolas de OSM junto al río Chili; ubicación aproximada, no delimita un lote"},
+  "elevation_m": {"value": 2400, "note": "Fondo del valle entre ~2 340 y ~2 465 m según el modelo de elevación SRTM 30 m (OpenTopoData); la celda NASA POWER está a 3 330 m."},
+  "nasa": {"file": "nasa_power_daily_2015_2025.json", "source_id": "NASA-POWER-CHILINA"},
+  "catalog_file": "catalogo.json",
+  "zone_source_id": "ZONA-CHILINA",
+  "local_water_source_ids": ["ANA-CHILI-REGULADO-2022", "ANA-PAMPAS-NUEVAS-2025"],
+  "note": "Supuestos de la campiña de Chilina, obtenidos de documentos propios de la zona (ANA, SENAMHI); ningún valor se toma de Majes. Se aplican solo a datos desconocidos, se etiquetan como supuesto de zona y nunca habilitan «Buena opción» en una restricción obligatoria (R16).",
+  "water_m3_ha_year": {
+    "value": 23000,
+    "unit": "m³/ha/año",
+    "source_id": "ANA-CHILI-REGULADO-2022",
+    "status": "supuesto_zona",
+    "label": "≈ 23 000 m³/ha/año (volumen de la Comisión Pampas Nuevas de Chilina, ANA 2022, ÷ 75,08 ha de su canal, ANA 2025)",
+    "derivation": "1,7268 hm³ (RA 0097-2022-ANA-AAA.CO-ALA.CH, cuadro de tarifas, volumen de agua) ÷ 75,08 ha (RA 0258-2025-ANA-AAA.CO-ALA.CH, cuadro del Art. 1º) = 22 999,5 m³/ha/año. Cálculo de CERES que cruza dos documentos de años distintos; supone que esas 75,08 ha son todo el riego de la comisión.",
+    "note": "Corresponde a la margen izquierda (Alto Selva Alegre). La comisión que riega la margen de Cayma (Carmen Alto) no está verificada. No es la dotación asignada a un lote concreto."
+  },
+  "monthly_distribution": {
+    "method": "uniforme",
+    "status": "supuesto_zona",
+    "note": "Se reparte el valor anual en partes iguales por mes; la distribución real por turnos debe confirmarse con la Comisión de Usuarios."
+  },
+  "efficiency_by_method": {
+    "goteo": 0.9,
+    "aspersion": 0.75,
+    "gravedad": 0.6,
+    "unit": "fracción",
+    "source_id": "FAO-EFICIENCIA",
+    "note": "Valores indicativos de eficiencia de aplicación en parcela (FAO, Irrigation Water Management, Tabla 8)."
+  },
+  "default_method": {
+    "value": "gravedad",
+    "status": "supuesto_zona",
+    "source_id": "EOS-AREQUIPA-2021",
+    "note": "La campiña de Arequipa se riega por una red de canales de gravedad (EOS, 2021); el riego en parcela de Chilina no está verificado. Sin dato del lote se supone gravedad, la opción más conservadora."
+  },
+  "default_area_ha": {
+    "value": 1,
+    "status": "supuesto_demo",
+    "note": "Área de ejemplo: el canal Pampas Nuevas de Chilina tiene 75 usuarios en 75,08 ha (ANA 2025), cerca de 1 ha por usuario. Cambia volúmenes, no la viabilidad por hectárea."
+  },
+  "demo": {
+    "name": "Caso público de demostración — Valle de Chilina",
+    "note": "Caso de demostración: todos los datos de parcela son supuestos etiquetados",
+    "polygon": {"type": "Polygon", "coordinates": [[[-71.5300, -16.3655], [-71.5291, -16.3655], [-71.5291, -16.3646], [-71.5300, -16.3646], [-71.5300, -16.3655]]]},
+    "harvest_in_days": null,
+    "soil_analysis_days_ago": null,
+    "profile": {
+      "current_crop_id": "papa",
+      "current_status": "cosechado",
+      "planned_next_crop_id": null,
+      "water": {"mode": "no_se"},
+      "soil": {},
+      "priority": "equilibrada",
+      "budget_soles": null,
+      "residue_management": "no_se",
+      "economic_overrides": []
+    }
+  }
+}

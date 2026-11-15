@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 from datetime import date
+from typing import Protocol
 
 from ceres.domain.catalog import Catalog
 from ceres.domain.engine import ClimateInput, evaluate
@@ -13,6 +14,7 @@ from ceres.domain.model import (
     ParcelInput,
     SoilInput,
     WaterInput,
+    ZoneContext,
 )
 
 
@@ -73,30 +75,46 @@ def apply_scenario(profile: dict, scenario: dict | None) -> tuple[dict, str | No
 
 
 def apply_zone_defaults(profile: dict, area_ha: float, zone: dict | None) -> tuple[dict, list[str]]:
-    """Completa SOLO datos desconocidos con supuestos de zona (R16). Devuelve (perfil efectivo, campos supuestos)."""
+    """Completa SOLO datos desconocidos con supuestos de la zona (R16). Devuelve (perfil efectivo, campos supuestos).
+
+    Una zona sin valor típico publicado (p. ej. agua) no rellena ese dato: queda desconocido.
+    """
     if not zone or profile.get("use_zone_defaults", True) is False:
         return profile, []
     p = copy.deepcopy(profile)
     w = p.setdefault("water", {})
     assumed: list[str] = []
-    eff_table = zone["efficiency_by_method"]
+    eff_table = zone.get("efficiency_by_method") or {}
+    default_method = (zone.get("default_method") or {}).get("value")
     if w.get("efficiency") is None:
         method = w.get("method")
         if method in eff_table:
             w["efficiency"] = eff_table[method]  # método declarado + referencia FAO: no es supuesto
-        else:
-            w["efficiency"] = eff_table[zone["default_method"]["value"]]
+        elif default_method in eff_table:
+            w["efficiency"] = eff_table[default_method]
             assumed.append("water.efficiency")
     knows_exact = w.get("mode") == "conozco" and w.get("allocation_m3") is not None and w.get("allocation_period", "mensual") == "mensual"
     has_bounds = w.get("allocation_min_m3") is not None or w.get("allocation_max_m3") is not None
-    if not knows_exact and not has_bounds and w.get("allocation_period", "mensual") == "mensual":
-        monthly = zone["water_m3_ha_year"]["value"] / 12 * area_ha
+    typical = (zone.get("water_m3_ha_year") or {}).get("value")
+    if typical is not None and not knows_exact and not has_bounds and w.get("allocation_period", "mensual") == "mensual":
+        monthly = typical / 12 * area_ha
         w.update(mode="conozco", allocation_m3=round(monthly), allocation_period="mensual")
         assumed.append("water.allocation")
     return p, assumed
 
 
-def parcel_input(profile: dict, area_ha: float, in_pilot: bool, reference_date: date, assumed: list[str] | None = None) -> ParcelInput:
+def parcel_input(
+    profile: dict, area_ha: float, in_pilot: bool, reference_date: date, assumed: list[str] | None = None,
+    zone: ZoneContext | None = None, own_economics: list[dict] | None = None,
+) -> ParcelInput:
+    overrides = {o["crop_id"]: EconomicOverride(**o) for o in profile.get("economic_overrides", [])}
+    # Datos propios del cuaderno (R17): sustituyen a los del perfil y a los de ejemplo, campo a campo.
+    for o in own_economics or []:
+        prev = overrides.get(o["crop_id"])
+        merged = {k: v for k, v in (vars(prev) if prev else {}).items()}
+        merged.update({k: v for k, v in o.items() if v is not None})
+        merged["origin"] = "cuaderno"
+        overrides[o["crop_id"]] = EconomicOverride(**merged)
     w = profile.get("water") or {}
     s = profile.get("soil") or {}
     return ParcelInput(
@@ -129,28 +147,48 @@ def parcel_input(profile: dict, area_ha: float, in_pilot: bool, reference_date: 
         priority=profile.get("priority", "equilibrada"),
         budget_soles=profile.get("budget_soles"),
         residue_management=profile.get("residue_management", "no_se"),
-        economic_overrides=tuple(EconomicOverride(**o) for o in profile.get("economic_overrides", [])),
+        economic_overrides=tuple(overrides.values()),
         reference_date=reference_date,
         assumed=frozenset(assumed or []),
+        zone=zone or ZoneContext(),
     )
 
 
-def frozen_inputs(profile: dict, area_ha: float, in_pilot: bool, reference_date: date, zone: dict | None = None) -> dict:
-    """Entradas congeladas: perfil declarado, perfil efectivo con supuestos de zona y su versión."""
-    effective, assumed = apply_zone_defaults(profile, area_ha, zone)
+class ZoneLike(Protocol):
+    """Zona piloto resuelta por la infraestructura (catálogo, clima y supuestos propios)."""
+
+    id: str
+    data: dict
+    catalog: Catalog
+    climate: ClimateInput
+
+    def context(self) -> ZoneContext: ...
+
+
+def frozen_inputs(
+    profile: dict, area_ha: float, in_pilot: bool, reference_date: date, zone: ZoneLike | None = None,
+    own_economics: list[dict] | None = None,
+) -> dict:
+    """Entradas congeladas: perfil declarado, perfil efectivo con supuestos de zona, la zona y sus versiones."""
+    effective, assumed = apply_zone_defaults(profile, area_ha, zone.data if (zone and in_pilot) else None)
     return {
         "profile": profile,
         "effective_profile": effective,
         "assumed": assumed,
-        "zone_version": zone.get("version") if zone else None,
+        "zone_id": zone.id if zone else None,
+        "zone_version": zone.data.get("version") if zone else None,
+        "own_economics": own_economics or [],
         "area_ha": area_ha,
         "in_pilot_zone": in_pilot,
         "reference_date": reference_date.isoformat(),
     }
 
 
-def evaluate_frozen(inputs: dict, catalog: Catalog, climate: ClimateInput) -> ComparisonResult:
-    """Reproduce un resultado desde sus entradas congeladas."""
+def evaluate_frozen(inputs: dict, zone: ZoneLike) -> ComparisonResult:
+    """Reproduce un resultado desde sus entradas congeladas con el catálogo y el clima de SU zona."""
     profile = inputs.get("effective_profile", inputs["profile"])
-    p = parcel_input(profile, inputs["area_ha"], inputs["in_pilot_zone"], date.fromisoformat(inputs["reference_date"]), inputs.get("assumed"))
-    return evaluate(p, catalog, climate)
+    p = parcel_input(
+        profile, inputs["area_ha"], inputs["in_pilot_zone"], date.fromisoformat(inputs["reference_date"]),
+        inputs.get("assumed"), zone.context(), inputs.get("own_economics"),
+    )
+    return evaluate(p, zone.catalog, zone.climate)

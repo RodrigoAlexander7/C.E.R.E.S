@@ -1,0 +1,66 @@
+{
+  "id": "majes",
+  "version": "zona-majes-2026-11-15.2",
+  "name": "Majes I",
+  "zone": "Irrigación Majes I (Pampa de Majes)",
+  "region": "Distrito de Majes, provincia de Caylloma, Arequipa",
+  "districts": ["040520"],
+  "recognition": "Se reconoce por el distrito de Majes (SERFOR/INEI, código 040520). El límite de la irrigación no está cargado; el distrito es una referencia. No confundir con el valle de Majes (Castilla) ni con Majes Siguas II.",
+  "center": {"lat": -16.35, "lon": -72.19, "note": "Pampa de Majes, cerca de El Pedregal; ubicación aproximada, no delimita un lote"},
+  "elevation_m": {"value": 1400, "note": "La Pampa de Majes está a unos 1 400 m; la celda NASA POWER está a 835 m."},
+  "nasa": {"file": "nasa_power_daily_2015_2025.json", "source_id": "NASA-POWER"},
+  "catalog_file": "catalogo.json",
+  "zone_source_id": "ZONA-MAJES",
+  "local_water_source_ids": ["AGUA-LOCAL", "AUTODEMA-MAJES"],
+  "note": "Valores típicos de zona para no dejar al agricultor en un callejón sin salida. Se aplican solo a datos desconocidos, se etiquetan como supuesto de zona y nunca habilitan «Buena opción» en una restricción obligatoria (R16).",
+  "water_m3_ha_year": {
+    "value": 22500,
+    "unit": "m³/ha/año",
+    "source_id": "AUTODEMA-INDICADORES-2023",
+    "status": "referencia_local",
+    "label": "22 500 m³/ha/año (consumo reportado por AUTODEMA, 2023)",
+    "note": "Cantidad de agua de riego por hectárea en Majes reportada por AUTODEMA para 2023 (indicador de rendición de cuentas). Es consumo reportado, no la dotación asignada a un lote concreto."
+  },
+  "monthly_distribution": {
+    "method": "uniforme",
+    "status": "supuesto_zona",
+    "note": "Se reparte el valor anual en partes iguales por mes; la distribución real por turnos debe confirmarse con la Junta de Usuarios."
+  },
+  "efficiency_by_method": {
+    "goteo": 0.9,
+    "aspersion": 0.75,
+    "gravedad": 0.6,
+    "unit": "fracción",
+    "source_id": "FAO-EFICIENCIA",
+    "note": "Valores indicativos de eficiencia de aplicación en parcela (FAO, Irrigation Water Management, Tabla 8)."
+  },
+  "default_method": {
+    "value": "aspersion",
+    "status": "supuesto_zona",
+    "source_id": "AUTODEMA-MAJES",
+    "note": "La irrigación se riega con métodos presurizados (aspersión y goteo); sin dato del lote se supone aspersión, la opción más conservadora de las dos."
+  },
+  "default_area_ha": {
+    "value": 5,
+    "status": "supuesto_demo",
+    "note": "Área de ejemplo para el modo sencillo cuando el agricultor no la indica; cambia márgenes y volúmenes, no la viabilidad por hectárea."
+  },
+  "demo": {
+    "name": "Caso público de demostración — Majes I",
+    "note": "Caso de demostración: todos los datos de parcela son supuestos etiquetados",
+    "polygon": {"type": "Polygon", "coordinates": [[[-72.1911, -16.3510], [-72.1890, -16.3510], [-72.1890, -16.3490], [-72.1911, -16.3490], [-72.1911, -16.3510]]]},
+    "harvest_in_days": 90,
+    "soil_analysis_days_ago": 150,
+    "profile": {
+      "current_crop_id": "maiz_grano",
+      "current_status": "en_campo",
+      "planned_next_crop_id": null,
+      "water": {"mode": "conozco", "allocation_m3": 12000, "allocation_period": "mensual", "efficiency": 0.85, "delivery_point": "toma de la parcela", "origin": "supuesto_demo"},
+      "soil": {"ece_ds_m": 0.9, "ph": 7.6, "organic_matter_pct": 1.1, "depth_cm": "0-30", "method": "extracto de saturación (supuesto)", "kind": "supuesto_demo"},
+      "priority": "equilibrada",
+      "budget_soles": null,
+      "residue_management": "incorporar",
+      "economic_overrides": []
+    }
+  }
+}

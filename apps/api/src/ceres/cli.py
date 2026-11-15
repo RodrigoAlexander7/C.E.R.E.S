@@ -1,6 +1,7 @@
 """Comandos de mantenimiento: `uv run python -m ceres.cli <comando>`.
 
-- fetch-nasa: descarga la serie real NASA POWER del piloto (una vez; luego se reutiliza la copia).
+- fetch-nasa --zone <zona>: descarga la serie real NASA POWER de una zona piloto (una vez; luego se reutiliza la copia).
+- fetch-oni: descarga el índice ONI de NOAA CPC (fases El Niño/La Niña) con hash.
 - fetch-regions: descarga límites administrativos referenciales (SERFOR/INEI) para la demo.
 - seed: carga catálogo, fuentes, fichas y el caso público de demostración en PostgreSQL.
 - check-llm: comprueba la configuración del asistente sin imprimir la clave.
@@ -15,18 +16,18 @@ from datetime import date
 
 from ceres.config import get_settings
 
-MAJES_I_POINT = {"lat": -16.35, "lon": -72.19}  # Pampa de Majes (Majes I), cerca de El Pedregal
-
-
 def cmd_fetch_nasa(args: argparse.Namespace) -> int:
+    """Descarga la serie de la zona indicada en el punto `center` de su zona.json."""
     from ceres.infrastructure.nasa_power import NasaPowerError, fetch_and_store, load_snapshot
 
     settings = get_settings()
-    out = settings.data_dir / settings.nasa_snapshot_file
+    zdir = settings.data_dir / "zonas" / args.zone
+    zone = json.loads((zdir / "zona.json").read_text())
+    out = zdir / zone["nasa"]["file"]
     try:
         fetch_and_store(
-            MAJES_I_POINT["lat"],
-            MAJES_I_POINT["lon"],
+            zone["center"]["lat"],
+            zone["center"]["lon"],
             date.fromisoformat(args.start),
             date.fromisoformat(args.end),
             out,
@@ -34,6 +35,20 @@ def cmd_fetch_nasa(args: argparse.Namespace) -> int:
         snap = load_snapshot(out)
     except NasaPowerError as exc:
         print(f"ERROR NASA POWER: {exc}", file=sys.stderr)
+        return 1
+    print(json.dumps(snap.public_summary(), indent=2, ensure_ascii=False))
+    return 0
+
+
+def cmd_fetch_oni(args: argparse.Namespace) -> int:
+    from ceres.infrastructure.noaa_oni import OniError, fetch_and_store, load_oni
+
+    out = get_settings().data_dir / "noaa" / "oni.ascii.txt"
+    try:
+        fetch_and_store(out)
+        snap = load_oni(out)
+    except OniError as exc:
+        print(f"ERROR NOAA ONI: {exc}", file=sys.stderr)
         return 1
     print(json.dumps(snap.public_summary(), indent=2, ensure_ascii=False))
     return 0
@@ -68,8 +83,10 @@ def main(argv: list[str] | None = None) -> int:
     p = sub.add_parser("fetch-nasa")
     p.add_argument("--start", default="2015-01-01")
     p.add_argument("--end", default="2025-12-31")
+    p.add_argument("--zone", default="majes", help="zona de data/zonas/ (usa su punto center)")
     p.set_defaults(func=cmd_fetch_nasa)
     sub.add_parser("fetch-regions").set_defaults(func=cmd_fetch_regions)
+    sub.add_parser("fetch-oni").set_defaults(func=cmd_fetch_oni)
     sub.add_parser("seed").set_defaults(func=cmd_seed)
     sub.add_parser("check-llm").set_defaults(func=cmd_check_llm)
     args = parser.parse_args(argv)

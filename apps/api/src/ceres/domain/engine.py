@@ -30,8 +30,9 @@ from ceres.domain.model import (
     TimelineBlock,
 )
 
-ENGINE_VERSION = "ceres-engine-0.2.0"
+ENGINE_VERSION = "ceres-engine-0.3.0"
 MM_HA_TO_M3 = 10.0  # 1 mm sobre 1 ha = 10 m³
+_METHOD_LABEL = {"goteo": "goteo", "aspersion": "aspersión", "gravedad": "gravedad"}
 MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"]
 
 
@@ -53,6 +54,7 @@ class ClimateInput:
     snapshot_id: str | None
     series: ClimateSeries | None
     scale_note: str = ""
+    source_id: str = "NASA-POWER"  # fuente registrada de la instantánea de esta zona
 
     def __post_init__(self) -> None:
         self._et0_clim: dict[tuple[int, int], float] = {}
@@ -104,10 +106,11 @@ def sequence_for(template: StrategyTemplate, p: ParcelInput, catalog: Catalog) -
         nxt = p.planned_next_crop_id or current
         missing = [] if catalog.crop(nxt) else [f"Ficha agronómica para «{catalog.non_catalog_crops.get(nxt, nxt)}»"]
         return [nxt], missing
-    if template.sequence_rule == "leguminosa":
-        return (["maiz_grano", "frejol_grano"] if current == "frejol_grano" else ["frejol_grano", "maiz_grano"]), []
-    if template.sequence_rule == "diversificar":
-        return (["maiz_grano", "cebolla_roja"] if current == "cebolla_roja" else ["cebolla_roja", "maiz_grano"]), []
+    if template.sequence_rule == "alternar":
+        # Se turnan los cultivos de la plantilla; si el actual está entre ellos, se empieza por el siguiente.
+        crops = list(template.crops)
+        start = (crops.index(current) + 1) % len(crops) if current in crops else 0
+        return crops[start:] + crops[:start], []
     raise ValueError(template.sequence_rule)
 
 
@@ -174,7 +177,7 @@ def evaluate(p: ParcelInput, catalog: Catalog, climate: ClimateInput) -> Compari
         )
     if not p.in_pilot_zone:
         blocking.append(
-            "La parcela está fuera de la zona piloto (Majes I). Faltan fichas locales para recomendar; puedes explorar "
+            "La parcela está fuera de las zonas piloto. Faltan fichas locales para recomendar; puedes explorar "
             "el mapa y las fuentes."
         )
 
@@ -226,7 +229,7 @@ def evaluate(p: ParcelInput, catalog: Catalog, climate: ClimateInput) -> Compari
     )
     from ceres.domain.simple import simplify
 
-    simplify(result, p, {t.id: t.cap_status for t in catalog.templates})
+    simplify(result, p, catalog)
     return result
 
 
@@ -286,6 +289,10 @@ def _assess(
     )
     if "supuesto_demo" in window_status:
         assumptions.append("Ventanas de siembra de demostración, sin revisión agronómica local.")
+    if "sin_calendario" in window_status:
+        assumptions.append("Sin calendario local verificado para algún cultivo: no se restringe el mes de siembra; revisa el riesgo de helada de cada mes.")
+    if "sin_verificar" in window_status:
+        assumptions.append("Alguna ventana de siembra se infiere de observaciones de campo publicadas, sin un calendario oficial.")
     for n in cal_notes:
         reasons.append(Reason("CAL-03", "informacion", n))
     metrics[f"{sid}.ciclos"] = Metric(f"{sid}.ciclos", "Ciclos completos en el horizonte", len(cycles), "ciclos", "derivado", "calendario")
@@ -428,10 +435,14 @@ def _assess(
         crit_missing = True
 
     lo, hi = p.water.bounds()
+    z = p.zone
     water_assumed = sorted(f for f in ("water.allocation", "water.efficiency") if f in p.assumed)
-    water_sources = ["NASA-POWER", "FAO56-PM", "FAO-TM3-PE"] + (
-        ["AUTODEMA-INDICADORES-2023", "ZONA-MAJES"] if "water.allocation" in p.assumed else ["PARCELA"]
+    water_sources = [climate.source_id, "FAO56-PM", "FAO-TM3-PE"] + (
+        [*z.water_source_ids, z.zone_source_id] if "water.allocation" in p.assumed else ["PARCELA"]
     ) + (["FAO-EFICIENCIA"] if "water.efficiency" in p.assumed or p.water.method else [])
+    if "water.efficiency" in p.assumed:
+        water_sources.append(z.zone_source_id)
+    water_sources = _dedupe(water_sources)
     if p.water.allocation_period == "anual" and p.water.mode == "conozco":
         crit_missing = True
         missing.append("Dotación desagregada por mes")
@@ -452,8 +463,9 @@ def _assess(
                 "AGU-01",
                 "falta_dato",
                 "Indicaste que no sabes cuánta agua recibirás. La lluvia NASA no equivale al agua del canal: sin dotación "
-                "no se puede confirmar que el ciclo tenga agua suficiente.",
-                source_ids=["AGUA-LOCAL", "AUTODEMA-MAJES"],
+                "no se puede confirmar que el ciclo tenga agua suficiente."
+                + ("" if z.water_label else f" En {z.name} no hay un valor típico publicado que podamos usar como supuesto."),
+                source_ids=list(z.local_water_source_ids),
                 missing=["Dotación mensual (m³) y punto de entrega"],
             )
         )
@@ -473,12 +485,15 @@ def _assess(
         peak = max(monthly_water, key=lambda m: m["gross_m3"] or 0)
         need = peak["gross_m3"]
         zone_note = (
-            ["Agua típica de Majes: 22 500 m³/ha/año (consumo reportado por AUTODEMA, 2023) repartido igual cada mes; confírmalo con tu Junta."]
+            [f"Agua típica de {z.name}: {z.water_label} repartido igual cada mes; confírmalo con tu junta o comisión de usuarios."]
             if "water.allocation" in p.assumed
             else ["Dotación declarada igual en todos los meses, medida en la toma de la parcela."]
         )
         if "water.efficiency" in p.assumed:
-            zone_note.append("Riego por aspersión supuesto (eficiencia 75 %, FAO); goteo necesitaría menos agua.")
+            zone_note.append(
+                f"Riego por {_METHOD_LABEL.get(z.default_method or '', z.default_method)} supuesto "
+                f"(eficiencia {p.water.efficiency * 100:.0f} %, FAO) porque no indicaste cómo riegas."
+            )
         who = "el agua típica de la zona" if "water.allocation" in p.assumed else "tu dotación"
         if hi is not None and need > hi:
             hard_fail = True
@@ -530,8 +545,8 @@ def _assess(
                 ref,
                 "m³/mes",
                 "supuesto_zona" if "water.allocation" in p.assumed else "declarado",
-                "22 500 m³/ha/año (AUTODEMA 2023) ÷ 12 × área" if "water.allocation" in p.assumed else "declaración del agricultor",
-                source_ids=["AUTODEMA-INDICADORES-2023", "ZONA-MAJES"] if "water.allocation" in p.assumed else ["PARCELA"],
+                f"{z.water_label} ÷ 12 × área" if "water.allocation" in p.assumed else "declaración del agricultor",
+                source_ids=[*z.water_source_ids, z.zone_source_id] if "water.allocation" in p.assumed else ["PARCELA"],
             )
 
     # --- economía
@@ -649,17 +664,7 @@ def _water(sid, cycles, p: ParcelInput, climate: ClimateInput, metrics, reasons,
             slot["etc"] += etc
             slot["days"] += 1
         # rango histórico por año
-        per_year = []
-        for _, s, e in historical_windows(climate.series, c.plant, c.harvest):
-            tot, ok = 0.0, True
-            for k in range(n):
-                v = climate.series.et0.get(s + timedelta(days=k))
-                if v is None:
-                    ok = False
-                    break
-                tot += c.crop.kc_on_day(k) * v
-            if ok:
-                per_year.append(tot)
+        per_year = [t for *_, t in etc_by_year(climate.series, c.crop, c.plant, c.harvest)]
         year_totals.append((min(per_year), max(per_year)) if per_year else (None, None))
 
     monthly = []
@@ -685,7 +690,7 @@ def _water(sid, cycles, p: ParcelInput, climate: ClimateInput, metrics, reasons,
                 "gross_m3": round(gross_mm * MM_HA_TO_M3 * p.area_ha) if gross_mm is not None else None,
             }
         )
-    src = ["NASA-POWER", "FAO56-PM", "FAO56-KC"]
+    src = [climate.source_id, "FAO56-PM", "FAO56-KC"]
     lo = sum(v[0] for v in year_totals if v[0] is not None) if all(v[0] is not None for v in year_totals) else None
     hi = sum(v[1] for v in year_totals if v[1] is not None) if all(v[1] is not None for v in year_totals) else None
     metrics[f"{sid}.agua.etc_mm"] = Metric(
@@ -728,9 +733,26 @@ def _water(sid, cycles, p: ParcelInput, climate: ClimateInput, metrics, reasons,
     return monthly, True
 
 
-def _thermal(sid, c: Cycle, climate: ClimateInput, metrics, reasons):
+def etc_by_year(series: ClimateSeries, crop: CropProfile, plant: date, harvest: date) -> list[tuple[int, date, date, float]]:
+    """ETc del ciclo completo en cada año histórico equivalente (solo años sin ausentes)."""
+    out = []
+    for y, s, e in historical_windows(series, plant, harvest):
+        tot, ok = 0.0, True
+        for k in range(crop.cycle_days):
+            v = series.et0.get(s + timedelta(days=k))
+            if v is None:
+                ok = False
+                break
+            tot += crop.kc_on_day(k) * v
+        if ok:
+            out.append((y, s, e, tot))
+    return out
+
+
+def _thermal(sid, c: Cycle, climate: ClimateInput, metrics, reasons) -> list[dict]:
     from ceres.domain.climate import thermal_exposure
 
+    found: list[dict] = []
     for rule in c.crop.thermal_rules:
         ranges = c.crop.stage_ranges(c.plant)
         selected = [(s, e) for n, s, e in ranges if "todas" in rule.stages or n in rule.stages]
@@ -749,10 +771,19 @@ def _thermal(sid, c: Cycle, climate: ClimateInput, metrics, reasons):
             "días/año (promedio histórico)",
             "derivado",
             f"NASA POWER {rule.variable} {rule.comparator} {rule.threshold_c} °C; {exp.years_with_events} de {exp.years_evaluated} años con eventos",
-            source_ids=["NASA-POWER", *rule.source_ids],
+            source_ids=[climate.source_id, *rule.source_ids],
             detail=rule.note,
         )
         state = "advertencia" if exp.share_of_years >= 0.3 else "informacion"
+        found.append(
+            {
+                "rule_id": rule.id, "label": rule.label, "variable": rule.variable, "comparator": rule.comparator,
+                "threshold_c": rule.threshold_c, "start": s.isoformat(), "end": e.isoformat(),
+                "years_with_events": exp.years_with_events, "years_evaluated": exp.years_evaluated,
+                "mean_days_per_year": round(exp.mean_days_per_year, 1), "state": state, "status": rule.status,
+                "source_ids": [climate.source_id, *rule.source_ids],
+            }
+        )
         reasons.append(
             Reason(
                 "CLI-01",
@@ -761,10 +792,113 @@ def _thermal(sid, c: Cycle, climate: ClimateInput, metrics, reasons):
                 f"con {_var_label(rule.variable)} {rule.comparator} {rule.threshold_c:g} °C en esas fechas "
                 f"(promedio {exp.mean_days_per_year:.1f} días/año). Es frecuencia histórica, no pronóstico.",
                 metric_ids=[mid],
-                source_ids=["NASA-POWER", *rule.source_ids],
+                source_ids=[climate.source_id, *rule.source_ids],
                 assumptions=[f"Umbral {rule.status.replace('_', ' ')}: {rule.note}"],
             )
         )
+    return found
+
+
+# ---------------------------------------------------------------- ventana de siembra (R19)
+
+
+def sowing_window(
+    crop: CropProfile, climate: ClimateInput, efficiency: float, phases: dict[tuple[int, int], str] | None = None,
+    ref_year: int = 2027,
+) -> list[dict]:
+    """«¿Cuándo me conviene sembrar?»: para cada mes de siembra (día 15), el MISMO cálculo de agua y
+    exposición térmica que usa la comparación (_water, _thermal), por hectárea y con los 11 años NASA.
+    Con `phases` (ONI de NOAA), cada campaña histórica se etiqueta El Niño / La Niña / neutro."""
+    from ceres.domain.enso import campaign_phase
+    from ceres.domain.model import SoilInput, WaterInput
+
+    if not climate.available:
+        return []
+    stub = ParcelInput(
+        area_ha=1.0, in_pilot_zone=True, current_crop_id=crop.id, current_status="cosechado", expected_harvest=None,
+        planned_next_crop_id=None, water=WaterInput(efficiency=efficiency), soil=SoilInput(), priority="equilibrada",
+        budget_soles=None, residue_management="no_se",
+    )
+    out = []
+    for m in range(1, 13):
+        plant = date(ref_year, m, 15)
+        harvest = plant + timedelta(days=crop.cycle_days - 1)
+        cycle = Cycle(crop, plant, plant, harvest, 0)
+        metrics: dict[str, Metric] = {}
+        reasons: list[Reason] = []
+        monthly, ok = _water("V", [cycle], stub, climate, metrics, reasons, [])
+        if not ok:
+            out.append({"month": m, "available": False})
+            continue
+        thermal = _thermal("V", cycle, climate, metrics, reasons)
+        series = climate.series
+        campaigns = []
+        for y, s, e, etc in etc_by_year(series, crop, plant, harvest):
+            days = [series.days.get(s + timedelta(days=k)) for k in range(crop.cycle_days)]
+            rain = [d.precipitation_mm for d in days if d and d.precipitation_mm is not None]
+            tmax = [d.t_max for d in days if d and d.t_max is not None]
+            tmin = [d.t_min for d in days if d and d.t_min is not None]
+            campaigns.append(
+                {
+                    "year": y, "start": s.isoformat(), "end": e.isoformat(), "etc_mm": round(etc, 1),
+                    "rain_mm": round(sum(rain), 1) if len(rain) == crop.cycle_days else None,
+                    "t_max_mean_c": round(sum(tmax) / len(tmax), 1) if tmax else None,
+                    "t_min_mean_c": round(sum(tmin) / len(tmin), 1) if tmin else None,
+                    "phase": campaign_phase(s, e, phases) if phases else None,
+                }
+            )
+        etc_total = metrics["V.agua.etc_mm"].value
+        net = metrics["V.agua.neto_mm"].value
+        years = [c["etc_mm"] for c in campaigns]
+        out.append(
+            {
+                "month": m,
+                "available": True,
+                "plant": plant.isoformat()[5:],
+                "harvest": harvest.isoformat()[5:],
+                "cycle_days": crop.cycle_days,
+                "in_window": any(w.contains(plant) for w in crop.windows),
+                "etc_mm": round(etc_total, 1),
+                "etc_mm_range": [min(years), max(years)] if years else None,
+                "net_mm": round(net, 1),
+                "gross_m3_ha": round(net / efficiency * MM_HA_TO_M3),
+                "peak_month": max(monthly, key=lambda r: r["gross_m3"] or 0)["label"][:3],
+                "peak_gross_m3_ha": max(r["gross_m3"] or 0 for r in monthly),
+                "thermal": thermal,
+                "campaigns": campaigns,
+            }
+        )
+    return out
+
+
+def enso_summary(months: list[dict]) -> list[dict]:
+    """Promedios por fase ENSO de las campañas históricas de cada mes de siembra."""
+    from ceres.domain.enso import PHASE_LABEL
+
+    out = []
+    for row in months:
+        if not row.get("available"):
+            continue
+        groups = []
+        for ph, label in PHASE_LABEL.items():
+            cs = [c for c in row["campaigns"] if c["phase"] == ph]
+            if not cs:
+                groups.append({"phase": ph, "label": label, "n": 0, "years": []})
+                continue
+
+            def mean(key, cs=cs):
+                v = [c[key] for c in cs if c[key] is not None]
+                return round(sum(v) / len(v), 1) if v else None
+
+            groups.append(
+                {
+                    "phase": ph, "label": label, "n": len(cs), "years": [c["year"] for c in cs],
+                    "etc_mm": mean("etc_mm"), "rain_mm": mean("rain_mm"),
+                    "t_max_mean_c": mean("t_max_mean_c"), "t_min_mean_c": mean("t_min_mean_c"),
+                }
+            )
+        out.append({"month": row["month"], "groups": groups})
+    return out
 
 
 def _var_label(v: str) -> str:
@@ -794,14 +928,27 @@ def _economics(sid, cycles, p: ParcelInput, catalog: Catalog, salinity_factor, m
     central = low = high = 0.0
     lacking: list[str] = []
     kinds: set[str] = set()
+    own: set[str] = set()  # PARCELA (perfil) y/o CUADERNO (registros propios)
+    own_notes: list[str] = []
     per_cycle = []
     for c in cycles:
         e = c.crop.economics
         o = overrides.get(c.crop.id)
-        y = o.yield_t_ha if o and o.yield_t_ha is not None else e.yield_t_ha
-        pr = o.price_soles_kg if o and o.price_soles_kg is not None else e.price_soles_kg
-        cost = o.variable_cost_soles_ha if o and o.variable_cost_soles_ha is not None else e.variable_cost_soles_ha
-        kinds.add("declarado" if o else e.status)
+        vals = []
+        for field_name in ("yield_t_ha", "price_soles_kg", "variable_cost_soles_ha"):
+            mine = getattr(o, field_name) if o else None
+            if mine is not None:
+                kinds.add("declarado")
+                own.add("CUADERNO" if o.origin == "cuaderno" else "PARCELA")
+                vals.append(mine)
+            else:
+                ref = getattr(e, field_name)
+                if ref is not None:
+                    kinds.add(e.status)
+                vals.append(ref)
+        if o and o.note:
+            own_notes.append(o.note)
+        y, pr, cost = vals
         if None in (y, pr, cost):
             lacking.append(c.crop.name)
             continue
@@ -831,8 +978,9 @@ def _economics(sid, cycles, p: ParcelInput, catalog: Catalog, salinity_factor, m
     for _, v in events:
         cum += v
         worst = min(worst, cum)
-    kind = "supuesto_demo" if "supuesto_demo" in kinds else "declarado"
-    src = sorted({s for c in cycles for s in c.crop.economics.source_ids}) + (["PARCELA"] if "declarado" in kinds else [])
+    # Basta un valor de ejemplo para que el margen no se presente como dato propio.
+    kind = next((k for k in ("supuesto_demo", "sin_verificar", "referencia_bibliografica") if k in kinds), "declarado")
+    src = sorted({s for c in cycles for s in c.crop.economics.source_ids}) + sorted(own)
     metrics[f"{sid}.eco.margen"] = Metric(
         f"{sid}.eco.margen", "Margen bruto estimado (escenario central)", central, "S/", kind,
         "Σ ciclos (rendimiento comercializable × precio en chacra − costos variables − transición) × área",
@@ -850,7 +998,11 @@ def _economics(sid, cycles, p: ParcelInput, catalog: Catalog, salinity_factor, m
         f"{sid}.eco.capital", "Capital necesario antes de recuperar con cosechas", -worst, "S/", kind,
         "Máximo saldo negativo acumulado (costos al sembrar, ingresos al cosechar)", source_ids=src,
     )
-    if kind == "supuesto_demo":
+    if "CUADERNO" in own:
+        assumptions.append("Usa tus propios registros del cuaderno de campo: " + "; ".join(_dedupe(own_notes)) + ".")
+        if kind != "declarado":
+            assumptions.append("Lo que no está en tu cuaderno se completó con valores de ejemplo del catálogo.")
+    elif kind == "supuesto_demo":
         assumptions.append("Precios, rendimientos y costos son supuestos de demostración, no datos de SIEA ni del productor.")
     assumptions.append("El precio de hoy no se garantiza para la cosecha futura.")
     reasons.append(

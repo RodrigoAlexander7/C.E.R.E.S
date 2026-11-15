@@ -23,12 +23,14 @@ BASE = {
 
 
 @pytest.fixture(scope="module")
-def zone(base_settings):
-    return json.loads((base_settings.data_dir / "catalog" / "zona_majes.json").read_text())
+def zone(majes):
+    return majes
 
 
 def run(profile, zone, catalog, climate, area=5):
-    return evaluate_frozen(frozen_inputs(profile, area, True, TODAY, zone), catalog, climate)
+    # catalog y climate se conservan en la firma: deben ser los de la zona.
+    assert zone.catalog is catalog and zone.climate is climate
+    return evaluate_frozen(frozen_inputs(profile, area, True, TODAY, zone), zone)
 
 
 def levels(r):
@@ -36,13 +38,13 @@ def levels(r):
 
 
 def test_zone_defaults_only_fill_unknowns(zone):
-    eff, assumed = apply_zone_defaults(BASE, 5, zone)
+    eff, assumed = apply_zone_defaults(BASE, 5, zone.data)
     assert set(assumed) == {"water.allocation", "water.efficiency"}
     assert eff["water"]["allocation_m3"] == round(22500 / 12 * 5)
     assert eff["water"]["efficiency"] == 0.75
     declared = set_path(set_path(BASE, "water.mode", "conozco"), "water.allocation_m3", 8000)
     declared = set_path(declared, "water.method", "goteo")
-    eff2, assumed2 = apply_zone_defaults(declared, 5, zone)
+    eff2, assumed2 = apply_zone_defaults(declared, 5, zone.data)
     assert assumed2 == [] and eff2["water"]["allocation_m3"] == 8000 and eff2["water"]["efficiency"] == 0.9
     assert BASE["water"] == {"mode": "no_se"}  # el perfil declarado no se modifica
 

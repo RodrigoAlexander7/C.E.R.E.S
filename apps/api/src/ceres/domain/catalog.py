@@ -83,6 +83,12 @@ class CropProfile:
     residue_note: str
     nutrition_note: str
     kc_note: str = ""
+    short: str = ""  # nombre cotidiano («maíz»)
+    hint: str = ""
+
+    @property
+    def short_name(self) -> str:
+        return self.short or self.name.split(" (")[0].lower()
 
     @property
     def cycle_days(self) -> int:
@@ -132,10 +138,11 @@ class StrategyTemplate:
     id: str
     name: str
     short: str
-    sequence_rule: str  # "declarada" | "leguminosa" | "diversificar"
+    sequence_rule: str  # "declarada" | "alternar"
     cap_status: str | None  # p. ej. "exploratoria"
     rationale: str
     source_ids: tuple[str, ...]
+    crops: tuple[str, ...] = ()  # para "alternar": cultivos que se turnan
 
 
 @dataclass(frozen=True)
@@ -152,6 +159,15 @@ class Catalog:
     scenario_low: tuple[float, float]  # (factor rendimiento, factor precio)
     scenario_high: tuple[float, float]
     non_catalog_crops: dict[str, str] = field(default_factory=dict)
+    non_catalog_hints: dict[str, str] = field(default_factory=dict)
 
     def crop(self, crop_id: str) -> CropProfile | None:
         return self.crops.get(crop_id)
+
+    def knows(self, crop_id: str) -> bool:
+        """Cultivo reconocido en esta zona (con ficha o como cultivo declarable sin ficha)."""
+        return crop_id in self.crops or crop_id in self.non_catalog_crops
+
+    def crop_label(self, crop_id: str) -> str:
+        c = self.crops.get(crop_id)
+        return c.name if c else self.non_catalog_crops.get(crop_id, crop_id)

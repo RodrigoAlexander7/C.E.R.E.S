@@ -7,10 +7,8 @@ from pathlib import Path
 import pytest
 
 from ceres.config import Settings, get_settings
-from ceres.domain.climate import ClimateSeries
 from ceres.domain.engine import ClimateInput
-from ceres.infrastructure.catalog_loader import load_catalog
-from ceres.infrastructure.nasa_power import load_snapshot
+from ceres.infrastructure.zones import load_zones
 
 TEST_DB = os.environ.get("CERES_TEST_DATABASE_URL", "postgresql+psycopg://ceres:ceres_dev@127.0.0.1:5440/ceres_test")
 ORIGIN = "http://testserver"
@@ -23,15 +21,26 @@ def base_settings() -> Settings:
 
 
 @pytest.fixture(scope="session")
-def catalog(base_settings):
-    return load_catalog(base_settings.data_dir / "catalog" / "catalog.json")
+def zones(base_settings):
+    """Registro real de zonas piloto (data/zonas/), con sus instantáneas NASA reales."""
+    return load_zones(base_settings.data_dir)
 
 
 @pytest.fixture(scope="session")
-def climate(base_settings) -> ClimateInput:
-    """Copia REAL de NASA POWER guardada en data/ (no un fixture sintético)."""
-    snap = load_snapshot(base_settings.data_dir / base_settings.nasa_snapshot_file)
-    return ClimateInput(snap.snapshot_id, ClimateSeries.from_days(snap.days, snap.query_latitude, snap.cell_elevation_m))
+def majes(zones):
+    return zones.get("majes")
+
+
+@pytest.fixture(scope="session")
+def catalog(majes):
+    return majes.catalog
+
+
+@pytest.fixture(scope="session")
+def climate(majes) -> ClimateInput:
+    """Copia REAL de NASA POWER de Majes guardada en data/ (no un fixture sintético)."""
+    assert majes.climate.available
+    return majes.climate
 
 
 @pytest.fixture(scope="session")

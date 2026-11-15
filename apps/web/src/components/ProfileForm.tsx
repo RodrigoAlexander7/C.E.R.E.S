@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { CROP_LABELS, type Profile } from "@/lib/types";
+import { METHOD_LABEL, type Zone } from "@/lib/zones";
 
 export const EMPTY_PROFILE: Profile = {
   current_crop_id: "maiz_grano",
@@ -27,8 +28,13 @@ export function validateProfile(p: Profile): string[] {
   return errs;
 }
 
-export function ProfileForm({ value, onChange, compact = false }: { value: Profile; onChange: (p: Profile) => void; compact?: boolean }) {
+export function ProfileForm({ value, onChange, compact = false, zone = null }: { value: Profile; onChange: (p: Profile) => void; compact?: boolean; zone?: Zone | null }) {
   const p = value;
+  // Cultivos de la zona piloto (catálogo propio); sin zona, la lista general.
+  const cropOptions: [string, string][] = zone ? zone.crops.map((c) => [c.id, c.full_name]) : Object.entries(CROP_LABELS);
+  const catalogCrops: [string, string][] = zone ? zone.crops.filter((c) => c.in_catalog).map((c) => [c.id, c.full_name]) : [["maiz_grano", CROP_LABELS.maiz_grano], ["frejol_grano", CROP_LABELS.frejol_grano], ["cebolla_roja", CROP_LABELS.cebolla_roja]];
+  const typical = zone?.water_m3_ha_year?.value != null ? zone.water_m3_ha_year : null;
+  const defMethod = METHOD_LABEL[zone?.default_method?.value ?? ""] ?? "aspersión";
   const set = (patch: Partial<Profile>) => onChange({ ...p, ...patch });
   const setWater = (patch: Partial<Profile["water"]>) => onChange({ ...p, water: { ...p.water, ...patch } });
   const setSoil = (patch: Partial<Profile["soil"]>) => onChange({ ...p, soil: { ...p.soil, ...patch } });
@@ -46,7 +52,7 @@ export function ProfileForm({ value, onChange, compact = false }: { value: Profi
       <div className="field">
         <label htmlFor="crop">¿Qué sembraste? <span className="hint">Cultivo actual o el último que cosechaste</span></label>
         <select id="crop" value={p.current_crop_id} onChange={(e) => set({ current_crop_id: e.target.value })}>
-          {Object.entries(CROP_LABELS).map(([k, v]) => (
+          {cropOptions.map(([k, v]) => (
             <option key={k} value={k}>{v}</option>
           ))}
         </select>
@@ -75,13 +81,15 @@ export function ProfileForm({ value, onChange, compact = false }: { value: Profi
         </div>
         {p.water.mode === "no_se" && (
           <p className="hint" style={{ marginTop: "0.4rem" }}>
-            Usaremos el agua típica de Majes (22 500 m³/ha/año, consumo reportado por AUTODEMA en 2023) como <b>supuesto</b> y te diremos cuánta necesita cada opción en su mes más exigente.
+            {typical
+              ? <>Usaremos el agua típica de {zone?.name} ({typical.label ?? `${typical.value} m³/ha/año`}) como <b>supuesto</b> y te diremos cuánta necesita cada opción en su mes más exigente.</>
+              : <>No hay un valor típico de agua para esta zona: te diremos cuánta necesita cada opción en su mes más exigente para que lo confirmes.</>}
           </p>
         )}
         <div className="field" style={{ marginTop: "0.6rem" }}>
           <label htmlFor="method">¿Cómo riegas? <span className="hint">Define la eficiencia (FAO: goteo 90 %, aspersión 75 %, gravedad 60 %)</span></label>
           <select id="method" value={p.water.method ?? ""} onChange={(e) => setWater({ method: (e.target.value || null) as Profile["water"]["method"] })}>
-            <option value="">No sé (se supone aspersión)</option>
+            <option value="">No sé (se supone {defMethod})</option>
             <option value="goteo">Goteo</option>
             <option value="aspersion">Aspersión</option>
             <option value="gravedad">Gravedad</option>
@@ -192,14 +200,14 @@ export function ProfileForm({ value, onChange, compact = false }: { value: Profi
                   <tr><th>Cultivo</th><th>Rendimiento (t/ha)</th><th>Precio en chacra (S/ por kg)</th><th>Costos variables (S/ por ha)</th></tr>
                 </thead>
                 <tbody>
-                  {["maiz_grano", "frejol_grano", "cebolla_roja"].map((c) => {
+                  {catalogCrops.map(([c, label]) => {
                     const o = ov(c) as unknown as Record<string, number | null | undefined>;
                     return (
                       <tr key={c}>
-                        <td>{CROP_LABELS[c]}</td>
+                        <td>{label}</td>
                         {(["yield_t_ha", "price_soles_kg", "variable_cost_soles_ha"] as const).map((k) => (
                           <td key={k}>
-                            <input aria-label={`${k} ${CROP_LABELS[c]}`} type="number" min={0} step="any" value={o[k] ?? ""} onChange={(e) => setOv(c, { [k]: num(e.target.value) })} />
+                            <input aria-label={`${k} ${label}`} type="number" min={0} step="any" value={o[k] ?? ""} onChange={(e) => setOv(c, { [k]: num(e.target.value) })} />
                           </td>
                         ))}
                       </tr>

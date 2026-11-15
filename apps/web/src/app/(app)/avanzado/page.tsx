@@ -8,6 +8,7 @@ import { DRAFT_KEY, useSession } from "@/components/SessionProvider";
 import { EMPTY_PROFILE, ProfileForm, validateProfile } from "@/components/ProfileForm";
 import { ApiError, api, fmtNumber } from "@/lib/api";
 import type { Geometry, Parcel, Profile, RegionNode } from "@/lib/types";
+import { useZones } from "@/lib/zones";
 
 const MapView = dynamic(() => import("@/components/MapView"), { ssr: false, loading: () => <p className="muted" style={{ padding: "1rem" }}>Cargando mapa…</p> });
 
@@ -17,6 +18,7 @@ interface AreaInfo {
   centroid: { lat: number; lon: number };
   district: RegionNode | null;
   in_pilot_zone: boolean;
+  zone_id: string | null;
 }
 
 interface Draft {
@@ -34,6 +36,7 @@ const NEW_DRAFT: Draft = { mode: "dibujo", vertices: [], closed: false, point: n
 export default function Home() {
   const router = useRouter();
   const { user, refresh } = useSession();
+  const { zones } = useZones();
   const [deps, setDeps] = useState<RegionNode[]>([]);
   const [provs, setProvs] = useState<RegionNode[]>([]);
   const [dists, setDists] = useState<RegionNode[]>([]);
@@ -51,7 +54,7 @@ export default function Home() {
   const [areaError, setAreaError] = useState<string | null>(null);
   const [geo, setGeo] = useState<{ lat: number; lon: number } | null>(null);
   const [geoMsg, setGeoMsg] = useState<string | null>(null);
-  const [pointInfo, setPointInfo] = useState<{ district: RegionNode | null; in_pilot_zone: boolean } | null>(null);
+  const [pointInfo, setPointInfo] = useState<{ district: RegionNode | null; in_pilot_zone: boolean; zone_id: string | null } | null>(null);
   const [saving, setSaving] = useState(false);
   const [formErrors, setFormErrors] = useState<string[]>([]);
   const [myParcels, setMyParcels] = useState<Parcel[]>([]);
@@ -110,12 +113,12 @@ export default function Home() {
   };
   const selectDist = (id: string) => setDist(id);
 
-  const goToPilot = async () => {
-    await selectDep("dep:04");
-    setProv("prov:0405");
-    const d = await loadChildren("prov:0405");
+  const goToZone = async (code: string) => {
+    await selectDep(`dep:${code.slice(0, 2)}`);
+    setProv(`prov:${code.slice(0, 4)}`);
+    const d = await loadChildren(`prov:${code.slice(0, 4)}`);
     setDists(d);
-    setDist("dist:040520");
+    setDist(`dist:${code}`);
   };
 
   const onRegionClick = (id: string) => {
@@ -148,7 +151,7 @@ export default function Home() {
   useEffect(() => {
     setPointInfo(null);
     if (!draft.point) return;
-    api<{ district: RegionNode | null; in_pilot_zone: boolean }>(`/regions/locate?lat=${draft.point.lat}&lon=${draft.point.lon}`).then(setPointInfo).catch(() => {});
+    api<{ district: RegionNode | null; in_pilot_zone: boolean; zone_id: string | null }>(`/regions/locate?lat=${draft.point.lat}&lon=${draft.point.lon}`).then(setPointInfo).catch(() => {});
   }, [draft.point]);
 
   const useMyLocation = () => {
@@ -182,6 +185,7 @@ export default function Home() {
   };
 
   const inPilot = draft.mode === "dibujo" ? area?.in_pilot_zone : pointInfo?.in_pilot_zone;
+  const zoneHere = zones.find((z) => z.id === (draft.mode === "dibujo" ? area?.zone_id : pointInfo?.zone_id)) ?? null;
   const terrainReady = draft.mode === "dibujo" ? Boolean(polygon && area) : Boolean(draft.point && Number(draft.manualArea) > 0);
 
   const save = async () => {
@@ -252,7 +256,9 @@ export default function Home() {
                 </select>
               </div>
               <div className="row">
-                <button className="btn-secondary" onClick={goToPilot}>Ir a Majes I (piloto)</button>
+                {zones.map((z) => (
+                  <button key={z.id} className="btn-secondary" onClick={() => goToZone(z.districts[z.districts.length - 1])}>Ir a {z.name} (piloto)</button>
+                ))}
                 <button className="btn-secondary" onClick={useMyLocation}>Usar mi ubicación</button>
                 {loadingRegions && <span className="spinner" aria-label="Cargando límites" />}
               </div>
@@ -300,7 +306,8 @@ export default function Home() {
                   </div>
                 </div>
               )}
-              {inPilot === false && <div className="notice notice-warn">Este terreno está fuera de Majes I: podrás guardarlo, pero la aplicación no tiene fichas locales para recomendar allí.</div>}
+              {inPilot === false && <div className="notice notice-warn">Este terreno está fuera de las zonas piloto ({zones.map((z) => z.name).join(" y ")}): podrás guardarlo, pero la aplicación no tiene fichas locales para recomendar allí.</div>}
+              {zoneHere && <div className="notice notice-ok" role="status">Zona piloto: {zoneHere.zone}. Se usarán su clima NASA, sus supuestos y su catálogo.</div>}
             </div>
           </li>
           <li>
@@ -310,7 +317,7 @@ export default function Home() {
               <input id="pname" type="text" value={draft.name} onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))} />
             </div>
             <div style={{ marginTop: "0.75rem" }}>
-              <ProfileForm value={draft.profile} onChange={(profile) => setDraft((d) => ({ ...d, profile }))} compact />
+              <ProfileForm value={draft.profile} onChange={(profile) => setDraft((d) => ({ ...d, profile }))} compact zone={zoneHere} />
             </div>
           </li>
           <li>

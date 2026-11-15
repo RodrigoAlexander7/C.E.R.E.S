@@ -7,7 +7,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-CROP_IDS = {"maiz_grano", "frejol_grano", "cebolla_roja", "papa", "alfalfa", "maiz_chala", "otro"}
+# Forma del identificador; que el cultivo exista en el catálogo de la ZONA se comprueba en la ruta.
+CROP_ID = r"^[a-z][a-z_]{1,39}$"
 
 
 class Strict(BaseModel):
@@ -51,32 +52,25 @@ class SoilData(Strict):
 
 
 class EconomicOverrideData(Strict):
-    crop_id: Literal["maiz_grano", "frejol_grano", "cebolla_roja"]
+    crop_id: str = Field(pattern=CROP_ID)
     yield_t_ha: float | None = Field(None, ge=0, le=200)
     price_soles_kg: float | None = Field(None, ge=0, le=100)
     variable_cost_soles_ha: float | None = Field(None, ge=0, le=500_000)
 
 
 class ProfileData(Strict):
-    current_crop_id: str = Field(max_length=40)
+    current_crop_id: str = Field(pattern=CROP_ID)
     current_status: Literal["en_campo", "cosechado"]
     expected_harvest: date | None = None
-    planned_next_crop_id: str | None = Field(None, max_length=40)
+    planned_next_crop_id: str | None = Field(None, pattern=CROP_ID)
     water: WaterData = WaterData()
     soil: SoilData = SoilData()
     priority: Literal["dinero", "agua", "suelo", "equilibrada"] = "equilibrada"
     budget_soles: float | None = Field(None, ge=0, le=100_000_000)
     residue_management: Literal["incorporar", "retirar", "no_se"] = "no_se"
     economic_overrides: list[EconomicOverrideData] = Field(default_factory=list, max_length=5)
-    # Completar datos desconocidos con supuestos de zona de Majes I (R16).
+    # Completar datos desconocidos con supuestos de la zona piloto (R16).
     use_zone_defaults: bool = True
-
-    @field_validator("current_crop_id", "planned_next_crop_id")
-    @classmethod
-    def known_crop(cls, v: str | None) -> str | None:
-        if v is not None and v not in CROP_IDS:
-            raise ValueError("Cultivo no reconocido")
-        return v
 
 
 class PointData(Strict):
@@ -103,7 +97,7 @@ class RevisionCreate(Strict):
 
 
 class CropEventCreate(Strict):
-    crop_id: str = Field(max_length=40)
+    crop_id: str = Field(pattern=CROP_ID)
     variety: str | None = Field(None, max_length=120)
     destination: str | None = Field(None, max_length=120)
     sowing_date: date | None = None
@@ -112,13 +106,6 @@ class CropEventCreate(Strict):
     status: Literal["en_campo", "cosechado"]
     area_ha: float | None = Field(None, gt=0, le=10_000)
     supersedes_id: str | None = Field(None, max_length=32)
-
-    @field_validator("crop_id")
-    @classmethod
-    def known_crop(cls, v: str) -> str:
-        if v not in CROP_IDS:
-            raise ValueError("Cultivo no reconocido")
-        return v
 
 
 class SoilCreate(Strict):
@@ -159,6 +146,7 @@ class QuickCompare(Strict):
 
     profile: ProfileData
     area_ha: float = Field(5, gt=0, le=10_000)
+    zone_id: str | None = Field(None, pattern=r"^[a-z][a-z_]{1,29}$")
 
 
 class AreaRequest(Strict):

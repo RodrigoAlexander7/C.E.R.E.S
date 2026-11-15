@@ -145,8 +145,14 @@ def test_missing_costs_no_precise_money_ranking(catalog, climate, monkeypatch):
 
 
 def test_declared_prices_override_demo_values(catalog, climate):
-    s = by_id(evaluate(base(economic_overrides=(EconomicOverride("maiz_grano", price_soles_kg=1.0),)), catalog, climate))
+    # Solo el precio es propio: el margen sigue dependiendo de valores de ejemplo y se etiqueta así.
+    partial = by_id(evaluate(base(economic_overrides=(EconomicOverride("maiz_grano", price_soles_kg=1.0),)), catalog, climate))
+    m = partial["A"].metrics["A.eco.margen"]
+    assert m.kind == "supuesto_demo" and "PARCELA" in m.source_ids
+    full = EconomicOverride("maiz_grano", yield_t_ha=8.0, price_soles_kg=1.0, variable_cost_soles_ha=7000)
+    s = by_id(evaluate(base(economic_overrides=(full,)), catalog, climate))
     assert s["A"].metrics["A.eco.margen"].kind == "declarado"
+    assert s["A"].metrics["A.eco.margen"].value != partial["A"].metrics["A.eco.margen"].value
 
 
 def test_exploratory_strategy_never_ranked(catalog, climate):
@@ -168,7 +174,7 @@ def test_priority_reorders_only_comparable(catalog, climate):
 def test_alfalfa_and_outside_pilot_block(catalog, climate):
     assert evaluate(base(current_crop_id="alfalfa"), catalog, climate).strategies == []
     r = evaluate(base(in_pilot_zone=False), catalog, climate)
-    assert r.strategies == [] and "fuera de la zona piloto" in r.blocking[0]
+    assert r.strategies == [] and "fuera de las zonas piloto" in r.blocking[0]
 
 
 def test_non_catalog_plan_requires_data(catalog, climate):

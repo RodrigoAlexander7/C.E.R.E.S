@@ -1,0 +1,33 @@
+/* «¿Cuándo me conviene sembrar?» — mobile first, solo tema claro. */
+.card { background: #fff; border: 1px solid #e0d7c3; border-radius: 22px; padding: 16px; color: #13221a; box-shadow: 0 1px 0 rgba(19, 34, 26, 0.04); }
+.tabs, .months { display: flex; flex-wrap: wrap; gap: 6px; }
+.tab, .month { font: inherit; min-height: 44px; padding: 8px 14px; border-radius: 999px; border: 1.5px solid #e0d7c3; background: #f6f1e6; color: #3d4b40; font-weight: 600; cursor: pointer; }
+.month { min-width: 46px; padding: 8px 10px; }
+.tab[aria-pressed="true"], .month[aria-pressed="true"] { background: #1f4d2b; border-color: #1f4d2b; color: #fff; }
+.tab:focus-visible, .month:focus-visible { outline: 3px solid #d9a53a; outline-offset: 2px; }
+.q { margin: 16px 0 8px; font-weight: 700; }
+.svg { width: 100%; height: auto; margin-top: 12px; display: block; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 0.8rem; color: #66705f; margin-top: 4px; }
+.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+.boxes { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 14px; }
+.box { background: #f6f1e6; border-radius: 16px; padding: 12px 14px; }
+.box strong { display: block; font-size: 1.35rem; }
+.box span { color: #3d4b40; font-size: 0.9rem; line-height: 1.4; }
+.thermal { margin: 12px 0 0; padding: 0; list-style: none; display: grid; gap: 6px; font-size: 0.92rem; line-height: 1.45; }
+.thermal li { padding: 8px 12px; border-radius: 12px; background: #dcefd8; }
+.thermal li[data-warn="true"] { background: #f8ddd6; }
+.thermal small { color: #66705f; }
+.insight { margin: 12px 0 0; line-height: 1.5; }
+.enso { margin-top: 14px; border-top: 1px solid #e0d7c3; padding-top: 10px; }
+.enso summary { cursor: pointer; font-weight: 700; color: #1f4d2b; min-height: 44px; display: flex; align-items: center; }
+.tableWrap { overflow-x: auto; }
+.enso table { width: 100%; border-collapse: collapse; font-size: 0.88rem; min-width: 460px; }
+.enso th, .enso td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #ece3d0; }
+.fine { font-size: 0.8rem; color: #66705f; line-height: 1.5; margin: 10px 0 0; }
+.skeleton { height: 300px; margin-top: 12px; border-radius: 16px; background: linear-gradient(90deg, #f6f1e6, #ece3d0, #f6f1e6); background-size: 200% 100%; animation: shimmer 1.4s infinite; }
+@keyframes shimmer { to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .skeleton { animation: none; } }
+@media (min-width: 640px) {
+  .card { padding: 22px; }
+  .boxes { grid-template-columns: repeat(3, 1fr); }
+}

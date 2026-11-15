@@ -1,0 +1,180 @@
+{
+  "version": "catalogo-chilina-2026-11-15.1",
+  "review_note": "Cultivos habituales de la campiña según SENAMHI (boletín agroclimático DZ6, abril 2025: ajo, cebolla, maíz; papa en la campiña). Kc (FAO-56 tabla 12), duración de etapas (FAO-56 tabla 11, fila más parecida a la zona) y tolerancia a sales (FAO 29 tabla 4) copiados de las tablas FAO el 15-nov-2026. El ajo no figura en la tabla 11 de FAO-56 ni en la tabla 4 de FAO 29: queda sin ficha. No hay calendario oficial: la cebolla usa la siembra observada por SENAMHI (junio–julio, inferida) y papa y maíz no restringen el mes. No hay precios ni rendimientos locales verificados: la economía queda pendiente hasta que el agricultor registre los suyos. Nada se copió del catálogo de Majes. Ver data/zonas/chilina/REVISION.md.",
+  "horizon_months": 24,
+  "prep_days": 15,
+  "prep_status": "supuesto_demo",
+  "transition_cost_soles_ha": null,
+  "transition_cost_status": "sin_dato",
+  "scenario_low": {"yield_factor": 0.85, "price_factor": 0.8},
+  "scenario_high": {"yield_factor": 1.1, "price_factor": 1.2},
+  "non_catalog_crops": {
+    "ajo": "Ajo",
+    "alfalfa": "Alfalfa",
+    "otro": "Otro cultivo"
+  },
+  "non_catalog_hints": {"ajo": "Sin ficha FAO todavía", "alfalfa": "Instalada"},
+  "crops": [
+    {
+      "id": "cebolla",
+      "name": "Cebolla (bulbo seco)",
+      "short": "cebolla",
+      "hint": "Para bulbo",
+      "family": "Amaryllidaceae",
+      "is_legume": false,
+      "destination": "Bulbo para mercado",
+      "stage_days": [20, 35, 110, 45],
+      "stage_status": "referencia_bibliografica",
+      "stage_source_ids": ["FAO56-T11"],
+      "kc": {"ini": 0.70, "mid": 1.05, "end": 0.75},
+      "kc_source_ids": ["FAO56-KC"],
+      "kc_note": "Fila «Arid Region; Calif.» de FAO-56 (210 días); la variedad y el ciclo locales pueden diferir.",
+      "windows": [{"start": "06-01", "end": "07-31"}],
+      "window_status": "sin_verificar",
+      "window_source_ids": ["SENAMHI-AJO-CEBOLLA"],
+      "salinity": {"ece_threshold": 1.2, "ece_50": 4.3, "source_ids": ["FAO29-SAL"]},
+      "thermal_rules": [
+        {
+          "id": "helada",
+          "label": "Helada (mínima bajo 0 °C)",
+          "stages": ["todas"],
+          "variable": "t_min",
+          "comparator": "<",
+          "threshold_c": 0,
+          "status": "sin_verificar",
+          "source_ids": ["UMBRAL-HELADA-CHILINA"],
+          "note": "0 °C del aire como señal general de helada, sin umbral de daño verificado para el cultivo. La celda NASA está ~900 m más alta que el valle, así que exagera las heladas."
+        }
+      ],
+      "economics": {
+        "yield_t_ha": null,
+        "price_soles_kg": null,
+        "variable_cost_soles_ha": null,
+        "status": "sin_dato",
+        "price_label": "Sin precio local verificado",
+        "note": "Sin rendimientos, precios ni costos locales verificados: regístralos en tu cuaderno de campo.",
+        "source_ids": []
+      },
+      "residue_note": "Deja poco residuo; el suelo queda descubierto tras la cosecha si no se cubre.",
+      "nutrition_note": "Sensible a sales; el plan de fertilización requiere análisis de suelo."
+    },
+    {
+      "id": "papa",
+      "name": "Papa",
+      "short": "papa",
+      "hint": "Para consumo",
+      "family": "Solanaceae",
+      "is_legume": false,
+      "destination": "Tubérculo para mercado",
+      "stage_days": [25, 30, 45, 30],
+      "stage_status": "referencia_bibliografica",
+      "stage_source_ids": ["FAO56-T11"],
+      "kc": {"ini": 0.50, "mid": 1.15, "end": 0.75},
+      "kc_source_ids": ["FAO56-KC"],
+      "kc_note": "Fila «(Semi) Arid Climate» de FAO-56 con etapa media de 45 días (130 días); FAO da 30 o 45. Variedad local pendiente.",
+      "windows": [{"start": "01-01", "end": "12-31"}],
+      "window_status": "sin_calendario",
+      "window_source_ids": ["SENAMHI-CAMPINA-2025"],
+      "salinity": {"ece_threshold": 1.7, "ece_50": 5.9, "source_ids": ["FAO29-SAL"]},
+      "thermal_rules": [
+        {
+          "id": "helada",
+          "label": "Helada (mínima bajo 0 °C)",
+          "stages": ["todas"],
+          "variable": "t_min",
+          "comparator": "<",
+          "threshold_c": 0,
+          "status": "sin_verificar",
+          "source_ids": ["UMBRAL-HELADA-CHILINA"],
+          "note": "0 °C del aire como señal general de helada, sin umbral de daño verificado para la papa. La celda NASA está ~900 m más alta que el valle, así que exagera las heladas."
+        }
+      ],
+      "economics": {
+        "yield_t_ha": null,
+        "price_soles_kg": null,
+        "variable_cost_soles_ha": null,
+        "status": "sin_dato",
+        "price_label": "Sin precio local verificado",
+        "note": "Sin rendimientos, precios ni costos locales verificados: regístralos en tu cuaderno de campo.",
+        "source_ids": []
+      },
+      "residue_note": "Tras la cosecha quedan restos de follaje; los tubérculos que quedan en campo pueden rebrotar y llevar plagas a la siguiente campaña.",
+      "nutrition_note": "Exigente en potasio y nitrógeno; la dosis requiere análisis de suelo."
+    },
+    {
+      "id": "maiz_grano",
+      "name": "Maíz (grano)",
+      "short": "maíz",
+      "hint": "Para grano",
+      "family": "Poaceae",
+      "is_legume": false,
+      "destination": "Grano",
+      "stage_days": [30, 50, 60, 40],
+      "stage_status": "referencia_bibliografica",
+      "stage_source_ids": ["FAO56-T11"],
+      "kc": {"ini": 0.30, "mid": 1.20, "end": 0.35},
+      "kc_source_ids": ["FAO56-KC"],
+      "kc_note": "Fila «East Africa (alt.)» de FAO-56 (180 días), la única de altura; Kc final 0,35 para grano secado en campo (nota 11).",
+      "windows": [{"start": "01-01", "end": "12-31"}],
+      "window_status": "sin_calendario",
+      "window_source_ids": ["SENAMHI-CAMPINA-2025"],
+      "salinity": {"ece_threshold": 1.7, "ece_50": 5.9, "source_ids": ["FAO29-SAL"]},
+      "thermal_rules": [
+        {
+          "id": "helada",
+          "label": "Helada (mínima bajo 0 °C)",
+          "stages": ["todas"],
+          "variable": "t_min",
+          "comparator": "<",
+          "threshold_c": 0,
+          "status": "sin_verificar",
+          "source_ids": ["UMBRAL-HELADA-CHILINA"],
+          "note": "0 °C del aire como señal general de helada, sin umbral de daño verificado para el maíz. La celda NASA está ~900 m más alta que el valle, así que exagera las heladas."
+        }
+      ],
+      "economics": {
+        "yield_t_ha": null,
+        "price_soles_kg": null,
+        "variable_cost_soles_ha": null,
+        "status": "sin_dato",
+        "price_label": "Sin precio local verificado",
+        "note": "Sin rendimientos, precios ni costos locales verificados: regístralos en tu cuaderno de campo.",
+        "source_ids": []
+      },
+      "residue_note": "Rastrojo abundante: incorporarlo aporta materia orgánica; retirarlo para forraje se lleva nutrientes.",
+      "nutrition_note": "Cultivo exigente en nitrógeno; la dosis requiere análisis de suelo."
+    }
+  ],
+  "associations": [],
+  "templates": [
+    {
+      "id": "A",
+      "name": "A. Continuar tu plan",
+      "short": "Lo que tenías previsto",
+      "sequence_rule": "declarada",
+      "cap_status": null,
+      "rationale": "Referencia para comparar: tu secuencia declarada (o repetir el cultivo actual si no indicas otra).",
+      "source_ids": ["PARCELA"]
+    },
+    {
+      "id": "B",
+      "name": "B. Rotar papa y maíz",
+      "short": "Papa y maíz alternados",
+      "sequence_rule": "alternar",
+      "crops": ["papa", "maiz_grano"],
+      "cap_status": null,
+      "rationale": "Alterna dos familias botánicas (solanácea y gramínea), ambas habituales en la campiña según SENAMHI. La secuencia no tiene un ensayo local publicado.",
+      "source_ids": ["SENAMHI-CAMPINA-2025"]
+    },
+    {
+      "id": "C",
+      "name": "C. Diversificar con cebolla",
+      "short": "Cebolla y maíz alternados",
+      "sequence_rule": "alternar",
+      "crops": ["cebolla", "maiz_grano"],
+      "cap_status": "exploratoria",
+      "rationale": "La cebolla es habitual en la campiña (SENAMHI), pero su ciclo largo (210 días según FAO-56) y la secuencia con maíz no están validados localmente.",
+      "source_ids": ["SENAMHI-CAMPINA-2025", "SENAMHI-AJO-CEBOLLA"]
+    }
+  ]
+}

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from datetime import date
 
+from ceres.domain.catalog import Catalog
 from ceres.domain.model import ComparisonResult, ParcelInput, StrategyAssessment
 
 LEVELS = {
@@ -18,8 +19,6 @@ LEVELS = {
     "no_conviene": "No conviene",
 }
 LEVEL_ORDER = {"buena": 0, "posible": 1, "explorar": 2, "no_conviene": 3}
-SHORT = {"maiz_grano": "maíz", "frejol_grano": "frejol", "cebolla_roja": "cebolla"}
-SENSITIVE = {"frejol_grano", "cebolla_roja"}
 MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
 
 
@@ -53,7 +52,7 @@ def _peak(st: StrategyAssessment) -> dict | None:
     return max(rows, key=lambda m: m["gross_m3"]) if rows else None
 
 
-def decisive_for(st: StrategyAssessment, p: ParcelInput) -> list[dict]:
+def decisive_for(st: StrategyAssessment, p: ParcelInput, catalog: Catalog) -> list[dict]:
     """Preguntas observables cuya respuesta puede cambiar el nivel de esta opción."""
     out: list[dict] = []
     lo, hi = p.water.bounds()
@@ -79,7 +78,7 @@ def decisive_for(st: StrategyAssessment, p: ParcelInput) -> list[dict]:
                         {"label": "Sí, al menos eso", "patch": {"water.allocation_min_m3": round(need)}},
                         {"label": "No, recibo menos", "patch": {"water.allocation_max_m3": max(round(need) - 1, 0)}},
                     ],
-                    "source_ids": ["NASA-POWER", "FAO56-PM", "AUTODEMA-INDICADORES-2023"],
+                    "source_ids": [p.zone.nasa_source_id, "FAO56-PM", *p.zone.water_source_ids],
                 }
             )
     if "water.efficiency" in p.assumed and not p.water.method:
@@ -97,14 +96,15 @@ def decisive_for(st: StrategyAssessment, p: ParcelInput) -> list[dict]:
                 "source_ids": ["FAO-EFICIENCIA"],
             }
         )
-    if p.soil.ece_ds_m is None and p.soil.salinity_signs is None and SENSITIVE & set(st.sequence):
-        crops = " y ".join(SHORT[c] for c in st.sequence if c in SENSITIVE)
+    sensitive = [c for c in st.sequence if catalog.crop(c) and catalog.crop(c).salinity_sensitive]
+    if p.soil.ece_ds_m is None and p.soil.salinity_signs is None and sensitive:
+        crops = " y ".join(catalog.crop(c).short_name for c in dict.fromkeys(sensitive))
         out.append(
             {
                 "id": "sal",
                 "label": "si tu suelo tiene sal",
                 "question": "¿Ves costras blancas o manchas de sal en tu chacra?",
-                "detail": f"El {crops} es sensible a la sal. Si hay sal, no conviene hasta medirla con un análisis de suelo.",
+                "detail": f"Sensible a la sal: {crops}. Si hay sal, no conviene hasta medirla con un análisis de suelo.",
                 "answers": [
                     {"label": "No, no veo", "patch": {"soil.salinity_signs": "sin_signos"}},
                     {"label": "Sí, se ven", "patch": {"soil.salinity_signs": "con_signos"}},
@@ -122,15 +122,16 @@ def _first_sowing(st: StrategyAssessment) -> date | None:
     return None
 
 
-def simplify(result: ComparisonResult, p: ParcelInput, caps: dict[str, str | None] | None = None) -> None:
+def simplify(result: ComparisonResult, p: ParcelInput, catalog: Catalog) -> None:
     """Completa `simple`, `decisive` y `simple_order` en el resultado (in situ)."""
     sts = result.strategies
     if not sts:
         return
-    caps = caps or {}
+    caps = {t.id: t.cap_status for t in catalog.templates}
+    zone = p.zone.name
     for st in sts:
         st.simple = {"level": level_of(st, caps.get(st.strategy_id))}
-        st.decisive = decisive_for(st, p)
+        st.decisive = decisive_for(st, p, catalog)
 
     usable = [s for s in sts if s.simple["level"] in ("buena", "posible")]
     def best(key: str, reverse: bool) -> str | None:
@@ -142,13 +143,13 @@ def simplify(result: ComparisonResult, p: ParcelInput, caps: dict[str, str | Non
 
     for st in sts:
         lvl = st.simple["level"]
-        names = " → ".join(SHORT.get(c, c) for c in st.sequence)
+        names = " → ".join(catalog.crop(c).short_name if catalog.crop(c) else catalog.crop_label(c).lower() for c in st.sequence)
         tags: list[str] = []
         if st.strategy_id == richest:
             tags.append("Más ganancia estimada")
         if st.strategy_id == thriftiest:
             tags.append("Menos agua")
-        if any(c in ("frejol_grano",) for c in st.sequence):
+        if any(catalog.crop(c) and catalog.crop(c).is_legume for c in st.sequence):
             tags.append("Cuida el suelo (leguminosa)")
         if st.strategy_id == "A":
             tags.append("Tu plan")
@@ -157,12 +158,12 @@ def simplify(result: ComparisonResult, p: ParcelInput, caps: dict[str, str | Non
         if lvl == "no_conviene" and failing:
             headline = _plain_failure(failing.rule_id, st)
         elif lvl == "explorar":
-            headline = "Idea con potencial, pero aún sin validar en Majes: tómala como exploración."
+            headline = f"Idea con potencial, pero aún sin validar en {zone}: tómala como exploración."
             if st.decisive:
                 headline += f" Además, confirma {st.decisive[0]['label']}."
         elif lvl == "posible" and failing and st.decisive:
             # Falla solo por un supuesto de zona: decirlo así, sin presentarlo como un «no» definitivo.
-            headline = f"{_plain_failure(failing.rule_id, st).rstrip('.')} si recibes el agua típica de Majes; confirma {st.decisive[0]['label']}."
+            headline = f"{_plain_failure(failing.rule_id, st).rstrip('.')} si recibes el agua típica de la zona ({zone}); confirma {st.decisive[0]['label']}."
         elif lvl == "posible" and st.decisive:
             headline = f"Puede funcionar; confirma {st.decisive[0]['label']}."
         elif lvl == "posible":

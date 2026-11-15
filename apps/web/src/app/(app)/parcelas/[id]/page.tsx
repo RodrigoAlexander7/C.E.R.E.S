@@ -10,6 +10,7 @@ import { useSession } from "@/components/SessionProvider";
 import { SourceChips } from "@/components/Sources";
 import { ApiError, api, fmtDate, fmtDateTime, fmtNumber } from "@/lib/api";
 import { CROP_LABELS, PRIORITY_LABELS, type CropEvent, type Parcel, type Profile, type Revision, type Run } from "@/lib/types";
+import { useZones } from "@/lib/zones";
 
 interface ParcelDetail extends Parcel {
   profile: Revision | null;
@@ -32,6 +33,8 @@ export default function ParcelPage() {
   const router = useRouter();
   const { user, loading, refresh } = useSession();
   const [parcel, setParcel] = useState<ParcelDetail | null>(null);
+  const { zones } = useZones();
+  const zone = zones.find((z) => z.id === parcel?.zone_id) ?? null;
   const [runs, setRuns] = useState<Run[]>([]);
   const [run, setRun] = useState<Run | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -155,7 +158,7 @@ export default function ParcelPage() {
         </div>
         <p className="muted" style={{ margin: 0 }}>
           {fmtNumber(parcel.area_ha, 2)} ha ({parcel.area_origin === "geodesica" ? "área calculada del dibujo" : "área declarada"}) · {parcel.region_codes.district_name ?? "distrito no identificado"} ·{" "}
-          {parcel.in_pilot_zone ? "Zona piloto Majes I" : "Fuera de la zona piloto"}
+          {zone ? `Zona piloto ${zone.name}` : parcel.in_pilot_zone ? "Zona piloto" : "Fuera de las zonas piloto"}
         </p>
         {msg && <div className="notice notice-ok" role="status">{msg}</div>}
         {error && <div className="notice notice-bad" role="alert">{error}</div>}
@@ -235,7 +238,7 @@ export default function ParcelPage() {
         {profile && !editing && <ul>{describeProfile(profile).map((l) => <li key={l}>{l}</li>)}</ul>}
         {editing && draftProfile && (
           <div className="stack">
-            <ProfileForm value={draftProfile} onChange={setDraftProfile} />
+            <ProfileForm value={draftProfile} onChange={setDraftProfile} zone={zone} />
             {formErr.length > 0 && <div className="notice notice-bad" role="alert">{formErr.join(" ")}</div>}
             <div className="row">
               <button className="btn-primary" onClick={saveProfile}>Guardar nueva revisión</button>

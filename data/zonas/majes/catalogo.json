@@ -1,6 +1,6 @@
 {
-  "version": "catalogo-majes-2026-11-14.1",
-  "review_note": "Kc, duración de etapas y tolerancia a sales comprobados contra FAO-56 (tablas 11 y 12) y FAO 29 (tabla 4) el 14-nov-2026. Ventanas de siembra, preparación, costos, rendimientos y precios son supuestos de demostración sin revisión agronómica local. Ver data/catalog/REVISION.md.",
+  "version": "catalogo-majes-2026-11-15.1",
+  "review_note": "Kc, duración de etapas y tolerancia a sales comprobados contra FAO-56 (tablas 11 y 12) y FAO 29 (tabla 4) el 14-nov-2026. Ventanas de siembra, preparación, costos, rendimientos y precios son supuestos de demostración sin revisión agronómica local. Ver data/zonas/majes/REVISION.md. 15-nov-2026: solo cambia el formato (nombre corto y secuencias explícitas), no los valores.",
   "horizon_months": 24,
   "prep_days": 15,
   "prep_status": "supuesto_demo",
@@ -14,10 +14,13 @@
     "maiz_chala": "Maíz chala (forraje)",
     "otro": "Otro cultivo"
   },
+  "non_catalog_hints": {"maiz_chala": "Para forraje", "alfalfa": "Instalada"},
   "crops": [
     {
       "id": "maiz_grano",
       "name": "Maíz amarillo duro (grano)",
+      "short": "maíz",
+      "hint": "Amarillo duro, para grano",
       "family": "Poaceae",
       "is_legume": false,
       "destination": "Grano seco para venta",
@@ -59,6 +62,8 @@
     {
       "id": "frejol_grano",
       "name": "Frejol canario (grano seco)",
+      "short": "frejol",
+      "hint": "Grano seco",
       "family": "Fabaceae",
       "is_legume": true,
       "destination": "Grano seco para venta",
@@ -111,6 +116,8 @@
     {
       "id": "cebolla_roja",
       "name": "Cebolla roja (bulbo)",
+      "short": "cebolla",
+      "hint": "Roja, para bulbo",
       "family": "Amaryllidaceae",
       "is_legume": false,
       "destination": "Bulbo para mercado fresco",
@@ -187,7 +194,8 @@
       "id": "B",
       "name": "B. Introducir una leguminosa",
       "short": "Maíz y frejol alternados",
-      "sequence_rule": "leguminosa",
+      "sequence_rule": "alternar",
+      "crops": ["frejol_grano", "maiz_grano"],
       "cap_status": null,
       "rationale": "Secuencia maíz–frejol estudiada en Majes (ensayo de labranzas); no demuestra mayor rentabilidad ni ahorro de agua.",
       "source_ids": ["UNSA-MAJES", "INIA-RIZOBIOS"]
@@ -196,7 +204,8 @@
       "id": "C",
       "name": "C. Diversificar con cebolla",
       "short": "Cebolla y maíz alternados",
-      "sequence_rule": "diversificar",
+      "sequence_rule": "alternar",
+      "crops": ["cebolla_roja", "maiz_grano"],
       "cap_status": "exploratoria",
       "rationale": "Hipótesis comercial: cebolla registrada entre cultivos de la irrigación; la secuencia no está validada.",
       "source_ids": ["MINAM-2016"]

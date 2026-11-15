@@ -66,6 +66,7 @@ class Parcel(Base):
     area_origin: Mapped[str] = mapped_column(String(20))  # geodesica | declarada
     region_codes: Mapped[dict] = mapped_column(JSONType, default=dict)  # códigos texto + proveedor
     in_pilot_zone: Mapped[bool] = mapped_column(Boolean, default=False)
+    zone_id: Mapped[str | None] = mapped_column(String(30), nullable=True)  # zona piloto (data/zonas/)
     active_revision_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
     is_public_demo: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

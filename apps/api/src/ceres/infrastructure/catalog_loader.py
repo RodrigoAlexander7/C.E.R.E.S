@@ -71,10 +71,12 @@ def parse_catalog(data: dict) -> Catalog:
             residue_note=c["residue_note"],
             nutrition_note=c["nutrition_note"],
             kc_note=c.get("kc_note", ""),
+            short=c.get("short", ""),
+            hint=c.get("hint", ""),
         )
     if sum(1 for c in crops.values() if c.id == "trigo" and c.is_legume):
         raise ValueError("El trigo no es una leguminosa fijadora")
-    return Catalog(
+    cat = Catalog(
         version=data["version"],
         crops=crops,
         associations=tuple(
@@ -100,6 +102,7 @@ def parse_catalog(data: dict) -> Catalog:
                 cap_status=t["cap_status"],
                 rationale=t["rationale"],
                 source_ids=tuple(t["source_ids"]),
+                crops=tuple(t.get("crops", ())),
             )
             for t in data["templates"]
         ),
@@ -111,7 +114,12 @@ def parse_catalog(data: dict) -> Catalog:
         scenario_low=(data["scenario_low"]["yield_factor"], data["scenario_low"]["price_factor"]),
         scenario_high=(data["scenario_high"]["yield_factor"], data["scenario_high"]["price_factor"]),
         non_catalog_crops=data.get("non_catalog_crops", {}),
+        non_catalog_hints=data.get("non_catalog_hints", {}),
     )
+    for t in cat.templates:
+        if t.sequence_rule == "alternar" and (len(t.crops) < 2 or any(c not in crops for c in t.crops)):
+            raise ValueError(f"La plantilla {t.id} alterna cultivos sin ficha en el catálogo")
+    return cat
 
 
 @lru_cache
