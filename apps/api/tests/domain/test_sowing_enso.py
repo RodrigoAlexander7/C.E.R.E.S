@@ -80,5 +80,5 @@ def test_sowing_window_endpoint(make_client):
     goteo = c.get("/api/v1/public/sowing-window", params={"crop": "frejol_grano", "method": "goteo"}).json()
     assert goteo["efficiency"]["kind"] == "declarado"
     assert goteo["months"][3]["gross_m3_ha"] < d["months"][3]["gross_m3_ha"]
-    assert c.get("/api/v1/public/sowing-window", params={"crop": "papa"}).status_code == 404  # sin ficha
+    assert c.get("/api/v1/public/sowing-window", params={"crop": "maiz_chala"}).status_code == 404  # sin ficha
     assert c.get("/api/v1/public/sowing-window", params={"crop": "frejol_grano", "zone": "otra"}).status_code == 404

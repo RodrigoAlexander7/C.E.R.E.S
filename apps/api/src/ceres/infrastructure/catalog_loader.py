@@ -102,6 +102,7 @@ def parse_catalog(data: dict, prices: dict[tuple[str, str], MarketStat] | None =
             kc_note=c.get("kc_note", ""),
             short=c.get("short", ""),
             hint=c.get("hint", ""),
+            exploratory=bool(c.get("exploratory", False)),
         )
     if sum(1 for c in crops.values() if c.id == "trigo" and c.is_legume):
         raise ValueError("El trigo no es una leguminosa fijadora")

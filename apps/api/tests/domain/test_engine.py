@@ -183,7 +183,7 @@ def test_alfalfa_is_accepted_as_previous_crop_and_outside_pilot_blocks(catalog, 
 
 
 def test_non_catalog_plan_requires_data(catalog, climate):
-    s = by_id(evaluate(base(planned_next_crop_id="papa"), catalog, climate))
+    s = by_id(evaluate(base(planned_next_crop_id="maiz_chala"), catalog, climate))
     assert s["A"].status == "requiere_datos"
 
 

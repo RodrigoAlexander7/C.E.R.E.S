@@ -138,7 +138,10 @@ def simplify(result: ComparisonResult, p: ParcelInput, catalog: Catalog) -> None
     caps = {t.id: t.cap_status for t in catalog.templates}
     zone = p.zone.name
     for st in sts:
-        st.simple = {"level": level_of(st, caps.get(st.strategy_id))}
+        cap = caps.get(st.strategy_id)
+        if any(catalog.crop(c) and catalog.crop(c).exploratory for c in st.sequence):
+            cap = "exploratoria"  # un cultivo sin validación local nunca sube de «Por explorar»
+        st.simple = {"level": level_of(st, cap)}
         st.decisive = decisive_for(st, p, catalog)
 
     usable = [s for s in sts if s.simple["level"] in ("buena", "posible")]

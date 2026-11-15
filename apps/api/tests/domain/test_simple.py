@@ -116,10 +116,17 @@ def test_after_alfalfa_compares_options_and_plan_requires_data(zone, catalog, cl
 
 
 def test_non_catalog_plan_is_not_presented_as_possible(zone, catalog, climate):
-    p = set_path(set_path(BASE, "current_crop_id", "papa"), "current_status", "cosechado")
+    p = set_path(set_path(BASE, "current_crop_id", "maiz_chala"), "current_status", "cosechado")
     a = {s.strategy_id: s for s in run(p, zone, catalog, climate).strategies}["A"]
     assert a.simple["level"] == "sin_datos"
-    assert a.simple["headline"].startswith("Seguir con papa") and "ficha" in a.simple["headline"]
+    assert a.simple["headline"].startswith("Seguir con maíz chala") and "ficha" in a.simple["headline"]
+
+
+def test_new_catalog_crop_is_never_better_than_explore(zone, catalog, climate):
+    # La papa ya tiene ficha FAO-56, pero sin validación local: «Tu plan» con papa queda «Por explorar».
+    p = set_path(set_path(set_path(BASE, "current_crop_id", "papa"), "current_status", "cosechado"), "water.allocation_min_m3", 10**6)
+    a = {s.strategy_id: s for s in run(p, zone, catalog, climate).strategies}["A"]
+    assert a.simple["level"] in ("explorar", "no_conviene")
 
 
 def test_simple_order_and_reproducibility(zone, catalog, climate):

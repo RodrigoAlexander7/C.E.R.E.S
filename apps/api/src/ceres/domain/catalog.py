@@ -90,6 +90,8 @@ class CropProfile:
     kc_note: str = ""
     short: str = ""  # nombre cotidiano («maíz»)
     hint: str = ""
+    # Cultivo agregado sin validación local: cualquier opción que lo use queda como «Por explorar».
+    exploratory: bool = False
 
     @property
     def short_name(self) -> str:

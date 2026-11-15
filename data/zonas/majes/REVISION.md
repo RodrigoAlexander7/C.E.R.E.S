@@ -23,6 +23,17 @@ Validación 2 del plan (`specs/tareas.md`). Revisión documental hecha por el ag
 - **Rendimientos, precios en chacra y costos**: `supuesto_demo`; no provienen de SIEA ni de productores.
 - **Ajuste climático del Kc medio** (FAO-56 ec. 62) no aplicado: en el clima árido de Majes tendería a subirlo; se declara como supuesto.
 
+## Precios MIDAGRI-SISAP y cultivos agregados (15-nov-2026, catálogo .2)
+
+- **Precio en chacra = mayorista MIDAGRI-SISAP de Arequipa (mediana diaria 2–13 nov 2026) × factor chacra/mayorista.** El factor es `supuesto_demo`: para frejol (0,712) y cebolla (0,378) se eligió para conservar los precios previos de la demo (S/ 5,50 y 0,70/kg); para los cultivos nuevos es un genérico de 0,5 (verificar con acopiadores de Majes). Maíz amarillo duro no figura en SISAP en esas dos semanas: su precio sigue siendo supuesto.
+- **Volatilidad de precio (`price_sigma`)**: σ de un log-normal usado solo en el análisis de riesgo (maíz 0,15; frejol 0,20; ajo y arveja 0,30; papa 0,35; cebolla y zanahoria 0,40). Supuesto de demostración; reemplazar con la serie histórica SISAP.
+- **Cultivos agregados por explorar** (`exploratory: true`, nunca mejor que «Por explorar»):
+  - **Papa**: FAO-56 Tabla 11 «(Semi) Arid Climate» 25/30/45/30 (130 d); Kc 0,50/1,15/0,75 (Tabla 12); FAO-29 Tabla 4: ECe 1,7 (100 %) y 5,9 dS/m (50 %). Comprobado el 15-nov-2026.
+  - **Zanahoria**: Tabla 11 «Arid climate» 20/30/50/20 (120 d); Kc 0,70/1,05/0,95; FAO-29: 1,0 y 4,6 dS/m. Comprobado.
+  - **Arveja verde**: Tabla 11 «Mediterranean» 20/30/35/15 (100 d); Kc arveja fresca 0,50/1,15/1,10. FAO-29 no la incluye: sin umbral de sal.
+  - **Ajo morado**: Kc 0,70/1,00/0,70 (Tabla 12). **La Tabla 11 no trae duración para ajo**: se aproxima con la cebolla (150 d) y queda `sin_verificar`. FAO-29 no lo incluye.
+  - Ventanas de siembra, rendimientos y costos de los cuatro: `supuesto_demo`. Ningún cultivo nuevo tiene umbral térmico verificado.
+
 ## Observación sobre la serie NASA
 
 La celda NASA POWER consultada tiene 835 m de elevación; la Pampa de Majes está cerca de 1 400 m. Las mínimas de la celda (13–19 °C de media mensual) son probablemente más templadas que en el lote, por lo que los indicadores de frío pueden subestimar riesgos. El contraste con la estación SENAMHI «Pampa de Majes» sigue pendiente.
