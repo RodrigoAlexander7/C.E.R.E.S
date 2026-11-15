@@ -1,5 +1,6 @@
 "use client";
 
+import { NasaBadge } from "@/components/NasaBadge";
 import { SourceChips } from "@/components/Sources";
 import { fmtDate, fmtNumber } from "@/lib/api";
 import type { ComparisonResult, Decisive, Profile, Strategy } from "@/lib/types";
@@ -66,7 +67,7 @@ export function OptionCard({
         </div>
         <div className={s.fact}>
           <strong>{f?.water_m3 != null ? `${fmtNumber(f.water_m3)} m³` : "—"}</strong>
-          <span><Term id="agua_bruta">Agua</Term> en 24 meses</span>
+          <span><Term id="agua_bruta">Agua</Term> en 24 meses <NasaBadge product="power" variant="micro" /></span>
         </div>
         <div className={s.fact}>
           <strong>{f?.first_sowing ? fmtDate(f.first_sowing).replace(/ \d{4}$/, "") : "—"}</strong>

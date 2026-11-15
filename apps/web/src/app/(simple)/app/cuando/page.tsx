@@ -4,6 +4,7 @@
 // y años El Niño / La Niña según el ONI de NOAA. Público, sin cuenta.
 
 import { useState } from "react";
+import { NasaBadge } from "@/components/NasaBadge";
 import s from "@/components/simple/simple.module.css";
 import { SowingWindow } from "@/components/SowingWindow";
 import { useZones } from "@/lib/zones";
@@ -18,6 +19,7 @@ export default function Cuando() {
         <p className={s.stepKicker}>Datos NASA</p>
         <h1 id="cuando-t" className={`${s.q} ${s.display}`}>¿Cuándo me conviene sembrar?</h1>
         <p>Elige el cultivo y el mes. Te mostramos cuánta agua pediría todo el ciclo y en cuántos de los últimos 11 años hubo frío o calor dañino en esas fechas.</p>
+        <div style={{ marginTop: 10 }}><NasaBadge product="power" /></div>
       </div>
       {error && <div className={s.error} role="alert">{error}</div>}
       {zones.length > 1 && (

@@ -6,6 +6,7 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { NasaBadge } from "@/components/NasaBadge";
 import { useSession } from "@/components/SessionProvider";
 import { Ndvi } from "@/components/simple/ndvi";
 import s from "@/components/simple/simple.module.css";
@@ -93,7 +94,7 @@ export default function Chacra() {
         <p>{user ? "Tus parcelas guardadas. Dibujarla en el mapa es opcional: sirve para medir el área y consultar su verdor desde el satélite." : "Comprueba si tu terreno está en una zona piloto y cuánto mide. Para guardarlo, ingresa."}</p>
       </div>
 
-      <Ndvi key={active?.id ?? zone?.id} parcelId={active?.id} zone={zone?.id} />
+      <Ndvi key={active?.id ?? zone?.id} parcelId={active?.id} zone={zone?.id} zoneName={zone?.name} />
       {msg && <div className={s.panel} role="status"><p className={s.panelText}>{msg}</p></div>}
       {err && <div className={s.error} role="alert">{err}</div>}
 
@@ -163,7 +164,8 @@ export default function Chacra() {
           )}
           {info && active && <button className={`${s.btn} ${s.btnPrimary} ${s.btnBlock}`} onClick={saveOutline}>Guardar este contorno</button>}
           {info && !user && <Link href="/ingresar?volver=/app/chacra" className={`${s.btn} ${s.btnPrimary} ${s.btnBlock}`}>Ingresar para guardar</Link>}
-          <p className={s.sub}>Mapa © colaboradores de OpenStreetMap. Un punto GPS no delimita la parcela; el área sale del dibujo.</p>
+          <div style={{ marginTop: 10 }}><NasaBadge product="gibs" /></div>
+          <p className={s.sub}>Imagen de un día, solo para ubicar y dibujar; no entra en los cálculos. Calles © colaboradores de OpenStreetMap. Un punto GPS no delimita la parcela; el área sale del dibujo.</p>
         </div>
       </details>
     </section>

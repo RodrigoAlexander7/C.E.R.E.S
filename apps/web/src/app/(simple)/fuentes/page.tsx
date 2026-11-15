@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { SourceChips } from "@/components/Sources";
 import { api, fmtNumber } from "@/lib/api";
+import { NASA } from "@/lib/nasa";
 import { KIND_LABELS, type SourceRec } from "@/lib/types";
 import { useZones, type Zone } from "@/lib/zones";
 
@@ -23,6 +24,24 @@ export default function Fuentes() {
   return (
     <div className="stack">
       <h1>Fuentes y procedencia</h1>
+      <section className="card stack" aria-labelledby="nasa-t">
+        <h2 id="nasa-t">Datos de la NASA que usa CERES</h2>
+        <p className="muted" style={{ margin: 0 }}>Datos abiertos de la NASA, con producto, período y resolución. CERES no está respaldado por la NASA. El Niño (NOAA) y los precios (MIDAGRI-SISAP) no son datos NASA.</p>
+        <div className="table-scroll">
+          <table>
+            <thead><tr><th>Producto</th><th>Período y resolución</th><th>Qué hace CERES con él</th></tr></thead>
+            <tbody>
+              {Object.values(NASA).map((p) => (
+                <tr key={p.id} id={`nasa-${p.id}`} style={{ scrollMarginTop: 80 }}>
+                  <td><a href={p.url} target="_blank" rel="noreferrer"><b>{p.name}</b></a><div><SourceChips ids={[p.sourceId]} /></div></td>
+                  <td className="small">{p.detail}</td>
+                  <td className="small">{p.use}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
       {zones.map((z) => <ZoneNasa key={z.id} zone={z} />)}
       <section className="card stack" aria-labelledby="src-t">
         <h2 id="src-t">Registro de fuentes</h2>

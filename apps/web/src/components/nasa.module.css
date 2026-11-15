@@ -1,0 +1,24 @@
+/* Sellos NASA: azul «espacio» discreto sobre la paleta arena/bosque de CERES. */
+.chip, .micro, .block {
+  --n-ink: #17385a;
+  --n-bg: #e3edf6;
+  --n-line: #c6d8ea;
+  color: var(--n-ink);
+  text-decoration: none;
+}
+.chip { display: inline-flex; align-items: center; gap: 4px 6px; flex-wrap: wrap; padding: 5px 10px; border-radius: 14px; background: var(--n-bg); border: 1px solid var(--n-line); font-size: 0.78rem; line-height: 1.25; min-height: 30px; }
+.chip b { font-weight: 800; letter-spacing: 0.01em; }
+.chip span { color: #3b5874; }
+.chip:hover, .block:hover { border-color: #8fb0d0; }
+.chip:focus-visible, .micro:focus-visible, .block:focus-visible { outline: 3px solid #d9a53a; outline-offset: 2px; }
+
+.micro { display: inline-flex; align-items: center; gap: 3px; font-size: 0.66rem; font-weight: 800; letter-spacing: 0.02em; padding: 1px 6px; border-radius: 999px; background: var(--n-bg); vertical-align: middle; white-space: nowrap; }
+
+.block { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; align-items: start; padding: 12px 14px; border-radius: 16px; background: var(--n-bg); border: 1px solid var(--n-line); }
+.block b { display: block; font-size: 0.92rem; }
+.block small { display: block; color: #3b5874; font-size: 0.8rem; margin-top: 1px; }
+.blockIcon { width: 34px; height: 34px; border-radius: 50%; background: #fff; display: grid; place-items: center; }
+.use { display: block; margin-top: 6px; font-size: 0.84rem; line-height: 1.4; color: #24435f; }
+
+.footer { margin: 28px 0 0; font-size: 0.78rem; color: #66705f; line-height: 1.6; text-align: center; }
+.footer a { color: inherit; font-weight: 700; }

@@ -5,6 +5,7 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+import { NasaBadge } from "@/components/NasaBadge";
 import { useSession } from "@/components/SessionProvider";
 import { HelpProvider, Sheet, Term } from "@/components/simple/help";
 import { MoreDetails } from "@/components/simple/more";
@@ -221,9 +222,10 @@ export default function SimpleApp() {
               <button className={s.chip} onClick={() => { setAreaDraft(String(areaHa)); setAreaOpen(true); }} disabled={!!saved}>{fmtNumber(areaHa, areaHa % 1 ? 1 : 0)} ha{saved ? "" : " ✎"}</button>
             </div>
             <p className={s.sub}>
-              {zone?.name} · clima <Term id="nasa">NASA</Term> 2015–2025 · {result.horizon_start ? `de ${fmtDate(result.horizon_start)} a ${fmtDate(result.horizon_end)}` : ""}.
+              {zone?.name} · {result.horizon_start ? `de ${fmtDate(result.horizon_start)} a ${fmtDate(result.horizon_end)}` : ""}.
               {view.assumed.length > 0 && <> Lo que no sabías lo completamos con <Term id="supuesto">supuestos</Term> de la zona.</>}
             </p>
+            <div style={{ marginTop: 8 }}><NasaBadge product="power" detail="clima diario 2015–2025 · celda ≈ 50 km, no es tu chacra" /></div>
           </header>
 
           {err && <div className={s.error} role="alert">{err}</div>}

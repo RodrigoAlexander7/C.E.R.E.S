@@ -3,9 +3,12 @@
 import { useEffect, useRef, useState } from "react";
 import type { GeoJSONSource, Map as MlMap, MapMouseEvent, StyleSpecification } from "maplibre-gl";
 import type { Geometry, RegionNode } from "@/lib/types";
+import { GIBS_BASEMAP } from "@/lib/nasa";
 
 const PERU_BOUNDS: [[number, number], [number, number]] = [[-81.4, -18.4], [-68.6, 0.1]];
 
+// Fondo: calles de OSM y, al acercarse (zoom ≥ 9), la imagen satelital HLS de NASA GIBS de una
+// escena despejada. Donde la escena no cubre, se ve OSM debajo.
 const STYLE: StyleSpecification = {
   version: 8,
   sources: {
@@ -16,10 +19,18 @@ const STYLE: StyleSpecification = {
       maxzoom: 19,
       attribution: '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">colaboradores de OpenStreetMap</a> · Límites referenciales SERFOR/INEI',
     },
+    nasa: {
+      type: "raster",
+      tiles: [`https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/${GIBS_BASEMAP.layer}/default/${GIBS_BASEMAP.date}/GoogleMapsCompatible_Level12/{z}/{y}/{x}.png`],
+      tileSize: 256,
+      maxzoom: GIBS_BASEMAP.maxzoom,
+      attribution: `Imagen: <a href="https://nasa-gibs.github.io/gibs-api-docs/" target="_blank" rel="noreferrer">NASA EOSDIS GIBS</a> · HLS Sentinel-2, ${GIBS_BASEMAP.date}`,
+    },
   },
   layers: [
     { id: "bg", type: "background", paint: { "background-color": "#e8efe6" } },
     { id: "osm", type: "raster", source: "osm" },
+    { id: "nasa", type: "raster", source: "nasa", minzoom: 9, paint: { "raster-fade-duration": 200 } },
   ],
 };
 
@@ -58,6 +69,7 @@ export default function MapView(props: MapViewProps) {
   const map = useRef<MlMap | null>(null);
   const [ready, setReady] = useState(false);
   const [tileError, setTileError] = useState(false);
+  const [satellite, setSatellite] = useState(true);
   const latest = useRef(props);
   latest.current = props;
 
@@ -171,9 +183,24 @@ export default function MapView(props: MapViewProps) {
     if (props.userPoint) m.flyTo({ center: [props.userPoint.lon, props.userPoint.lat], zoom: 15 });
   }, [ready, props.userPoint, props.pinPoint]);
 
+  // Satélite NASA (por defecto) o solo calles
+  useEffect(() => {
+    const m = map.current;
+    if (!ready || !m) return;
+    m.setLayoutProperty("nasa", "visibility", satellite ? "visible" : "none");
+  }, [ready, satellite]);
+
   return (
     <div className="map" role="region" aria-label="Mapa interactivo. También puedes usar los selectores de la izquierda.">
       <div ref={el} style={{ position: "absolute", inset: 0 }} />
+      <button
+        type="button"
+        onClick={() => setSatellite((v) => !v)}
+        aria-pressed={satellite}
+        style={{ position: "absolute", left: 10, top: 10, zIndex: 2, display: "inline-flex", alignItems: "center", gap: 6, minHeight: 36, padding: "6px 12px", borderRadius: 999, border: "1px solid #c6d8ea", background: satellite ? "#17385a" : "#fff", color: satellite ? "#fff" : "#17385a", font: "inherit", fontSize: "0.8rem", fontWeight: 800, cursor: "pointer", boxShadow: "0 4px 14px -6px rgba(0,0,0,.4)" }}
+      >
+        {satellite ? "Satélite NASA (HLS)" : "Ver satélite NASA"}
+      </button>
       {tileError && (
         <div className="map-status">
           <div className="notice notice-warn" role="status">

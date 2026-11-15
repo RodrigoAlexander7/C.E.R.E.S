@@ -5,6 +5,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { DataFooter } from "@/components/NasaBadge";
 import { useSession } from "@/components/SessionProvider";
 import s from "@/components/simple/simple.module.css";
 
@@ -56,7 +57,10 @@ export default function SimpleLayout({ children }: { children: React.ReactNode }
           </nav>
         </div>
       </header>
-      <main id="contenido" className={s.main}>{children}</main>
+      <main id="contenido" className={s.main}>
+        {children}
+        <DataFooter />
+      </main>
       {inApp && (
         <nav className={s.modBottom} aria-label="Módulos">
           {MODULES.map((m) => (
