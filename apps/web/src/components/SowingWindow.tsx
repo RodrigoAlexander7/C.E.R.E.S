@@ -6,6 +6,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { NasaBadge } from "@/components/NasaBadge";
+import { Icon } from "@/components/simple/icons";
 import { SourceChips } from "@/components/Sources";
 import { ApiError, api, fmtNumber } from "@/lib/api";
 import s from "./sowing.module.css";
@@ -77,7 +78,7 @@ export function SowingWindow({ zone, crops, initialCrop, initialMonth, wide = fa
           <div>
             <small>{data.crop.short.toUpperCase()}</small>
             <b>Mejor mes para sembrar {data.crop.short}: {MESES_LARGO[view.recommended.month - 1]}</b>
-            <span>Menos riego dentro de la ventana de siembra ({fmtNumber(view.recommended.gross_m3_ha)} m³/ha) y sin frío ni calor frecuentes en 11 años NASA POWER.</span>
+            <span>Pide menos agua y no tiene frío ni calor fuerte frecuente.</span>
           </div>
           {month !== view.recommended.month && <button className={s.bannerBtn} onClick={() => setMonth(view.recommended!.month)}>Ver {MESES_LARGO[view.recommended.month - 1]}</button>}
         </div>
@@ -116,33 +117,43 @@ export function SowingWindow({ zone, crops, initialCrop, initialMonth, wide = fa
             })}
           </svg>
           <div className={s.legend}>
-            <span><i style={{ background: "#5b9a45" }} />Ventana del catálogo{data.crop.window_status === "supuesto_demo" ? " (ejemplo)" : ""}</span>
-            <span><i style={{ background: "#cfdcc3" }} />Fuera de ventana</span>
-            <span><b style={{ color: "#9b2f1f" }}>!</b> Frío o calor en ≥ 3 de cada 10 años</span>
-            <span>Miles de m³ por ha</span>
+            <span title={data.crop.window_status === "supuesto_demo" ? "Meses de siembra de ejemplo, por confirmar con tu asesor" : "Meses de siembra recomendados"}><i style={{ background: "#5b9a45" }} />Buena época</span>
+            <span><i style={{ background: "#cfdcc3" }} />Fuera de época</span>
+            <span title="Frío o calor fuerte en 3 o más de cada 10 años"><b style={{ color: "#9b2f1f" }}>!</b> Frío o calor</span>
+            <span>mil m³ por ha</span>
           </div>
           </div>
 
           <div>
           {cur && (
             <>
+              {/* Tres datos con ícono; la explicación aparece al tocar. El resto, en «Ver más». */}
               <div className={s.boxes}>
-                <div className={s.box}><strong>{fmtNumber(cur.gross_m3_ha)} m³</strong><span>de riego por hectárea en todo el ciclo ({data.efficiency.label}{data.efficiency.kind === "supuesto_zona" ? ", supuesto" : ""})</span></div>
-                <div className={s.box}><strong>{fmtNumber(cur.etc_mm)} mm</strong><span>pide el cultivo{cur.etc_mm_range ? `; entre ${fmtNumber(cur.etc_mm_range[0])} y ${fmtNumber(cur.etc_mm_range[1])} según el año` : ""}</span></div>
-                <div className={s.box}><strong>{cur.peak_month}</strong><span>mes más exigente: {fmtNumber(cur.peak_gross_m3_ha)} m³/ha</span></div>
+                <div className={s.box} tabIndex={0} title={`Riego por hectárea en todo el ciclo (${data.efficiency.label}${data.efficiency.kind === "supuesto_zona" ? ", supuesto" : ""}).`}>
+                  <span className={s.boxIcon}><Icon name="water" size={24} /></span><strong>{fmtNumber((cur.gross_m3_ha ?? 0) / 1000, 1)} mil m³</strong><span>por hectárea</span>
+                </div>
+                <div className={s.box} tabIndex={0} title={`El mes que más agua pide: ${fmtNumber(cur.peak_gross_m3_ha)} m³/ha.`}>
+                  <span className={s.boxIcon}><Icon name="calendar" size={24} /></span><strong>{cur.peak_month}</strong><span>mes de más riego</span>
+                </div>
+                <div className={s.box} data-warn={risky(cur)} tabIndex={0} title={(cur.thermal ?? []).map((t) => `${t.label}: ${t.years_with_events} de ${t.years_evaluated} años`).join(". ") || "Sin reglas de frío o calor para este cultivo."}>
+                  <span className={s.boxIcon}><Icon name="thermo" size={24} /></span><strong>{risky(cur) ? "Riesgo" : "Sin riesgo"}</strong><span>de frío o calor</span>
+                </div>
               </div>
-              <ul className={s.thermal}>
-                {(cur.thermal ?? []).map((t) => (
-                  <li key={t.rule_id} data-warn={t.state === "advertencia"}>
-                    <b>{t.label}:</b> {t.years_with_events} de {t.years_evaluated} años con días de media {t.comparator === "<" ? "bajo" : "sobre"} {t.threshold_c} °C en esas etapas{t.years_with_events ? ` (≈ ${fmtNumber(t.mean_days_per_year, 1)} días/año)` : ""}.
-                    {t.status !== "referencia_bibliografica" && <small> Umbral por verificar.</small>}
-                  </li>
-                ))}
-              </ul>
-              <p className={s.insight}>
-                Sembrando {data.crop.short} en <b>{MESES_LARGO[view.best.month - 1]}</b> el riego baja a {fmtNumber(view.best.gross_m3_ha)} m³/ha, frente a {fmtNumber(view.worst.gross_m3_ha)} m³/ha en {MESES_LARGO[view.worst.month - 1]}
-                {view.best.in_window ? "" : " (fuera de la ventana del catálogo: revisa otros riesgos)"}.
-              </p>
+              <details className={s.enso}>
+                <summary>Ver más sobre este mes</summary>
+                <ul className={s.thermal}>
+                  {(cur.thermal ?? []).map((t) => (
+                    <li key={t.rule_id} data-warn={t.state === "advertencia"}>
+                      <b>{t.label}:</b> {t.years_with_events} de {t.years_evaluated} años con días de media {t.comparator === "<" ? "bajo" : "sobre"} {t.threshold_c} °C en esas etapas{t.years_with_events ? ` (≈ ${fmtNumber(t.mean_days_per_year, 1)} días/año)` : ""}.
+                      {t.status !== "referencia_bibliografica" && <small> Umbral por verificar.</small>}
+                    </li>
+                  ))}
+                </ul>
+                <p className={s.insight}>
+                  El cultivo pide {fmtNumber(cur.etc_mm)} mm{cur.etc_mm_range ? ` (entre ${fmtNumber(cur.etc_mm_range[0])} y ${fmtNumber(cur.etc_mm_range[1])} según el año)` : ""}. Sembrando en <b>{MESES_LARGO[view.best.month - 1]}</b> el riego baja a {fmtNumber(view.best.gross_m3_ha)} m³/ha, frente a {fmtNumber(view.worst.gross_m3_ha)} m³/ha en {MESES_LARGO[view.worst.month - 1]}
+                  {view.best.in_window ? "" : " (fuera de época: revisa otros riesgos)"}.
+                </p>
+              </details>
             </>
           )}
 
@@ -168,7 +179,7 @@ export function SowingWindow({ zone, crops, initialCrop, initialMonth, wide = fa
               <p className={s.fine}>{data.enso.definition} {data.enso.limitation} <SourceChips ids={data.enso.source_ids} /></p>
             </details>
           )}
-          <details className={s.enso} open={wide || undefined}>
+          <details className={s.enso}>
             <summary>¿De dónde sacamos este dato?</summary>
             <NasaBadge product="power" variant="block" />
             <p className={s.fine}>

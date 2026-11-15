@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { NasaBadge } from "@/components/NasaBadge";
+import { Icon, Tip } from "./icons";
 import { api, ApiError, fmtNumber } from "@/lib/api";
 import s from "./simple.module.css";
 interface Series { needs_polygon: boolean; items: { scene_id: string; observed_on: string; ndvi: number | null; cloud_pct: number | null; valid_pct: number | null; source_url: string }[]; monthly: { month: string; ndvi: number; scenes: number }[]; job: { status: string; detail: string | null } | null }
@@ -37,10 +37,12 @@ export function Ndvi({ parcelId, zone = "majes", zoneName }: { parcelId?: string
   const period = months.length ? (months.length > 1 ? `${monthLabel(months[0].month)} – ${monthLabel(months[months.length - 1].month)}` : monthLabel(months[0].month)) : null;
   const last = months[months.length - 1];
   return <section className={s.panel} aria-labelledby="ndvi-title">
-    <h2 id="ndvi-title" className={s.display} style={{ margin: "0 0 6px" }}>Verdor desde el satélite</h2>
-    <NasaBadge product="hls" detail={`NDVI a 30 m${period ? ` · ${period}` : ""}`} />
-    <p className={s.panelText} style={{ marginTop: 10 }}>El NDVI muestra cuánta vegetación verde hay; no diagnostica nutrientes ni la causa de un cambio.</p>
-    {!parcelId && <p className={s.sub} style={{ marginTop: 0 }}>Ejemplo público de {zoneName ?? zone}. Guarda y dibuja tu parcela para consultar la tuya.</p>}
+    <p className={s.qLine} style={{ marginBottom: 4 }}>
+      <span className={s.qIcon}><Icon name="sprout" /></span>
+      <b id="ndvi-title" className={s.display} style={{ fontSize: "1.15rem" }}>¿Qué tan verde está?</b>
+      <Tip className={s.qHelp} tip={`Índice de verdor (NDVI) de NASA HLS, 30 m${period ? `, ${period}` : ""}. Muestra cuánta planta verde hay; no mide nutrientes ni explica la causa de un cambio.`}><Icon name="question" size={14} /></Tip>
+    </p>
+    {!parcelId && <p className={s.sub} style={{ marginTop: 0 }}>Ejemplo de {zoneName ?? zone}. Dibuja tu chacra para ver la tuya.</p>}
     {err && <p role="alert">{err}</p>}
     {data?.needs_polygon && <p>Dibuja el contorno de tu parcela para consultar su NDVI.</p>}
     {months.length ? (
@@ -58,10 +60,10 @@ export function Ndvi({ parcelId, zone = "majes", zoneName }: { parcelId?: string
             </div>
           ))}
         </div>
-        {last && <p className={s.sub}>Último mes: <b>{fmtNumber(last.ndvi, 2)}</b>, {reading(last.ndvi)}. Escala de 0 (sin vegetación) a 1 (muy verde).</p>}
+        {last && <p className={s.sub}>Último mes: <b>{reading(last.ndvi)}</b> ({fmtNumber(last.ndvi, 2)} de 1).</p>}
       </>
     ) : <p>{data ? "Sin observaciones válidas todavía. Los huecos no son un NDVI de cero." : "Cargando escenas…"}</p>}
-    {data?.job && (data.job.status === "completo" ? data.job.detail && <p className={s.sub}>{data.job.detail}</p> : <p role="status">{data.job.status}: {data.job.detail}</p>)}
+    {data?.job && data.job.status !== "completo" && <p role="status">{data.job.status}: {data.job.detail}</p>}
     {parcelId && !data?.needs_polygon && <button className={`${s.btn} ${s.btnGhost}`} onClick={refresh} disabled={busy || ["pendiente", "procesando"].includes(data?.job?.status ?? "")}>Actualizar desde HLS</button>}
     {!!data?.items.length && <details className={s.more}><summary>Ver escenas y calidad</summary><div className={s.moreBody} style={{ overflowX: "auto" }}><table><thead><tr><th>Fecha</th><th>NDVI</th><th>Nubes de escena</th><th>Píxeles válidos</th></tr></thead><tbody>{data.items.map(i => <tr key={i.scene_id}><td><a href={i.source_url} target="_blank" rel="noreferrer">{i.observed_on}</a></td><td>{fmtNumber(i.ndvi, 2)}</td><td>{fmtNumber(i.cloud_pct, 1)} %</td><td>{fmtNumber(i.valid_pct, 1)} %</td></tr>)}</tbody></table><p className={s.sub}>NASA HLS v2 (Landsat 8/9 y Sentinel-2 armonizados, 30 m). Mediana mensual de hasta dos escenas por mes. Nubes, sombra, nieve, agua y aerosol alto enmascarados. Parcelas pequeñas pueden no contener centros de píxel.</p></div></details>}
   </section>;

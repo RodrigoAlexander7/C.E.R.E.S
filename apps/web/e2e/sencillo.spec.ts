@@ -62,6 +62,7 @@ test("modo sencillo en móvil: 3 preguntas → opciones → por qué → guardar
 
   const cards = page.locator("article");
   // 3 plantillas + el plan sugerido por CERES (D) y el mejor por explorar (E) cuando el optimizador los encuentra.
+  await expect(cards.nth(2)).toBeVisible();
   const count = await cards.count();
   expect(count).toBeGreaterThanOrEqual(3);
   expect(count).toBeLessThanOrEqual(5);
@@ -72,13 +73,15 @@ test("modo sencillo en móvil: 3 preguntas → opciones → por qué → guardar
   await expect(page.getByText("Requiere datos")).toHaveCount(0);
   const onion = cards.filter({ hasText: "Cebolla" });
   await expect(onion.getByText("Por explorar")).toBeVisible();
-  await expect(onion.getByText(/Ganancia estimada · sin validar/)).toBeVisible(); // viabilidad antes que ganancia
-  await expect(cards.first().getByText("Plan sugerido por CERES").first()).toBeVisible();
-  await expect(cards.first().getByText(/Rango probable/)).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Precios de esta semana" })).toBeVisible();
-  await expect(page.getByText(/clima diario 2015–2025/).first()).toBeVisible(); // sello NASA POWER
+  await expect(onion.getByRole("note", { name: /sin validar/ })).toBeVisible(); // viabilidad antes que ganancia
+  // Sencillez: el plan recomendado se marca con un ícono y una palabra; el riesgo, en dos palabras.
+  await expect(cards.first().getByText("Te recomendamos")).toBeVisible();
+  await expect(cards.first().getByText(/Riesgo (bajo|medio|alto)/)).toBeVisible();
+  await expect(cards.first().getByText(/Rango probable/)).toHaveCount(0); // el detalle va bajo demanda
+  await expect(page.getByText("Precios de esta semana")).toBeVisible();
+  await expect(page.getByRole("note", { name: /NASA POWER/ }).first()).toBeAttached(); // sello NASA (ícono con tooltip)
   // Una sola pregunta de agua para toda la chacra (no una por tarjeta).
-  await expect(page.getByText("¿Cuánta agua te llega al mes en la época de más riego?")).toHaveCount(1);
+  await expect(page.getByText("¿Cuánta agua te llega al mes?")).toHaveCount(1);
   expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0);
 
   // Pregunta decisiva observable → recalcula.
@@ -90,18 +93,20 @@ test("modo sencillo en móvil: 3 preguntas → opciones → por qué → guardar
   await again;
   await expect(cards.first().getByText(/Buena opción|Posible, confirma/)).toBeVisible();
 
-  // «¿Por qué?» en capas, con lo usado etiquetado.
-  await cards.first().getByRole("button", { name: "¿Por qué?" }).click();
+  // «Ver más» (?) abre el detalle en capas, con el riesgo y lo usado etiquetado.
+  await cards.first().getByRole("button", { name: "Ver más" }).click();
   const why = page.getByRole("dialog", { name: "Por qué" });
   await expect(why.getByText("En pocas palabras")).toBeVisible();
-  await expect(why.getByText("Lo que usamos")).toBeVisible();
+  await expect(why.getByText(/Rango probable/)).toBeVisible();
+  await why.getByText(/Ver los \d+ datos que usamos/).click();
   await expect(why.getByText("Tu respuesta").first()).toBeVisible();
   await why.getByRole("button", { name: "Cerrar" }).click();
 
   // Glosario sin IA.
-  await cards.first().getByRole("button", { name: /Ganancia estimada: qué significa/ }).click();
-  await expect(page.getByRole("dialog", { name: /Ganancia estimada/ })).toContainText("no es una ganancia garantizada");
-  await page.getByRole("dialog", { name: /Ganancia estimada/ }).getByRole("button", { name: "Cerrar" }).click();
+  await page.getByText("Precios de esta semana").click(); // precios plegados: se abren a pedido
+  await page.getByRole("button", { name: /Precio mayorista: qué significa/ }).click();
+  await expect(page.getByRole("dialog", { name: /Precio mayorista/ })).toContainText("acopiador");
+  await page.getByRole("dialog", { name: /Precio mayorista/ }).getByRole("button", { name: "Cerrar" }).click();
 
   // IA sin cuenta: explica que necesita guardar.
   await page.getByRole("button", { name: "Pregúntale a la IA" }).click();

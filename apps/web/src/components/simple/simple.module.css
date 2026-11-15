@@ -118,13 +118,51 @@
 .cardQ { margin-top: 14px; padding: 12px; border-radius: 16px; background: var(--s-maybe-bg); }
 .cardQ p { margin: 0 0 4px; font-weight: 700; color: #5c4000; }
 .cardQ small { display: block; color: #6b5420; margin-bottom: 10px; line-height: 1.4; }
+/* ---------- Sencillez: ícono primero, explicación al pasar el mouse o al tocar ---------- */
+.tip { position: relative; display: inline-flex; align-items: center; gap: 6px; cursor: help; outline: none; -webkit-tap-highlight-color: transparent; }
+.tip::after { content: attr(data-tip); position: absolute; left: 50%; bottom: calc(100% + 8px); transform: translateX(-50%); width: max-content; max-width: min(240px, 70vw); background: var(--s-ink); color: #fff; font-size: 0.8rem; font-weight: 500; line-height: 1.35; padding: 8px 10px; border-radius: 10px; display: none; pointer-events: none; z-index: 40; white-space: normal; text-align: left; text-transform: none; letter-spacing: 0; box-shadow: 0 10px 24px -12px rgba(0, 0, 0, 0.5); }
+.tip:hover::after, .tip:focus::after { display: block; }
+.tip:focus-visible { outline: 3px solid var(--s-maize); outline-offset: 2px; border-radius: 8px; }
+.badge.tip::after, .marketTrend .tip::after, .qHelp::after { left: auto; right: 0; transform: none; }
+.ribbon.tip::after, .iconFact:first-child::after { left: 0; transform: none; }
+
+.card { overflow: visible; }
+.card::before { border-radius: 22px 22px 0 0; }
+.ribbon { align-self: flex-start; font-size: 0.78rem; font-weight: 800; padding: 4px 10px; border-radius: 999px; background: var(--s-forest); color: #fff; margin: 2px 0 8px; }
+.ribbonExplore { background: var(--s-explore-bg); color: var(--s-explore); }
+.ribbonMine { background: var(--s-sand-2); color: var(--s-ink-2); }
+.cardTitle { display: grid; gap: 6px; min-width: 0; }
+.cropSeq { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 2px; }
+.cropSeqItem { display: inline-flex; align-items: center; gap: 2px; }
+.cropArrow { color: var(--s-muted); font-weight: 800; padding: 0 1px; }
+.cropDot { width: 28px; height: 28px; border-radius: 50%; display: inline-grid; place-items: center; color: #fff; font-weight: 800; font-size: 0.72rem; flex: none; box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.35); }
+.iconFacts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.iconFact { background: var(--s-sand); border-radius: 12px; padding: 8px 10px; color: var(--s-ink-2); min-height: 40px; }
+.iconFact strong { color: var(--s-ink); font-size: 0.98rem; white-space: nowrap; }
+.moreBtn { font: inherit; display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 8px 14px; border-radius: 999px; border: 1.5px solid var(--s-line); background: #fff; color: var(--s-forest); font-weight: 800; cursor: pointer; margin-left: auto; }
+.moreBtn:hover { border-color: var(--s-leaf); }
+.headMeta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 10px; color: var(--s-muted); font-size: 0.86rem; }
+.nasaDot { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 999px; background: #e3edf6; color: #17385a; font-weight: 800; font-size: 0.76rem; }
+.iconBtn { font: inherit; display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 6px 12px; border-radius: 999px; border: 1.5px solid var(--s-line); background: #fff; color: var(--s-ink-2); font-weight: 700; font-size: 0.86rem; cursor: pointer; text-decoration: none; }
+.qLine { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; }
+.qIcon { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: var(--s-sage); color: var(--s-forest); flex: none; }
+.qHelp { width: 26px; height: 26px; border-radius: 50%; justify-content: center; border: 1.5px solid var(--s-line); color: var(--s-muted); flex: none; margin-left: auto; }
+.marketPanel > p, .marketPanel > div { margin-top: 12px; }
+.marketSummary { cursor: pointer; list-style: none; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; min-height: 44px; }
+.marketSummary::-webkit-details-marker { display: none; }
+.marketSummary::after { content: "▾"; margin-left: auto; color: var(--s-muted); }
+.marketPanel[open] .marketSummary::after { content: "▴"; }
+.marketMini { display: inline-flex; flex-wrap: wrap; gap: 8px; font-size: 0.8rem; font-weight: 700; color: var(--s-ink-2); }
+.marketMini span { display: inline-flex; align-items: center; gap: 4px; }
+.marketMini i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+
 /* Plan sugerido, riesgo y viabilidad antes que ganancia */
 .cardLead { border: 2px solid var(--s-forest); box-shadow: 0 22px 44px -30px rgba(19, 34, 26, 0.65); }
 .cardLead::before { height: 7px; background: var(--s-forest); }
 .leadKicker, .exploreKicker { margin: 4px 0 8px; font-size: 0.74rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--s-forest); }
 .exploreKicker { color: var(--s-explore); }
 .leadBody { display: grid; gap: 4px; }
-.waterLink { display: inline-block; margin: -4px 0 12px; font-size: 0.86rem; font-weight: 700; color: #6b4a00; text-decoration: underline; text-underline-offset: 3px; }
+.waterLink { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 6px 12px; border-radius: 999px; background: var(--s-maybe-bg); font-size: 0.86rem; font-weight: 800; color: #6b4a00; text-decoration: none; }
 .portfolio { display: grid; gap: 4px; margin: 0 0 12px; padding: 10px 12px; border-radius: 14px; background: var(--s-sage); font-size: 0.9rem; line-height: 1.45; }
 .portfolio b { color: var(--s-forest); }
 .switchLine { margin: 0 0 12px; font-size: 0.88rem; line-height: 1.45; color: var(--s-ink-2); }
@@ -154,7 +192,7 @@
 .priceForm { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .priceForm input { font: inherit; min-height: 44px; width: 170px; max-width: 100%; border-radius: 999px; border: 1.5px solid var(--s-line); padding: 0 14px; background: #fff; }
 
-.cardActions { display: flex; gap: 8px; margin-top: 14px; }
+.cardActions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; }
 .cardActions .btn { flex: 1; }
 
 .footerActions { display: grid; gap: 10px; margin-top: 22px; }

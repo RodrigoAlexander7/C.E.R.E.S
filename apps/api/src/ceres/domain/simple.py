@@ -174,31 +174,26 @@ def simplify(result: ComparisonResult, p: ParcelInput, catalog: Catalog) -> None
         if lvl == "sin_datos":
             crop = st.sequence[0] if st.sequence else ""
             label = catalog.crop_label(crop).lower() if crop else "ese cultivo"
-            why = "es perenne y no la comparamos" if crop == "alfalfa" else f"aún no tenemos su ficha en {zone}, no lo estimamos"
+            # Frases cortas: el agricultor lee una línea; el detalle está en «Ver más».
+            why = "es perenne, no la comparamos" if crop == "alfalfa" else "aún sin ficha, no lo calculamos"
             headline = f"Seguir con {label}: {why}."
             # Sin ficha no hay agua ni ganancia que confirmar: ninguna pregunta cambia esta tarjeta.
             st.decisive = []
         elif lvl == "no_conviene" and failing:
             headline = _plain_failure(failing.rule_id, st)
         elif lvl == "explorar":
-            headline = f"Idea con potencial, pero aún sin validar en {zone}: tómala como exploración."
-            if st.decisive:
-                headline += f" Además, confirma {st.decisive[0]['label']}."
+            headline = f"Aún sin probar en {zone}."
         elif lvl == "posible" and failing and st.decisive:
             # Falla solo por un supuesto de zona: decirlo así, sin presentarlo como un «no» definitivo.
-            cause = (
-                f"si recibes el agua típica de la zona ({zone})"
-                if "water.allocation" in failing.assumed_inputs
-                else f"si riegas como es típico en la zona ({zone})"
-            )
-            headline = f"{_plain_failure(failing.rule_id, st).rstrip('.')} {cause}; confirma {st.decisive[0]['label']}."
+            cause = "con el agua típica de la zona" if "water.allocation" in failing.assumed_inputs else "con el riego típico de la zona"
+            headline = f"{_plain_failure(failing.rule_id, st).rstrip('.')} {cause}."
         elif lvl == "posible" and st.decisive:
             headline = f"Puede funcionar; confirma {st.decisive[0]['label']}."
         elif lvl == "posible":
             missing = next((r for r in st.reasons if r.state == "falta_dato"), None)
-            headline = f"Puede funcionar, pero falta un dato: {missing.missing[0] if missing and missing.missing else 'confírmalo con tu asesor'}."
+            headline = f"Falta un dato: {missing.missing[0] if missing and missing.missing else 'confírmalo con tu asesor'}."
         else:
-            headline = (tags[0] + ". " if tags and tags[0] != "Tu plan" else "") + "Cumple con el agua y el suelo que indicaste."
+            headline = "Cumple con tu agua y tu suelo."
         if role == "sugerido" and lvl in ("buena", "posible") and not failing:
             headline = (
                 "Lo que más te deja con tu agua, sin arriesgar de más."

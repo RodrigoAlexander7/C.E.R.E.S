@@ -5,12 +5,12 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import { NasaBadge } from "@/components/NasaBadge";
 import { useSession } from "@/components/SessionProvider";
 import { HelpProvider, Sheet, Term } from "@/components/simple/help";
 import { MoreDetails } from "@/components/simple/more";
+import { Icon, Tip } from "@/components/simple/icons";
 import { MarketPanel } from "@/components/simple/market";
-import { GlobalQuestions, OptionCard, WhySheet, countQuestions } from "@/components/simple/results";
+import { GlobalQuestions, OptionCard, WhySheet, countQuestions, shortNames } from "@/components/simple/results";
 import { PRIORITY_NAME, Wizard, cropName, type Answers } from "@/components/simple/wizard";
 import s from "@/components/simple/simple.module.css";
 import { SowingWindow } from "@/components/SowingWindow";
@@ -61,14 +61,14 @@ function applyPatch(p: Profile, patch: Patch): Profile {
 }
 
 /** Resumen para WhatsApp: opciones en el mismo orden, con nivel y cifras; sin datos personales. */
-function shareText(result: ComparisonResult, ordered: Strategy[], zoneName: string, area: number, crop: string): string {
+function shareText(result: ComparisonResult, ordered: Strategy[], zoneName: string, area: number, crop: string, cropLabel: (id: string) => string): string {
   const lines = ordered.map((st, i) => {
     const f = st.simple?.facts;
     const r = f?.risk;
     const money = f?.margin_soles != null ? ` · S/ ${fmtNumber(f.margin_soles)}${st.simple?.level === "explorar" ? " (sin validar)" : ""}` : "";
     const range = r && st.simple?.level !== "explorar" ? ` (probable S/ ${fmtNumber(r.p10_soles)}–${fmtNumber(r.p90_soles)})` : "";
     const lead = st.risk?.role === "sugerido" ? " ⭐ plan sugerido" : "";
-    return `${i + 1}. ${st.simple?.names ?? st.short} — ${st.simple?.label ?? ""}${money}${range}${lead}`;
+    return `${i + 1}. ${shortNames(st, cropLabel)} — ${st.simple?.label ?? ""}${money}${range}${lead}`;
   });
   return [
     `CERES · Qué sembrar después de mi ${crop || "cultivo"} (${zoneName}, ${fmtNumber(area, area % 1 ? 1 : 0)} ha, 24 meses):`,
@@ -255,14 +255,10 @@ export default function SimpleApp() {
               <button className={s.chip} onClick={() => edit(2)}>{PRIORITY_NAME[answers.priority ?? "equilibrada"]} ✎</button>
               <button className={s.chip} onClick={() => { setAreaDraft(String(areaHa)); setAreaOpen(true); }} disabled={!!saved}>{fmtNumber(areaHa, areaHa % 1 ? 1 : 0)} ha{saved ? "" : " ✎"}</button>
             </div>
-            <p className={s.sub}>
-              {zone?.name} · {result.horizon_start ? `de ${fmtDate(result.horizon_start)} a ${fmtDate(result.horizon_end)}` : ""}.
-              {view.assumed.length > 0 && <> Lo que no sabías lo completamos con <Term id="supuesto">supuestos</Term> de la zona.</>}
-            </p>
-            <div style={{ marginTop: 8 }}><NasaBadge product="power" detail="clima diario 2015–2025 · celda ≈ 50 km, no es tu chacra" /></div>
-            <div className={s.shareRow}>
-              <a className={`${s.btn} ${s.btnGhost} ${s.shareBtn}`} href={`https://wa.me/?text=${encodeURIComponent(shareText(result, ordered, zone?.name ?? "", areaHa, cropName(zone, answers.crop)))}`} target="_blank" rel="noreferrer">Compartir por WhatsApp</a>
-              <button className={`${s.btn} ${s.btnGhost} ${s.shareBtn}`} onClick={() => window.print()}>Guardar PDF</button>
+            <div className={s.headMeta}>
+              <span>{zone?.name} · próximos 24 meses</span>
+              <Tip tip="Clima de 11 años (2015–2025) de NASA POWER para tu zona. Es historia, no pronóstico."><span className={s.nasaDot}><Icon name="sat" size={14} /> NASA</span></Tip>
+              {view.assumed.length > 0 && <Term id="supuesto">Usamos datos típicos de la zona</Term>}
             </div>
           </header>
 
@@ -278,7 +274,7 @@ export default function SimpleApp() {
           ) : (
             <>
               {countQuestions(result) > 0 && (
-                <a href="#preguntas" className={s.nudge}>Responde {countQuestions(result) === 1 ? "1 pregunta rápida" : `${countQuestions(result)} preguntas rápidas`} para afinar estas opciones ↓</a>
+                <a href="#preguntas" className={s.nudge}><Icon name="question" size={16} /> Responde {countQuestions(result) === 1 ? "1 pregunta" : `${countQuestions(result)} preguntas`} y afinamos ↓</a>
               )}
               <div className={s.cards}>
                 {ordered.map((st) => (
@@ -312,7 +308,7 @@ export default function SimpleApp() {
           {!saved && (
             <section className={s.saveCard}>
               <h3 className={s.display}>Guarda tu chacra</h3>
-              <p>Con una cuenta guardas este resultado, le preguntas a la IA por qué y llevas tu cuaderno de campo con agenda. Nadie más ve tus datos.</p>
+              <p>Guarda este resultado y lleva tu cuaderno. Solo tú lo ves.</p>
               <button className={`${s.btn} ${s.btnPrimary} ${s.btnBlock}`} onClick={save} disabled={busy}>{user ? "Guardar en mi cuenta" : "Crear cuenta y guardar"}</button>
             </section>
           )}
@@ -331,13 +327,17 @@ export default function SimpleApp() {
             />
           )}
 
+          <div className={s.shareRow}>
+            <a className={s.iconBtn} href={`https://wa.me/?text=${encodeURIComponent(shareText(result, ordered, zone?.name ?? "", areaHa, cropName(zone, answers.crop), cropLabel))}`} target="_blank" rel="noreferrer" title="Compartir por WhatsApp" aria-label="Compartir por WhatsApp"><Icon name="share" /> WhatsApp</a>
+            <button className={s.iconBtn} onClick={() => window.print()} title="Guardar como PDF" aria-label="Guardar como PDF"><Icon name="print" /> PDF</button>
+          </div>
           <div className={s.footerActions}>
             <button className={`${s.btn} ${s.btnGhost}`} onClick={restart}>Nueva consulta</button>
           </div>
           <p className={s.sub} style={{ textAlign: "center" }}>Fechas orientativas. El clima es histórico, no un pronóstico. La decisión es tuya.</p>
 
           <WhySheet
-            st={why} profile={view.profile} assumed={view.assumed} area={view.area} zone={zone} onClose={() => setWhy(null)}
+            st={why} profile={view.profile} assumed={view.assumed} area={view.area} zone={zone} onClose={() => setWhy(null)} result={result} cropLabel={cropLabel}
             onMore={() => { setWhy(null); setDetailOpen(true); setTimeout(() => document.getElementById("detalle")?.scrollIntoView({ behavior: "smooth" }), 50); }}
           />
           <Sheet open={areaOpen} onClose={() => setAreaOpen(false)} title="¿Cuántas hectáreas tiene tu lote?">

@@ -6,29 +6,16 @@
 import { useEffect, useState } from "react";
 import { SourceChips } from "@/components/Sources";
 import { api, fmtNumber } from "@/lib/api";
-import type { MarketStat, PriceItem } from "@/lib/types";
+import type { PriceItem } from "@/lib/types";
 import { Term } from "./help";
+import { Icon, Tip, cropColor } from "./icons";
 import s from "./simple.module.css";
 
-function Spark({ m }: { m: MarketStat }) {
-  const pts = m.series;
-  if (pts.length < 2) return null;
-  const vals = pts.map((p) => p.soles_kg);
-  const lo = Math.min(...vals), hi = Math.max(...vals), span = hi - lo || 1;
-  const w = 72, h = 22;
-  const d = pts.map((p, i) => `${i ? "L" : "M"}${(i / (pts.length - 1)) * w},${h - 2 - ((p.soles_kg - lo) / span) * (h - 4)}`).join(" ");
-  return (
-    <svg viewBox={`0 0 ${w} ${h}`} width={w} height={h} role="img" aria-label={`Precio diario de ${m.first} a ${m.last}`}>
-      <path d={d} fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" strokeLinecap="round" />
-    </svg>
-  );
-}
-
 function Trend({ v }: { v: number | null }) {
-  if (v == null || Math.abs(v) < 0.02) return <span className={s.trendFlat} title="Estable en estas dos semanas">→ estable</span>;
+  if (v == null || Math.abs(v) < 0.02) return <Tip className={s.trendFlat} tip="Estable en estas dos semanas"><Icon name="flat" size={16} /></Tip>;
   return v > 0
-    ? <span className={s.trendUp} title={`Sube unos S/ ${fmtNumber(v, 2)} por kg a la semana`}>↑ sube</span>
-    : <span className={s.trendDown} title={`Baja unos S/ ${fmtNumber(-v, 2)} por kg a la semana`}>↓ baja</span>;
+    ? <Tip className={s.trendUp} tip={`Sube unos S/ ${fmtNumber(v, 2)} por kg a la semana`}><Icon name="trendUp" size={16} /></Tip>
+    : <Tip className={s.trendDown} tip={`Baja unos S/ ${fmtNumber(-v, 2)} por kg a la semana`}><Icon name="trendDown" size={16} /></Tip>;
 }
 
 export function MarketPanel({ zone, cropIds, ownPrices, onPrice, busy }: {
@@ -46,38 +33,40 @@ export function MarketPanel({ zone, cropIds, ownPrices, onPrice, busy }: {
   const shown = (items ?? []).filter((i) => cropIds.includes(i.crop_id));
   if (!items || !shown.length) return null;
   return (
-    <section className={s.panel} aria-labelledby="precios-t">
-      <h2 id="precios-t" className={s.panelTitle}>Precios de esta semana</h2>
+    <details className={`${s.panel} ${s.marketPanel}`} aria-labelledby="precios-t">
+      <summary className={s.marketSummary}>
+        <span className={s.qIcon}><Icon name="money" /></span>
+        <b id="precios-t">Precios de esta semana</b>
+        <span className={s.marketMini} aria-hidden="true">
+          {shown.filter((i) => i.markets[0]).slice(0, 3).map((i) => (
+            <span key={i.crop_id}><i style={{ background: cropColor(i.crop_id) }} />S/ {fmtNumber(i.markets[0].median_soles_kg, 2)}</span>
+          ))}
+        </span>
+      </summary>
       <p className={s.panelText}>
-        <Term id="precio_mayorista">Precio mayorista</Term> por kg en mercados cercanos (MIDAGRI-SISAP, 2–13 nov 2026). En la chacra te pagan menos y a la cosecha puede cambiar. <SourceChips ids={["MIDAGRI-SISAP"]} />
+        <Term id="precio_mayorista">Precio mayorista</Term> por kg en Arequipa (MIDAGRI-SISAP, 2–13 nov 2026). En la chacra te pagan menos. <SourceChips ids={["MIDAGRI-SISAP"]} />
       </p>
       <div className={s.marketList}>
         {shown.map((it) => {
           const home = it.markets[0];
           const mine = ownPrices[it.crop_id];
+          const others = it.markets.slice(1).map((m) => `${m.market} S/ ${fmtNumber(m.median_soles_kg, 2)}`).join(" · ");
           return (
             <div key={it.crop_id} className={s.marketRow}>
               <div className={s.marketHead}>
+                <span className={s.cropDot} style={{ background: cropColor(it.crop_id) }} aria-hidden="true">{it.crop_name.slice(0, 1).toUpperCase()}</span>
                 <b style={{ textTransform: "capitalize" }}>{it.crop_name}</b>
                 {home ? (
-                  <span className={s.marketMain}>
-                    <strong>S/ {fmtNumber(home.median_soles_kg, 2)}</strong>/kg en {home.market}
-                    <small> (de {fmtNumber(home.low_soles_kg, 2)} a {fmtNumber(home.high_soles_kg, 2)})</small>
-                  </span>
-                ) : <span className={s.sub} style={{ margin: 0 }}>{it.note}</span>}
-                {home && <span className={s.marketTrend}><Spark m={home} /><Trend v={home.trend_soles_kg_week} /></span>}
+                  <Tip className={s.marketMain} tip={`Mayorista en ${home.market}: de S/ ${fmtNumber(home.low_soles_kg, 2)} a ${fmtNumber(home.high_soles_kg, 2)} en dos semanas.${others ? ` Otros mercados: ${others}.` : ""}`}>
+                    <strong>S/ {fmtNumber(home.median_soles_kg, 2)}</strong>/kg
+                  </Tip>
+                ) : <Tip className={s.marketMain} tip={it.note ?? "Sin precio publicado"}><strong>—</strong></Tip>}
+                {home && <span className={s.marketTrend}><Trend v={home.trend_soles_kg_week} /></span>}
               </div>
-              {it.markets.length > 1 && (
-                <div className={s.marketOthers}>
-                  {it.markets.slice(1).map((m) => <span key={m.market}>{m.market} S/ {fmtNumber(m.median_soles_kg, 2)}</span>)}
-                </div>
-              )}
               <div className={s.marketOwn}>
-                <span>
-                  {mine != null
-                    ? <>Usamos <b>tu precio: S/ {fmtNumber(mine, 2)}/kg</b> en chacra.</>
-                    : <>En chacra usamos <b>S/ {fmtNumber(it.farmgate_soles_kg, 2)}/kg</b>{it.farmgate_factor ? ` (${fmtNumber(it.farmgate_factor * 100)} % del mayorista, supuesto)` : " (supuesto)"}.</>}
-                </span>
+                <Tip tip={mine != null ? "Usamos el precio que nos diste." : it.farmgate_factor ? `Suponemos que en chacra te pagan el ${fmtNumber(it.farmgate_factor * 100)} % del mayorista. Si sabes tu precio, escríbelo.` : "Es un precio supuesto. Si sabes tu precio, escríbelo."}>
+                  <span>En chacra: <b>S/ {fmtNumber(mine ?? it.farmgate_soles_kg, 2)}/kg</b>{mine != null ? " (tuyo)" : ""}</span>
+                </Tip>
                 <form
                   className={s.priceForm}
                   onSubmit={(e) => {
@@ -98,6 +87,6 @@ export function MarketPanel({ zone, cropIds, ownPrices, onPrice, busy }: {
           );
         })}
       </div>
-    </section>
+    </details>
   );
 }

@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import { ApiError, api } from "@/lib/api";
 import { readTierra, writeTierra, type Tierra } from "@/lib/tierra";
 import type { Revision } from "@/lib/types";
-import { Term } from "./help";
+import { Icon, Tip } from "./icons";
 import s from "./simple.module.css";
 
 export function TierraForm({ parcelId }: { parcelId?: string }) {
@@ -54,14 +54,21 @@ export function TierraForm({ parcelId }: { parcelId?: string }) {
 
   return (
     <section className={`${s.panel} ${s.tierra}`} aria-labelledby="tierra-t">
-      <h2 id="tierra-t" className={s.display} style={{ margin: "0 0 4px" }}>¿Cómo está tu tierra?</h2>
-      <p className={s.panelText}>Dos respuestas que cambian qué te conviene sembrar. Sin análisis de laboratorio.</p>
+      <h2 id="tierra-t" className={s.display} style={{ margin: "0 0 12px" }}>¿Cómo está tu tierra?</h2>
       <div className={s.question}>
-        <p style={{ margin: "0 0 8px", fontWeight: 700 }}>¿Ves costras blancas o manchas de sal? <Term id="sal">¿Qué es la CE?</Term></p>
+        <p className={s.qLine}>
+          <span className={s.qIcon}><Icon name="salt" /></span>
+          <b>¿Ves costras blancas o manchas de sal?</b>
+          <Tip className={s.qHelp} tip="La sal le hace daño a cultivos como el frejol y la cebolla. Si ves costras blancas, no te los recomendamos hasta medirla con un análisis."><Icon name="question" size={14} /></Tip>
+        </p>
         <div className={s.answerRow}>{opt("salinity_signs", "con_signos", "Sí, se ven")}{opt("salinity_signs", "sin_signos", "No, la veo normal")}</div>
       </div>
       <div className={s.question} style={{ marginTop: 14 }}>
-        <p style={{ margin: "0 0 8px", fontWeight: 700 }}>¿Cómo riegas tu chacra? <Term id="eficiencia">¿Por qué importa?</Term></p>
+        <p className={s.qLine}>
+          <span className={s.qIcon}><Icon name="water" /></span>
+          <b>¿Cómo riegas tu chacra?</b>
+          <Tip className={s.qHelp} tip="Con goteo se pierde menos agua que con aspersión o gravedad (FAO: 90 %, 75 % y 60 %)."><Icon name="question" size={14} /></Tip>
+        </p>
         <div className={s.answerRow}>{opt("method", "goteo", "Goteo")}{opt("method", "aspersion", "Aspersión")}{opt("method", "gravedad", "Gravedad")}</div>
       </div>
       <div className={s.saveBar}>

@@ -6,18 +6,25 @@ import { fmtDate, fmtNumber } from "@/lib/api";
 import type { ComparisonResult, Decisive, Profile, Strategy } from "@/lib/types";
 import { METHOD_LABEL, type Zone } from "@/lib/zones";
 import { Sheet, Term } from "./help";
+import { CropSeq, Icon, MoreButton, Tip, cropColor } from "./icons";
 import s from "./simple.module.css";
 
-const ICON: Record<string, string> = { buena: "✓", posible: "?", explorar: "◇", sin_datos: "…", no_conviene: "✕" };
-const CROP_COLOR: Record<string, string> = { maiz_grano: "#d9a53a", frejol_grano: "#5b9a45", cebolla_roja: "#a2456f", cebolla: "#a2456f", papa: "#8a6a3f" };
+const LEVEL_ICON: Record<string, string> = { buena: "check", posible: "question", explorar: "explore", sin_datos: "dots", no_conviene: "cross" };
+const LEVEL_TIP: Record<string, string> = {
+  buena: "Cumple con tu agua y tu suelo según lo que nos dijiste.",
+  posible: "Puede funcionar: confirma el dato que falta (por ejemplo, tu agua).",
+  explorar: "Idea con potencial, aún sin probar en tu zona. Tómala como exploración.",
+  sin_datos: "Todavía no tenemos datos de este cultivo para calcularlo.",
+  no_conviene: "No cumple una condición importante (agua, sal o clima).",
+};
 
 export function LevelBadge({ st }: { st: Strategy }) {
   const lvl = st.simple?.level ?? "posible";
   return (
-    <span className={s.badge}>
-      <b aria-hidden="true">{ICON[lvl]}</b>
+    <Tip tip={LEVEL_TIP[lvl]} className={s.badge}>
+      <b aria-hidden="true"><Icon name={LEVEL_ICON[lvl]} size={12} /></b>
       {st.simple?.label}
-    </span>
+    </Tip>
   );
 }
 
@@ -27,7 +34,7 @@ function MiniTimeline({ st, start, end }: { st: Strategy; start: string; end: st
     <>
       <div className={s.bar} role="img" aria-label={st.timeline.filter((b) => b.kind === "cultivo").map((b) => `${b.label} de ${fmtDate(b.start)} a ${fmtDate(b.end)}`).join("; ")}>
         {st.timeline.map((b, i) => (
-          <i key={i} style={{ width: `${((Date.parse(b.end) - Date.parse(b.start)) / total) * 100}%`, background: b.kind === "cultivo" ? CROP_COLOR[b.crop_id ?? ""] ?? "#888" : "#e7dcc4" }} />
+          <i key={i} style={{ width: `${((Date.parse(b.end) - Date.parse(b.start)) / total) * 100}%`, background: b.kind === "cultivo" ? cropColor(b.crop_id ?? "") : "#e7dcc4" }} />
         ))}
       </div>
       <div className={s.barLegend}><span>{fmtDate(start)}</span><span>24 meses</span><span>{fmtDate(end)}</span></div>
@@ -36,6 +43,18 @@ function MiniTimeline({ st, start, end }: { st: Strategy; start: string; end: st
 }
 
 const soles = (v: number) => (v < 0 ? `−S/ ${fmtNumber(-v)}` : `S/ ${fmtNumber(v)}`);
+
+/** «Frejol ×4» en vez de «frejol → frejol → frejol → frejol»: se lee de un vistazo. */
+export function shortNames(st: Strategy, cropLabel: (id: string) => string): string {
+  const runs: { id: string; n: number }[] = [];
+  for (const id of st.sequence) {
+    const last = runs[runs.length - 1];
+    if (last && last.id === id) last.n += 1;
+    else runs.push({ id, n: 1 });
+  }
+  const txt = runs.map((r) => `${cropLabel(r.id)}${r.n > 1 ? ` ×${r.n}` : ""}`).join(" → ") || st.simple?.names || st.short;
+  return txt.replace(/^./, (c) => c.toUpperCase());
+}
 const listEs = (xs: string[]) => (xs.length < 2 ? xs.join("") : `${xs.slice(0, -1).join(", ")} o ${xs[xs.length - 1]}`);
 
 /** «No pierdes si vendes X a ≥ S/ p*» (bisección sobre la media Monte Carlo). */
@@ -66,75 +85,93 @@ export function OptionCard({
   const f = st.simple?.facts;
   const water = st.decisive?.find((d) => d.id === "agua");
   const role = st.risk?.role ?? null;
-  const unvalidated = st.simple?.level === "explorar" || st.simple?.level === "no_conviene";
-  if (st.simple?.level === "sin_datos") {
-    // Sin ficha agronómica no hay cifras: una tarjeta ancha y breve, sin «—» que parezcan datos.
-    return (
-      <article className={`${s.card} ${s.cardWide} ${s.lvl_sin_datos}`} aria-labelledby={`opt-${st.strategy_id}`}>
-        <div className={s.cardTop}>
-          <h2 id={`opt-${st.strategy_id}`} className={`${s.names} ${s.display}`}>{st.simple?.names}</h2>
-          <LevelBadge st={st} />
+  const lvl = st.simple?.level ?? "posible";
+  const unvalidated = lvl === "explorar" || lvl === "no_conviene";
+  const mine = st.strategy_id === "A";
+  // Tarjeta mínima: qué sembrar (fichas de color), veredicto, 2–3 cifras con ícono y un «?» para todo lo demás.
+  return (
+    <article className={`${s.card} ${s[`lvl_${lvl}`]} ${role === "sugerido" ? s.cardLead : ""} ${lvl === "sin_datos" ? s.cardWide : ""}`} aria-labelledby={`opt-${st.strategy_id}`}>
+      {role === "sugerido" && (
+        <Tip className={s.ribbon} tip="Lo que más te deja con tu agua sin arriesgar de más, según 11 años de clima NASA y los precios de esta semana.">
+          <Icon name="star" size={14} /> Te recomendamos
+        </Tip>
+      )}
+      {role === "explorar" && (
+        <Tip className={`${s.ribbon} ${s.ribbonExplore}`} tip="Gana más en el papel, pero usa cultivos aún sin probar en tu zona. Tómalo como idea, no como recomendación.">
+          <Icon name="explore" size={14} /> Para explorar
+        </Tip>
+      )}
+      {mine && <Tip className={`${s.ribbon} ${s.ribbonMine}`} tip="Lo que tenías pensado hacer."><Icon name="sprout" size={14} /> Tu plan</Tip>}
+      <div className={s.cardTop}>
+        <div className={s.cardTitle}>
+          <CropSeq ids={st.sequence} label={cropLabel} />
+          <h2 id={`opt-${st.strategy_id}`} className={`${s.names} ${s.display}`}>{shortNames(st, cropLabel)}</h2>
         </div>
-        <p className={s.headline}>{st.simple?.headline}</p>
-        {st.simple.tags.length > 0 && <div className={s.tags}>{st.simple.tags.map((t) => <span key={t} className={`${s.tag} ${s.tagMuted}`}>{t}</span>)}</div>}
-      </article>
-    );
-  }
+        <LevelBadge st={st} />
+      </div>
+      <p className={s.headline}>{st.simple?.headline}</p>
+      {lvl !== "sin_datos" && (
+        <div className={s.iconFacts}>
+          <Tip className={`${s.iconFact} ${unvalidated ? s.factMuted : ""}`} tip={unvalidated ? "Ganancia en 24 meses, sin validar en tu zona." : "Ganancia estimada en 24 meses (lo que queda después de los gastos). No es segura."}>
+            <Icon name="money" />
+            <strong>{f?.margin_soles != null ? soles(f.margin_soles) : "—"}</strong>
+          </Tip>
+          <Tip className={s.iconFact} tip="Agua de riego que necesitas en 24 meses, calculada con 11 años de clima NASA POWER.">
+            <Icon name="water" />
+            <strong>{f?.water_m3 != null ? `${fmtNumber(f.water_m3 / 1000, f.water_m3 < 10000 ? 1 : 0)} mil m³` : "—"}</strong>
+          </Tip>
+          <Tip className={s.iconFact} tip="Cuándo sembrarías por primera vez.">
+            <Icon name="calendar" />
+            <strong>{f?.first_sowing ? fmtDate(f.first_sowing).replace(/ \d{4}$/, "") : "—"}</strong>
+          </Tip>
+          {!unvalidated && f?.risk && (
+            <Tip className={s.iconFact} tip={`En 1 000 campañas simuladas, perdiste dinero en ${fmtNumber(f.risk.p_loss * 100, 1)} % de ellas.`}>
+              <Icon name="shield" />
+              <strong>{f.risk.p_loss < 0.05 ? "Riesgo bajo" : f.risk.p_loss < 0.15 ? "Riesgo medio" : "Riesgo alto"}</strong>
+            </Tip>
+          )}
+        </div>
+      )}
+      <div className={s.cardActions}>
+        {water && (
+          <a href="#agua" className={s.waterLink} title={`Depende del agua que te llega en ${water.label.replace(/^tu agua de /, "")}`}>
+            <Icon name="water" size={16} /> Confirma tu agua
+          </a>
+        )}
+        {lvl !== "sin_datos" && <MoreButton onClick={onWhy} />}
+      </div>
+    </article>
+  );
+}
+
+/** Lo que antes llenaba la tarjeta, ahora bajo demanda (dentro de «Ver más»). */
+function Highlights({ st, result, cropLabel }: { st: Strategy; result: ComparisonResult; cropLabel: (id: string) => string }) {
+  const role = st.risk?.role ?? null;
   const portfolio = role === "sugerido" ? result.optimizer?.portfolio : null;
   const sw = role === "sugerido" ? result.optimizer?.switch : null;
   const rival = sw ? result.strategies.find((x) => x.strategy_id === sw.rival) : null;
+  const unvalidated = st.simple?.level === "explorar" || st.simple?.level === "no_conviene";
   return (
-    <article className={`${s.card} ${s[`lvl_${st.simple?.level ?? "posible"}`]} ${role === "sugerido" ? s.cardLead : ""}`} aria-labelledby={`opt-${st.strategy_id}`}>
-      {role === "sugerido" && <p className={s.leadKicker}>Plan sugerido por CERES · con tu agua, tus precios y 11 años de NASA POWER</p>}
-      {role === "explorar" && <p className={s.exploreKicker}>Mejor ganancia con cultivos por explorar · sin validar en la zona</p>}
-      <div className={s.cardTop}>
-        <h2 id={`opt-${st.strategy_id}`} className={`${s.names} ${s.display}`}>{st.simple?.names}</h2>
-        <LevelBadge st={st} />
-      </div>
-      <div className={role === "sugerido" ? s.leadBody : undefined}>
-      <div>
-      <p className={s.headline}>{st.simple?.headline}</p>
-      {water && <a href="#agua" className={s.waterLink}>Depende de tu agua de {water.label.replace(/^tu agua de /, "")} ↓</a>}
-      {role === "sugerido" && portfolio && (
+    <>
+      {!unvalidated && <RiskLine st={st} />}
+      {!unvalidated && <BreakevenLine st={st} cropLabel={cropLabel} />}
+      {portfolio && (
         <div className={s.portfolio}>
           <b>Mejor aún: reparte tu chacra</b>
           <span>
             {portfolio.lots.map((l) => `${fmtNumber(l.area_ha, l.area_ha % 1 ? 1 : 0)} ha ${l.sequence.map(cropLabel).join(" → ")}`).join(" + ")}
-            . Escalona los picos de agua y reparte el riesgo de precio: rango {soles(portfolio.stats.p10_soles)} – {soles(portfolio.stats.p90_soles)}.
+            . Reparte el agua y el riesgo de precio: rango {soles(portfolio.stats.p10_soles)} – {soles(portfolio.stats.p90_soles)}.
           </span>
         </div>
       )}
       {sw && rival && (
         <p className={s.switchLine}>Si {cropLabel(sw.crop_id)} baja de <b>S/ {fmtNumber(sw.price_soles_kg, 2)}/kg</b> en chacra, conviene más «{rival.simple?.names}».</p>
       )}
-      </div>
-      <div>
-      <div className={s.facts}>
-        <div className={`${s.fact} ${unvalidated ? s.factMuted : ""}`}>
-          <strong>{f?.margin_soles != null ? soles(f.margin_soles) : "—"}</strong>
-          <span><Term id="margen">Ganancia estimada</Term>{unvalidated ? " · sin validar" : f?.margin_kind === "supuesto_demo" ? " (precios de ejemplo)" : ""}</span>
-        </div>
-        <div className={s.fact}>
-          <strong>{f?.water_m3 != null ? `${fmtNumber(f.water_m3)} m³` : "—"}</strong>
-          <span><Term id="agua_bruta">Agua</Term> en 24 meses <NasaBadge product="power" variant="micro" /></span>
-        </div>
-        <div className={s.fact}>
-          <strong>{f?.first_sowing ? fmtDate(f.first_sowing).replace(/ \d{4}$/, "") : "—"}</strong>
-          <span>Primera siembra{f?.first_sowing ? ` ${f.first_sowing.slice(0, 4)}` : ""}</span>
-        </div>
-      </div>
-      {!unvalidated && <RiskLine st={st} />}
-      {!unvalidated && <BreakevenLine st={st} cropLabel={cropLabel} />}
       <MiniTimeline st={st} start={result.horizon_start} end={result.horizon_end} />
-      {st.simple && st.simple.tags.length > 0 && (
-        <div className={s.tags}>{st.simple.tags.map((t) => <span key={t} className={t === "Tu plan" ? `${s.tag} ${s.tagMuted}` : t === "Plan sugerido por CERES" ? `${s.tag} ${s.tagLead}` : s.tag}>{t}</span>)}</div>
-      )}
-      </div>
-      </div>
-      <div className={s.cardActions}>
-        <button className={`${s.btn} ${s.btnGhost}`} onClick={onWhy}>¿Por qué?</button>
-      </div>
-    </article>
+      <p className={s.sub} style={{ marginTop: 6 }}>
+        Agua calculada con <NasaBadge product="power" variant="micro" /> · <Term id="margen">¿Qué es la ganancia estimada?</Term>
+      </p>
+    </>
   );
 }
 
@@ -148,24 +185,27 @@ export function waterLadder(result: ComparisonResult, area: number): (Decisive &
   const qs = result.strategies.flatMap((st) => st.decisive ?? []).filter((d) => d.id === "agua" && d.critical_value != null);
   const cuts = [...new Set(qs.map((d) => Math.round(d.critical_value!)))].sort((a, b) => a - b);
   if (!cuts.length) return null;
-  const f = (v: number) => `${fmtNumber(v)} m³`;
+  // Etiquetas cortas en «mil m³» (más fáciles de leer que 10,745 m³).
+  const f = (v: number) => `${fmtNumber(v / 1000, 1)} mil m³`;
   const answers: Answer[] = [{ label: `Menos de ${f(cuts[0])}`, patch: { "water.allocation_min_m3": null, "water.allocation_max_m3": cuts[0] - 1 } }];
   cuts.forEach((c, i) => {
     const next = cuts[i + 1];
     answers.push(next != null
-      ? { label: `Entre ${f(c)} y ${f(next)}`, patch: { "water.allocation_min_m3": c, "water.allocation_max_m3": next - 1 } }
+      ? { label: `${fmtNumber(c / 1000, 1)} a ${f(next)}`, patch: { "water.allocation_min_m3": c, "water.allocation_max_m3": next - 1 } }
       : { label: `${f(c)} o más`, patch: { "water.allocation_min_m3": c, "water.allocation_max_m3": null } });
   });
   const months = [...new Set(qs.map((d) => d.label.replace(/^tu agua de /, "")))];
   return {
     id: "agua",
     label: "tu agua",
-    question: "¿Cuánta agua te llega al mes en la época de más riego?",
-    detail: `Para tus ${fmtNumber(area, area % 1 ? 1 : 0)} ha, en ${listEs(months)}. Cada opción pide distinto en su mes más exigente; con esta respuesta sabemos cuáles alcanzan.`,
+    question: "¿Cuánta agua te llega al mes?",
+    detail: `En la época de más riego (${listEs(months)}), para tus ${fmtNumber(area, area % 1 ? 1 : 0)} ha. Cada opción pide distinto; con tu respuesta sabemos cuáles alcanzan. Calculado con clima NASA POWER.`,
     answers,
     source_ids: qs[0].source_ids,
   };
 }
+
+const Q_ICON: Record<string, string> = { agua: "water", riego: "sprout", sal: "salt" };
 
 /** Preguntas que sirven para todas las opciones (agua, riego, sal), sin repetir. */
 export function GlobalQuestions({ result, area, onAnswer, busy }: { result: ComparisonResult; area: number; onAnswer: (patch: Record<string, string | number | null>) => void; busy: boolean }) {
@@ -177,12 +217,14 @@ export function GlobalQuestions({ result, area, onAnswer, busy }: { result: Comp
   return (
     <section className={s.panel} aria-labelledby="afinar" id="preguntas">
       <h2 id="afinar" className={s.panelTitle}>Afina tu resultado</h2>
-      <p className={s.panelText}>{seen.size === 1 ? "Una pregunta rápida" : `${seen.size} preguntas rápidas`} que pueden cambiar las opciones. Sin estudios ni análisis.</p>
       <div className={s.questionsGrid}>
         {[...seen.values()].map((d) => (
           <div key={d.id} id={d.id === "agua" ? "agua" : undefined} className={s.question}>
-            <p style={{ margin: "0 0 4px", fontWeight: 700 }}>{d.question}</p>
-            <p className={s.sub} style={{ margin: "0 0 8px" }}>{d.detail} {d.id === "sal" && <Term id="sal">¿Qué es la CE?</Term>}{d.id === "riego" && <Term id="eficiencia">¿Por qué importa?</Term>}{d.id === "agua" && <NasaBadge product="power" variant="micro" />}</p>
+            <p className={s.qLine}>
+              <span className={s.qIcon}><Icon name={Q_ICON[d.id] ?? "question"} /></span>
+              <b>{d.question}</b>
+              <Tip tip={d.detail} className={s.qHelp}><Icon name="question" size={14} /></Tip>
+            </p>
             <div className={s.answerRow}>
               {d.answers.map((a) => <button key={a.label} className={s.answer} disabled={busy} onClick={() => onAnswer(a.patch)}>{a.label}</button>)}
             </div>
@@ -201,7 +243,7 @@ export function countQuestions(result: ComparisonResult): number {
 const MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
 
 /** «¿Por qué?» en tres capas: frase → lo que usamos → detalle técnico con fuentes. */
-export function WhySheet({ st, profile, assumed, area, zone, onClose, onMore }: { st: Strategy | null; profile: Profile | null; assumed: string[]; area: number; zone: Zone | null; onClose: () => void; onMore: () => void }) {
+export function WhySheet({ st, profile, assumed, area, zone, onClose, onMore, result, cropLabel }: { st: Strategy | null; profile: Profile | null; assumed: string[]; area: number; zone: Zone | null; onClose: () => void; onMore: () => void; result?: ComparisonResult | null; cropLabel?: (id: string) => string }) {
   const w = profile?.water;
   const used: { text: React.ReactNode; kind: "tuyo" | "zona" | "nasa" | "demo" | "mercado"; label: string }[] = [];
   const typical = zone?.water_m3_ha_year?.value ?? null;
@@ -227,12 +269,13 @@ export function WhySheet({ st, profile, assumed, area, zone, onClose, onMore }: 
   }
   const icon: Record<string, string> = { cumple: "✓", no_cumple: "✕", falta_dato: "?", advertencia: "!", informacion: "i" };
   return (
-    <Sheet open={!!st} onClose={onClose} title={st ? `¿Por qué «${st.simple?.label}»?` : ""} label="Por qué">
+    <Sheet open={!!st} onClose={onClose} title={st ? `${shortNames(st, cropLabel ?? ((id) => id))}: ${st.simple?.label}` : ""} label="Por qué">
       {st && (
         <>
           <section className={s.layer}>
             <h3 className={s.layerTitle}><span>1</span>En pocas palabras</h3>
-            <p style={{ margin: 0, lineHeight: 1.55, fontSize: "1.02rem" }}><b style={{ textTransform: "capitalize" }}>{st.simple?.names}.</b> {st.simple?.headline}</p>
+            <p style={{ margin: 0, lineHeight: 1.55, fontSize: "1.02rem" }}>{st.simple?.headline}</p>
+            {result && <Highlights st={st} result={result} cropLabel={cropLabel ?? ((id) => id)} />}
             {st.timeline.filter((b) => b.kind === "cultivo").length > 0 && (
               <p className={s.sub}>
                 Calendario: {st.timeline.filter((b) => b.kind === "cultivo").map((b) => `${b.label.split(" (")[0].toLowerCase()} de ${MESES[+b.start.slice(5, 7) - 1]} ${b.start.slice(0, 4)} a ${MESES[+b.end.slice(5, 7) - 1]} ${b.end.slice(0, 4)}`).join(" → ")}.
@@ -241,11 +284,14 @@ export function WhySheet({ st, profile, assumed, area, zone, onClose, onMore }: 
           </section>
           <section className={s.layer}>
             <h3 className={s.layerTitle}><span>2</span>Lo que usamos</h3>
-            <ul className={s.used}>
-              {used.map((u, i) => (
-                <li key={i}><span className={`${s.kind} ${s[`k_${u.kind}`]}`}>{u.label}</span><span>{u.text}</span></li>
-              ))}
-            </ul>
+            <details className={s.tech}>
+              <summary>Ver los {used.length} datos que usamos</summary>
+              <ul className={s.used}>
+                {used.map((u, i) => (
+                  <li key={i}><span className={`${s.kind} ${s[`k_${u.kind}`]}`}>{u.label}</span><span>{u.text}</span></li>
+                ))}
+              </ul>
+            </details>
           </section>
           <section className={s.layer}>
             <h3 className={s.layerTitle}><span>3</span>Detalle técnico y fuentes</h3>

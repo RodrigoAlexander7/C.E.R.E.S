@@ -6,7 +6,7 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { NasaBadge } from "@/components/NasaBadge";
+import { Icon, Tip } from "@/components/simple/icons";
 import { useSession } from "@/components/SessionProvider";
 import { HelpProvider } from "@/components/simple/help";
 import { Ndvi } from "@/components/simple/ndvi";
@@ -169,8 +169,10 @@ export default function Chacra() {
           )}
           {info && active && <button className={`${s.btn} ${s.btnPrimary} ${s.btnBlock}`} onClick={saveOutline}>Guardar este contorno</button>}
           {info && !user && <Link href="/ingresar?volver=/app/chacra" className={`${s.btn} ${s.btnPrimary} ${s.btnBlock}`}>Ingresar para guardar</Link>}
-          <div style={{ marginTop: 10 }}><NasaBadge product="gibs" /></div>
-          <p className={s.sub}>Imagen de un día, solo para ubicar y dibujar; no entra en los cálculos. Calles © colaboradores de OpenStreetMap. Un punto GPS no delimita la parcela; el área sale del dibujo.</p>
+          <p className={s.headMeta}>
+            <Tip tip="Imagen satelital de NASA (HLS, 30 m) del 25 de octubre de 2026. Sirve para ubicar y dibujar; no entra en los cálculos."><span className={s.nasaDot}><Icon name="sat" size={14} /> Imagen NASA</span></Tip>
+            <span>El área sale de tu dibujo.</span>
+          </p>
         </div>
       </details>
       </div>
