@@ -68,3 +68,14 @@ Salida: asistente que explica los resultados existentes o reconoce que falta evi
 - [ ] Entregar resumen del código realizado, pruebas ejecutadas y límites pendientes. No afirmar validación agronómica ni conexión real de servicios que no se haya comprobado.
 
 HLS, infraestructura de búsqueda vectorial, clasificación de cultivos y otras ampliaciones no desplazan estas tareas. Malezas, macheteo y herbicidas permanecen fuera del alcance.
+
+## Incremento 6 — artefactos para despliegue Azure
+
+El despliegue lo coordina este chat, por encargo del usuario. El agente de desarrollo prepara lo siguiente sin crear una segunda VM ni otro grupo de recursos:
+
+- [ ] Dockerfiles de producción web/API, imágenes Linux x64 y construcción fuera del VPS de 1 GiB; frontend sin servidor de desarrollo.
+- [ ] Compose de despliegue con proxy HTTPS, red interna para API/PostgreSQL, volumen persistente y healthchecks; solo 80/443 públicos.
+- [ ] Variables de entorno documentadas, cookies y origen compatibles con HTTPS, sin credenciales embebidas en imágenes o repositorio.
+- [ ] Límites de memoria, un worker API inicial, logs acotados y configuración PostgreSQL ajustada a la demo; medir el recorrido, sin asumir suficiencia del servidor pequeño.
+- [ ] Procedimiento probado de migración, respaldo y restauración antes de publicar o actualizar datos.
+- [ ] Entregar al despliegue comandos/artefactos, versiones y validaciones realizadas. Seguir `despliegue.md`; no cambiar límites de gasto ni contratar servicios adicionales.

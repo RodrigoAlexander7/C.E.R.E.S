@@ -1,0 +1,33 @@
+#cloud-config
+package_update: true
+package_upgrade: false
+packages:
+  - ca-certificates
+  - curl
+  - docker.io
+  - docker-compose-v2
+  - unattended-upgrades
+
+swap:
+  filename: /swapfile
+  size: 2G
+  maxsize: 2G
+
+write_files:
+  - path: /etc/docker/daemon.json
+    owner: root:root
+    permissions: '0644'
+    content: |
+      {
+        "log-driver": "json-file",
+        "log-opts": {
+          "max-size": "10m",
+          "max-file": "3"
+        }
+      }
+
+runcmd:
+  - [systemctl, enable, docker]
+  - [systemctl, restart, docker]
+
+final_message: "Base CERES preparada. La aplicación, PostgreSQL y HTTPS se despliegan al disponer de sus artefactos."

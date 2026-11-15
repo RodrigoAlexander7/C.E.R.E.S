@@ -1,0 +1,175 @@
+name: Deploy
+
+# main → pruebas → imágenes (etiqueta = SHA) en GHCR → despliegue en ceres-vm vía Azure Run Command (OIDC, sin SSH).
+# Manual: desplegar el commit actual, re-desplegar un SHA existente o hacer rollback.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "deploy = construir y publicar este commit (o re-desplegar 'tag'); rollback = volver a la versión anterior (o a 'tag')"
+        type: choice
+        options: [deploy, rollback]
+        default: deploy
+      tag:
+        description: "SHA de una imagen ya publicada (opcional)"
+        type: string
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  checks:
+    if: github.event_name == 'push' || (inputs.action == 'deploy' && inputs.tag == '')
+    uses: ./.github/workflows/ci.yml
+
+  build:
+    name: Construir y publicar imágenes
+    needs: checks
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      tag: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Nombre del registro en minúsculas
+        id: reg
+        run: echo "prefix=${REGISTRY}/${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: API
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/api/Dockerfile
+          platforms: linux/amd64
+          push: true
+          build-args: CERES_REVISION=${{ github.sha }}
+          tags: ${{ steps.reg.outputs.prefix }}/ceres-api:${{ github.sha }}
+          labels: org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,scope=api,mode=max
+      - name: Web
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/web/Dockerfile
+          platforms: linux/amd64
+          push: true
+          build-args: CERES_REVISION=${{ github.sha }}
+          tags: ${{ steps.reg.outputs.prefix }}/ceres-web:${{ github.sha }}
+          labels: org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,scope=web,mode=max
+
+  deploy:
+    name: Desplegar en ceres-vm
+    needs: [checks, build]
+    if: ${{ !cancelled() && !contains(needs.*.result, 'failure') }}
+    runs-on: ubuntu-24.04
+    environment:
+      name: production
+      url: https://${{ vars.CERES_DOMAIN }}
+    permissions:
+      contents: read
+      id-token: write   # OIDC hacia Azure
+      packages: read    # token efímero para que la VM descargue de GHCR
+    env:
+      ACTION: ${{ github.event_name == 'push' && 'deploy' || inputs.action }}
+      TAG: ${{ needs.build.outputs.tag || inputs.tag }}
+      RG: ${{ vars.AZURE_RESOURCE_GROUP }}
+      VM: ${{ vars.AZURE_VM_NAME }}
+      LOCATION: ${{ vars.AZURE_LOCATION }}
+      CERES_DOMAIN: ${{ vars.CERES_DOMAIN }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validar entradas
+        run: |
+          set -euo pipefail
+          for v in RG VM LOCATION CERES_DOMAIN; do [[ -n "${!v}" ]] || { echo "::error::Falta la variable de entorno de GitHub para $v"; exit 1; }; done
+          if [[ "$ACTION" == deploy && -z "$TAG" ]]; then echo "::error::No hay etiqueta para desplegar"; exit 1; fi
+          if [[ -n "$TAG" && ! "$TAG" =~ ^[0-9a-f]{40}$ ]]; then echo "::error::'tag' debe ser un SHA completo de 40 caracteres"; exit 1; fi
+          echo "Acción: $ACTION · etiqueta: ${TAG:-<anterior registrada en la VM>}"
+      - name: Azure login (OIDC, sin secretos de larga duración)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - name: Preparar script de Run Command (paquete deploy/ embebido, sin secretos)
+        run: |
+          set -euo pipefail
+          bundle=$(tar -C deploy -czf - compose.yml Caddyfile ceres.sh | base64 -w0)
+          case "$ACTION" in
+            deploy) op="deploy \"\$CERES_TAG\"" ;;
+            rollback) op="rollback \${CERES_TAG:-}" ;;
+          esac
+          cat > /tmp/runcmd.sh <<EOF
+          #!/usr/bin/env bash
+          set -Eeuo pipefail
+          install -d -m 750 /opt/ceres
+          echo '$bundle' | base64 -d | tar -xzf - -C /opt/ceres
+          chmod 750 /opt/ceres/ceres.sh
+          /opt/ceres/ceres.sh $op 2>&1 | tail -c 3800
+          exit \${PIPESTATUS[0]}
+          EOF
+          wc -c /tmp/runcmd.sh
+      - name: Ejecutar en la VM
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}
+        run: |
+          set -euo pipefail
+          name="ceres-${ACTION}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          echo "RUN_NAME=$name" >> "$GITHUB_ENV"
+          prot=(GHCR_TOKEN="$GHCR_TOKEN")
+          [[ -n "$OPENAI_API_KEY" ]] && prot+=(OPENAI_API_KEY="$OPENAI_API_KEY")
+          az vm run-command create -g "$RG" --vm-name "$VM" -l "$LOCATION" --name "$name" \
+            --script @/tmp/runcmd.sh --timeout-in-seconds 1500 \
+            --parameters CERES_TAG="$TAG" CERES_DOMAIN="$CERES_DOMAIN" \
+              CERES_REGISTRY="${REGISTRY}/${GITHUB_REPOSITORY_OWNER,,}" GHCR_USER="$GITHUB_ACTOR" OPENAI_MODEL="$OPENAI_MODEL" \
+            --protected-parameters "${prot[@]}" \
+            --only-show-errors -o none || true
+          view=$(az vm run-command show -g "$RG" --vm-name "$VM" --name "$name" --instance-view \
+            --query "instanceView.{state:executionState, exit:exitCode, out:output, err:error}" -o json)
+          echo "$view" | jq -r '.out' || true
+          echo "$view" | jq -r '.err' | tail -n 20 || true
+          state=$(echo "$view" | jq -r '.state'); code=$(echo "$view" | jq -r '.exit')
+          echo "Estado: $state · código: $code"
+          [[ "$state" == "Succeeded" && "$code" == "0" ]]
+      - name: Verificación pública HTTPS desde GitHub
+        if: env.ACTION == 'deploy'
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 30); do
+            if body=$(curl -fsS --max-time 10 "https://$CERES_DOMAIN/api/v1/health"); then
+              echo "$body"
+              echo "$body" | jq -e --arg t "$TAG" '.status == "ok" and .revision == $t and .database == true' && break
+            fi
+            sleep 10
+          done
+          echo "$body" | jq -e --arg t "$TAG" '.revision == $t'
+          curl -fsS --max-time 10 -o /dev/null -w "web %{http_code}\n" "https://$CERES_DOMAIN/"
+          curl -fsS --max-time 10 -o /dev/null -w "demo %{http_code}\n" "https://$CERES_DOMAIN/api/v1/public/demo"
+          # Puertos internos no expuestos
+          for p in 3000 8000 5432; do ! timeout 5 bash -c "</dev/tcp/$CERES_DOMAIN/$p" 2>/dev/null || { echo "::error::Puerto $p accesible"; exit 1; }; done
+          echo "Puertos 3000/8000/5432 cerrados desde Internet"
+      - name: Limpiar Run Command
+        if: always() && env.RUN_NAME != ''
+        run: az vm run-command delete -g "$RG" --vm-name "$VM" --name "$RUN_NAME" --yes --only-show-errors || true

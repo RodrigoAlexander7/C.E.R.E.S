@@ -1,0 +1,183 @@
+"""Entradas y resultados del motor. Objetos puros, serializables y sin dependencias de frameworks."""
+
+from __future__ import annotations
+
+from dataclasses import asdict, dataclass, field
+from datetime import date
+from typing import Any, Literal
+
+Priority = Literal["dinero", "agua", "suelo", "equilibrada"]
+Status = Literal["viable_con_supuestos", "no_viable", "requiere_datos", "exploratoria"]
+ReasonState = Literal["cumple", "no_cumple", "falta_dato", "advertencia", "informacion"]
+Kind = Literal["observado", "declarado", "derivado", "referencia_bibliografica", "supuesto_demo", "sin_verificar"]
+
+STATUS_LABELS = {
+    "viable_con_supuestos": "Viable con supuestos",
+    "no_viable": "No viable",
+    "requiere_datos": "Requiere datos",
+    "exploratoria": "Exploratoria",
+}
+
+
+class InvalidInput(ValueError):
+    """Entrada inválida (unidad, rango o fecha)."""
+
+
+@dataclass(frozen=True)
+class WaterInput:
+    """Agua entregable a la parcela, declarada. `no_se` es una respuesta válida."""
+
+    mode: Literal["conozco", "no_se"] = "no_se"
+    allocation_m3: float | None = None
+    allocation_period: Literal["mensual", "anual"] = "mensual"
+    efficiency: float | None = None  # fracción (0, 1]
+    delivery_point: str | None = None
+
+    def validate(self) -> None:
+        if self.allocation_m3 is not None and self.allocation_m3 < 0:
+            raise InvalidInput("La dotación no puede ser negativa")
+        if self.efficiency is not None and not (0 < self.efficiency <= 1):
+            raise InvalidInput("La eficiencia de riego es una fracción entre 0 y 1 (p. ej. 0,85)")
+        if self.mode == "conozco" and self.allocation_m3 is None:
+            raise InvalidInput("Si conoces la dotación, indica el volumen")
+
+
+@dataclass(frozen=True)
+class SoilInput:
+    ece_ds_m: float | None = None  # conductividad eléctrica del extracto de saturación
+    ph: float | None = None
+    organic_matter_pct: float | None = None
+    analysis_date: date | None = None
+    depth_cm: str | None = None
+    method: str | None = None
+    kind: Kind = "declarado"
+
+    def validate(self) -> None:
+        if self.ece_ds_m is not None and self.ece_ds_m < 0:
+            raise InvalidInput("La conductividad eléctrica no puede ser negativa")
+        if self.ph is not None and not (0 < self.ph < 14):
+            raise InvalidInput("pH fuera de rango")
+        measured = any(v is not None for v in (self.ece_ds_m, self.ph, self.organic_matter_pct))
+        if measured and self.kind == "observado" and (self.analysis_date is None or not self.method):
+            raise InvalidInput("Un análisis medido requiere fecha y método")
+
+
+@dataclass(frozen=True)
+class EconomicOverride:
+    crop_id: str
+    yield_t_ha: float | None = None
+    price_soles_kg: float | None = None
+    variable_cost_soles_ha: float | None = None
+
+
+@dataclass(frozen=True)
+class ParcelInput:
+    area_ha: float
+    in_pilot_zone: bool
+    current_crop_id: str
+    current_status: Literal["en_campo", "cosechado"]
+    expected_harvest: date | None
+    planned_next_crop_id: str | None
+    water: WaterInput
+    soil: SoilInput
+    priority: Priority
+    budget_soles: float | None
+    residue_management: Literal["incorporar", "retirar", "no_se"]
+    economic_overrides: tuple[EconomicOverride, ...] = ()
+    reference_date: date = field(default_factory=date.today)
+
+    def validate(self) -> None:
+        if not (self.area_ha > 0):
+            raise InvalidInput("El área debe ser positiva")
+        if self.area_ha > 10_000:
+            raise InvalidInput("Área fuera de rango para una parcela")
+        if self.budget_soles is not None and self.budget_soles < 0:
+            raise InvalidInput("El presupuesto no puede ser negativo")
+        for o in self.economic_overrides:
+            for v in (o.yield_t_ha, o.price_soles_kg, o.variable_cost_soles_ha):
+                if v is not None and v < 0:
+                    raise InvalidInput("Costos, precios y rendimientos no pueden ser negativos")
+        self.water.validate()
+        self.soil.validate()
+
+
+@dataclass
+class Metric:
+    id: str
+    label: str
+    value: float | None
+    unit: str
+    kind: Kind
+    method: str
+    source_ids: list[str] = field(default_factory=list)
+    detail: str = ""
+
+
+@dataclass
+class Reason:
+    rule_id: str
+    state: ReasonState
+    message: str
+    metric_ids: list[str] = field(default_factory=list)
+    source_ids: list[str] = field(default_factory=list)
+    assumptions: list[str] = field(default_factory=list)
+    missing: list[str] = field(default_factory=list)
+
+
+@dataclass
+class TimelineBlock:
+    kind: Literal["preparacion", "espera", "cultivo", "descanso"]
+    start: date
+    end: date
+    crop_id: str | None = None
+    label: str = ""
+    stages: list[dict[str, Any]] = field(default_factory=list)
+    why: list[str] = field(default_factory=list)
+
+
+@dataclass
+class StrategyAssessment:
+    strategy_id: str
+    name: str
+    short: str
+    status: Status
+    sequence: list[str]
+    timeline: list[TimelineBlock]
+    metrics: dict[str, Metric]
+    reasons: list[Reason]
+    assumptions: list[str]
+    missing: list[str]
+    monthly_water: list[dict[str, Any]]
+    soil: dict[str, Any]
+    summary: str
+    rank: int | None = None
+
+
+@dataclass
+class ComparisonResult:
+    engine_version: str
+    catalog_version: str
+    climate_snapshot_id: str | None
+    priority: Priority
+    horizon_start: date
+    horizon_end: date
+    strategies: list[StrategyAssessment]
+    ordering: dict[str, Any]
+    associations: list[dict[str, Any]]
+    notes: list[str]
+    blocking: list[str]
+
+    def to_dict(self) -> dict[str, Any]:
+        return _jsonable(asdict(self))
+
+
+def _jsonable(x: Any) -> Any:
+    if isinstance(x, dict):
+        return {k: _jsonable(v) for k, v in x.items()}
+    if isinstance(x, (list, tuple)):
+        return [_jsonable(v) for v in x]
+    if isinstance(x, date):
+        return x.isoformat()
+    if isinstance(x, float):
+        return round(x, 4)
+    return x

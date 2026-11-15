@@ -21,6 +21,8 @@ Respeta las instrucciones del usuario y los AGENTS.md aplicables. Dentro de la d
 7. `reto.md`: texto del reto aportado por el equipo.
 8. `reports/Rotaciones agrícolas para Majes.md` y `research_notes/`: evidencia y límites de la investigación.
 
+Para preparar la publicación, leer también `despliegue.md` e `infra/azure/`. El usuario ha encargado el despliegue en Azure a este chat; el agente de desarrollo preparará los artefactos y no duplicará el aprovisionamiento.
+
 `propuesta_v2.md` y `research_notes/Rotaciones agrícolas para Majes/propuesta_original.md` son antecedentes conservados, no requisitos vigentes. No los borres ni los uses para reintroducir malezas, macheteo, alfalfa comparada injustamente o afirmaciones sin verificar. Si detectas una contradicción importante entre documentos actuales, resuélvela siguiendo las decisiones más recientes del usuario y deja constancia.
 
 ## 3. Producto que debe funcionar
@@ -100,7 +102,9 @@ El inventario completo es `recursos.md`; no se presupone que todos los portales 
 
 Crear un `.env.example` sin secretos con las variables realmente utilizadas: conexión PostgreSQL, configuración de sesión/origen, `OPENAI_API_KEY`, `OPENAI_MODEL` y opciones de fuentes/caché. Earthdata solo si se implementa HLS. Documentar qué es obligatorio para arrancar y qué habilita funciones adicionales.
 
-Sin claves LLM o acceso a un portal, avanzar con interfaces, persistencia, adaptadores y pruebas independientes. Registrar lo pendiente con causa concreta. **La aceptación de NASA real y de IA conectada no se satisface con mocks.** No contratar servicios, publicar ni desplegar a producción para completar esta entrega local.
+Sin claves LLM o acceso a un portal, avanzar con interfaces, persistencia, adaptadores y pruebas independientes. Registrar lo pendiente con causa concreta. **La aceptación de NASA real y de IA conectada no se satisface con mocks.** El usuario ha autorizado preparar el despliegue de CERES en Azure, reutilizando `rodrygo-resource-group` y priorizando el beneficio de estudiante. El agente de desarrollo entregará imágenes y configuración desplegables; el aprovisionamiento y publicación se coordinarán desde este chat según `despliegue.md`. No contratar servicios adicionales, crear otro grupo, cambiar la suscripción a pago por uso ni retirar su límite de gasto por iniciativa propia.
+
+Actualización de autorización: el usuario permite usar crédito estudiantil y una eventual migración a pago por uso. Actualmente el despliegue conserva la suscripción de estudiante y su límite; esa gestión corresponde a este chat y no requiere que el agente de desarrollo cree recursos o cambie la cuenta.
 
 ## 8. Fuera de alcance
 
@@ -116,3 +120,11 @@ Detección de malezas, fecha de macheteo, herbicidas, clasificación automática
 6. Entregar resultado ejecutable y resumen de lo probado, datos reales usados y limitaciones restantes. No declarar implementado o validado un componente que solo tenga una interfaz o mock.
 
 La definición de terminado verificable está en `specs/requisitos.md`. El punto decisivo de la demo será: seleccionar Majes, recuperar una parcela, comparar ciclos con evidencia NASA, cambiar agua/prioridad y preguntar a la IA por qué cambió el resultado, viendo las fuentes.
+
+## 10. Preparación para el VPS Azure
+
+Entregar Dockerfiles de producción para web/API y un Compose de despliegue con PostgreSQL persistente y proxy HTTPS, además del entorno local. Next.js debe construirse fuera del VPS y ejecutarse en modo de producción con artefacto reducido. No ejecutar servidor de desarrollo ni construir dependencias pesadas en una VM de 1 GiB.
+
+La configuración candidata es Linux x64 `Standard_B2ats_v2`, 2 vCPU/1 GiB, con swap como apoyo y recursos limitados para una demo pequeña. Su suficiencia debe comprobarse con el recorrido completo; no se promete capacidad de producción. Solo el proxy publica 80/443. Base de datos y API quedan en la red interna; las cookies privadas usan HTTPS y el mismo origen. Las claves LLM se cargan en el servidor, nunca en imagen, repositorio o datos de inicialización de Azure.
+
+El código debe ofrecer healthchecks, migraciones ejecutables, carga de datos reproducible, rotación de logs y un procedimiento de respaldo/restauración. Si el consumo no cabe o se requiere una VM mayor, informar de mediciones y costo antes de cambiar el dimensionamiento. El estado real del despliegue y las condiciones de costo se registran en `despliegue.md`.

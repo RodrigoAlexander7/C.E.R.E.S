@@ -117,6 +117,8 @@ La aplicación evalúa estrategias con los datos y supuestos disponibles. No gar
 
 ## Recorrido de aceptación de la demo
 
+La preparación para Azure añade el requisito R13 indicado al final; la aceptación funcional siguiente sigue aplicando con independencia del alojamiento.
+
 1. Visitante explora Perú y llega a Majes; acepta o deniega geolocalización sin bloquearse.
 2. Se registra/inicia sesión, guarda una parcela y puede recuperarla tras recargar.
 3. Completa historial mínimo y agua conocida o desconocida; ve tres ciclos con estados honestos.
@@ -126,3 +128,13 @@ La aplicación evalúa estrategias con los datos y supuestos disponibles. No gar
 7. Cierra sesión; otra cuenta no puede consultar esa parcela, sus recomendaciones ni su chat.
 
 Para declarar **demo completa**, NASA real y el asistente conectado deben estar comprobados; si falta alguno, entregar el avance ejecutable y registrar exactamente esa validación pendiente. No confundir una aplicación técnicamente funcional con recomendaciones agronómicas validadas para uso en campo.
+
+## R13 — artefactos y publicación en Azure
+
+- Entregar imágenes de producción Linux x64 y Compose de despliegue; construir fuera del VPS pequeño, sin servidor de desarrollo.
+- Proxy HTTPS como única entrada pública 80/443, API y PostgreSQL internos, cookies y origen coherentes con HTTPS.
+- Volumen PostgreSQL persistente, migraciones explícitas, healthchecks, logs acotados y respaldo/restauración comprobables.
+- Ajustar consumo y medir la demo antes de declarar suficiente una VM de 1 GiB. No alojar un LLM ni entrenar modelos en ella.
+- El agente de desarrollo no duplica infraestructura ni modifica otros proyectos; despliegue coordinado por este chat en `rodrygo-resource-group`.
+- Documentar versión, pruebas y configuración no secreta de cada publicación. No incluir claves en imagen, repositorio o cloud-init.
+- Distinguir infraestructura creada de aplicación publicada; seguir el estado y autorización de costos de `despliegue.md`.

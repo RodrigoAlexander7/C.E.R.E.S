@@ -1,0 +1,205 @@
+{
+  "version": "catalogo-majes-2026-11-14.1",
+  "review_note": "Kc, duración de etapas y tolerancia a sales comprobados contra FAO-56 (tablas 11 y 12) y FAO 29 (tabla 4) el 14-nov-2026. Ventanas de siembra, preparación, costos, rendimientos y precios son supuestos de demostración sin revisión agronómica local. Ver data/catalog/REVISION.md.",
+  "horizon_months": 24,
+  "prep_days": 15,
+  "prep_status": "supuesto_demo",
+  "transition_cost_soles_ha": 600,
+  "transition_cost_status": "supuesto_demo",
+  "scenario_low": {"yield_factor": 0.85, "price_factor": 0.8},
+  "scenario_high": {"yield_factor": 1.1, "price_factor": 1.2},
+  "non_catalog_crops": {
+    "papa": "Papa",
+    "alfalfa": "Alfalfa",
+    "maiz_chala": "Maíz chala (forraje)",
+    "otro": "Otro cultivo"
+  },
+  "crops": [
+    {
+      "id": "maiz_grano",
+      "name": "Maíz amarillo duro (grano)",
+      "family": "Poaceae",
+      "is_legume": false,
+      "destination": "Grano seco para venta",
+      "stage_days": [25, 40, 45, 30],
+      "stage_status": "referencia_bibliografica",
+      "stage_source_ids": ["FAO56-T11"],
+      "kc": {"ini": 0.30, "mid": 1.20, "end": 0.35},
+      "kc_source_ids": ["FAO56-KC"],
+      "kc_note": "Kc final 0,35 para grano secado en campo; sin ajuste climático (FAO-56 ec. 62), que en clima árido tiende a elevar Kc medio.",
+      "windows": [{"start": "08-01", "end": "12-31"}],
+      "window_status": "supuesto_demo",
+      "window_source_ids": ["DEMO-CALENDARIO"],
+      "salinity": {"ece_threshold": 1.7, "ece_50": 5.9, "source_ids": ["FAO29-SAL"]},
+      "thermal_rules": [
+        {
+          "id": "frio_establecimiento",
+          "label": "Frío en establecimiento",
+          "stages": ["inicial"],
+          "variable": "t_mean",
+          "comparator": "<",
+          "threshold_c": 10,
+          "status": "sin_verificar",
+          "source_ids": ["DEMO-UMBRALES"],
+          "note": "Temperatura media diaria bajo 10 °C retrasa la emergencia; umbral general pendiente de verificar con fuente agronómica."
+        }
+      ],
+      "economics": {
+        "yield_t_ha": 9.0,
+        "price_soles_kg": 1.20,
+        "variable_cost_soles_ha": 7500,
+        "status": "supuesto_demo",
+        "price_label": "Precio en chacra supuesto",
+        "note": "Valores de demostración; reemplazar con SIEA y costos del productor/asesor.",
+        "source_ids": ["DEMO-ECONOMIA"]
+      },
+      "residue_note": "Rastrojo abundante: incorporarlo aporta materia orgánica; retirarlo para forraje se lleva nutrientes.",
+      "nutrition_note": "Cultivo exigente en nitrógeno; la dosis requiere análisis de suelo."
+    },
+    {
+      "id": "frejol_grano",
+      "name": "Frejol canario (grano seco)",
+      "family": "Fabaceae",
+      "is_legume": true,
+      "destination": "Grano seco para venta",
+      "stage_days": [15, 25, 35, 20],
+      "stage_status": "referencia_bibliografica",
+      "stage_source_ids": ["FAO56-T11"],
+      "kc": {"ini": 0.40, "mid": 1.15, "end": 0.35},
+      "kc_source_ids": ["FAO56-KC"],
+      "kc_note": "Duración de clima árido (Pakistán/California) de FAO-56; la variedad local puede diferir.",
+      "windows": [{"start": "03-01", "end": "07-31"}],
+      "window_status": "supuesto_demo",
+      "window_source_ids": ["DEMO-CALENDARIO"],
+      "salinity": {"ece_threshold": 1.0, "ece_50": 3.6, "source_ids": ["FAO29-SAL"]},
+      "thermal_rules": [
+        {
+          "id": "calor_floracion",
+          "label": "Calor en floración y llenado",
+          "stages": ["media"],
+          "variable": "t_mean",
+          "comparator": ">",
+          "threshold_c": 27,
+          "status": "sin_verificar",
+          "source_ids": ["FAO-INFO-CULTIVOS"],
+          "note": "La ficha FAO de frejol (versión indexada) indica 27 °C como media diaria máxima para crecer; la página dio 404 el 14-nov-2026."
+        },
+        {
+          "id": "frio_crecimiento",
+          "label": "Frío durante el crecimiento",
+          "stages": ["todas"],
+          "variable": "t_mean",
+          "comparator": "<",
+          "threshold_c": 10,
+          "status": "sin_verificar",
+          "source_ids": ["FAO-INFO-CULTIVOS"],
+          "note": "La ficha FAO de frejol (versión indexada) indica 10 °C como media diaria mínima para crecer."
+        }
+      ],
+      "economics": {
+        "yield_t_ha": 2.0,
+        "price_soles_kg": 5.50,
+        "variable_cost_soles_ha": 6500,
+        "status": "supuesto_demo",
+        "price_label": "Precio en chacra supuesto",
+        "note": "Valores de demostración; reemplazar con SIEA y costos del productor/asesor.",
+        "source_ids": ["DEMO-ECONOMIA"]
+      },
+      "residue_note": "Residuos de leguminosa se descomponen rápido; si se retira todo el material, el aporte al suelo es menor.",
+      "nutrition_note": "Leguminosa: fijación biológica con rizobios adecuados; no implica crédito fijo de N para el siguiente cultivo."
+    },
+    {
+      "id": "cebolla_roja",
+      "name": "Cebolla roja (bulbo)",
+      "family": "Amaryllidaceae",
+      "is_legume": false,
+      "destination": "Bulbo para mercado fresco",
+      "stage_days": [15, 25, 70, 40],
+      "stage_status": "referencia_bibliografica",
+      "stage_source_ids": ["FAO56-T11"],
+      "kc": {"ini": 0.70, "mid": 1.05, "end": 0.75},
+      "kc_source_ids": ["FAO56-KC"],
+      "kc_note": "Duración mediterránea de FAO-56 (150 días); la de región árida es 210 días. Calendario local pendiente.",
+      "windows": [{"start": "03-01", "end": "08-31"}],
+      "window_status": "supuesto_demo",
+      "window_source_ids": ["DEMO-CALENDARIO"],
+      "salinity": {"ece_threshold": 1.2, "ece_50": 4.3, "source_ids": ["FAO29-SAL"]},
+      "thermal_rules": [
+        {
+          "id": "frio_floracion_prematura",
+          "label": "Frío que favorece floración prematura",
+          "stages": ["desarrollo", "media"],
+          "variable": "t_mean",
+          "comparator": "<",
+          "threshold_c": 14,
+          "status": "sin_verificar",
+          "source_ids": ["FAO-INFO-CULTIVOS"],
+          "note": "La ficha FAO de cebolla (versión indexada) indica que temperaturas bajo 14–16 °C inducen floración, que reduce el rendimiento de bulbo; depende de la variedad."
+        }
+      ],
+      "economics": {
+        "yield_t_ha": 45.0,
+        "price_soles_kg": 0.70,
+        "variable_cost_soles_ha": 16000,
+        "status": "supuesto_demo",
+        "price_label": "Precio en chacra supuesto",
+        "note": "Valores de demostración; precio muy variable; reemplazar con SIEA, comprador y costos del asesor.",
+        "source_ids": ["DEMO-ECONOMIA"]
+      },
+      "residue_note": "Deja poco residuo; el suelo queda descubierto tras la cosecha si no se cubre.",
+      "nutrition_note": "Sensible a sales; el plan de fertilización requiere análisis de suelo."
+    }
+  ],
+  "associations": [
+    {
+      "id": "maiz_frejol_asociado",
+      "name": "Asociación maíz + frejol (simultánea)",
+      "components": ["maiz_grano", "frejol_grano"],
+      "structure": "(maíz + frejol) → siguiente cultivo",
+      "status": "exploratoria",
+      "known": [
+        "Ambas especies tienen ficha individual (Kc, etapas, salinidad) en el catálogo.",
+        "Existe un ensayo local de rotación maíz → frejol en Majes (no de asociación simultánea)."
+      ],
+      "missing": [
+        "Densidades y arreglo espacial probados en Majes",
+        "Fechas relativas de siembra de cada especie",
+        "Coeficiente de cultivo de la asociación (no se suman Kc)",
+        "Rendimiento relativo de cada especie en asociación",
+        "Manejo conjunto (riego, fertilización, cosecha)",
+        "Revisión agronómica local"
+      ],
+      "source_ids": ["UNSA-MAJES", "FAO56-KC"],
+      "warning": "Ficha exploratoria: no se recomienda ni se cuantifica. No se suman consumos ni ingresos de dos monocultivos."
+    }
+  ],
+  "templates": [
+    {
+      "id": "A",
+      "name": "A. Continuar tu plan",
+      "short": "Lo que tenías previsto",
+      "sequence_rule": "declarada",
+      "cap_status": null,
+      "rationale": "Referencia para comparar: tu secuencia declarada (o repetir el cultivo actual si no indicas otra).",
+      "source_ids": ["PARCELA"]
+    },
+    {
+      "id": "B",
+      "name": "B. Introducir una leguminosa",
+      "short": "Maíz y frejol alternados",
+      "sequence_rule": "leguminosa",
+      "cap_status": null,
+      "rationale": "Secuencia maíz–frejol estudiada en Majes (ensayo de labranzas); no demuestra mayor rentabilidad ni ahorro de agua.",
+      "source_ids": ["UNSA-MAJES", "INIA-RIZOBIOS"]
+    },
+    {
+      "id": "C",
+      "name": "C. Diversificar con cebolla",
+      "short": "Cebolla y maíz alternados",
+      "sequence_rule": "diversificar",
+      "cap_status": "exploratoria",
+      "rationale": "Hipótesis comercial: cebolla registrada entre cultivos de la irrigación; la secuencia no está validada.",
+      "source_ids": ["MINAM-2016"]
+    }
+  ]
+}

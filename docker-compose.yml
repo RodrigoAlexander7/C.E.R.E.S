@@ -1,0 +1,20 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ceres
+      POSTGRES_PASSWORD: ceres_dev
+      POSTGRES_DB: ceres
+    ports:
+      - "127.0.0.1:5440:5432"
+    volumes:
+      - ceres-pg:/var/lib/postgresql/data
+      - ./infra/db-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ceres -d ceres"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  ceres-pg:

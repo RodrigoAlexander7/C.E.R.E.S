@@ -1,0 +1,18 @@
+{
+  "provider": "NASA POWER",
+  "request_url": "https://power.larc.nasa.gov/api/temporal/daily/point?parameters=T2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CWS2M%2CALLSKY_SFC_SW_DWN%2CPS&community=AG&longitude=-72.1900&latitude=-16.3500&start=20150101&end=20251231&format=JSON&time-standard=LST",
+  "request_params": {
+    "parameters": "T2M,T2M_MIN,T2M_MAX,PRECTOTCORR,RH2M,WS2M,ALLSKY_SFC_SW_DWN,PS",
+    "community": "AG",
+    "longitude": "-72.1900",
+    "latitude": "-16.3500",
+    "start": "20150101",
+    "end": "20251231",
+    "format": "JSON",
+    "time-standard": "LST"
+  },
+  "fetched_at": "2026-11-14T23:23:22+00:00",
+  "sha256": "6182bcf32295d49c87b39ff751f547bc06d70f6c0fdfea7f1fb04d1bdd5f9ea0",
+  "bytes": 535404,
+  "note": "Respuesta bruta sin modificar. Serie histórica regional; no es pronóstico ni medición parcelaria."
+}

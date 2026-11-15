@@ -1,0 +1,18 @@
+{
+  "Name": "CERES VM Run Command Operator",
+  "IsCustom": true,
+  "Description": "Permite a GitHub Actions leer ceres-vm y crear/consultar/borrar Run Commands administrados en ella. Asignado solo con alcance a la VM de CERES.",
+  "Actions": [
+    "Microsoft.Compute/virtualMachines/read",
+    "Microsoft.Compute/virtualMachines/instanceView/read",
+    "Microsoft.Compute/virtualMachines/runCommands/read",
+    "Microsoft.Compute/virtualMachines/runCommands/write",
+    "Microsoft.Compute/virtualMachines/runCommands/delete"
+  ],
+  "NotActions": [],
+  "DataActions": [],
+  "NotDataActions": [],
+  "AssignableScopes": [
+    "/subscriptions/92214e22-5a2b-4cb6-8c32-df842f57794a/resourceGroups/rodrygo-resource-group"
+  ]
+}

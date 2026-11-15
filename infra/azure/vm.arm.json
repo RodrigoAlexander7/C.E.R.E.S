@@ -1,0 +1,213 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": { "type": "string", "defaultValue": "northcentralus" },
+    "prefix": { "type": "string", "defaultValue": "ceres", "minLength": 3, "maxLength": 12 },
+    "vmSize": {
+      "type": "string",
+      "defaultValue": "Standard_B2ats_v2",
+      "allowedValues": ["Standard_B2ats_v2", "Standard_B1s"]
+    },
+    "adminUsername": { "type": "string", "defaultValue": "ceresadmin" },
+    "adminPublicKey": { "type": "string", "minLength": 32 },
+    "sshSourceCidr": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": { "description": "Vacío mantiene SSH cerrado. Para habilitarlo, usar únicamente la IP/CIDR de administración autorizado." }
+    },
+    "customDataBase64": { "type": "string", "defaultValue": "" },
+    "imageVersion": { "type": "string", "defaultValue": "24.04.202610250" }
+  },
+  "variables": {
+    "vmName": "[concat(parameters('prefix'), '-vm')]",
+    "nsgName": "[concat(parameters('prefix'), '-nsg')]",
+    "vnetName": "[concat(parameters('prefix'), '-vnet')]",
+    "nicName": "[concat(parameters('prefix'), '-nic')]",
+    "pipName": "[concat(parameters('prefix'), '-pip')]",
+    "dnsLabel": "[toLower(concat(parameters('prefix'), '-', uniqueString(resourceGroup().id)))]",
+    "tags": { "project": "CERES", "environment": "mvp", "managedBy": "ceres-arm" },
+    "webRules": [
+      {
+        "name": "allow-http",
+        "properties": {
+          "priority": 100,
+          "protocol": "Tcp",
+          "access": "Allow",
+          "direction": "Inbound",
+          "sourceAddressPrefix": "Internet",
+          "sourcePortRange": "*",
+          "destinationAddressPrefix": "*",
+          "destinationPortRange": "80"
+        }
+      },
+      {
+        "name": "allow-https",
+        "properties": {
+          "priority": 110,
+          "protocol": "Tcp",
+          "access": "Allow",
+          "direction": "Inbound",
+          "sourceAddressPrefix": "Internet",
+          "sourcePortRange": "*",
+          "destinationAddressPrefix": "*",
+          "destinationPortRange": "443"
+        }
+      }
+    ],
+    "sshRule": {
+      "name": "allow-admin-ssh",
+      "properties": {
+        "priority": 120,
+        "protocol": "Tcp",
+        "access": "Allow",
+        "direction": "Inbound",
+        "sourceAddressPrefix": "[parameters('sshSourceCidr')]",
+        "sourcePortRange": "*",
+        "destinationAddressPrefix": "*",
+        "destinationPortRange": "22"
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "apiVersion": "2024-05-01",
+      "name": "[variables('nsgName')]",
+      "location": "[parameters('location')]",
+      "tags": "[variables('tags')]",
+      "properties": {
+        "securityRules": "[if(empty(parameters('sshSourceCidr')), variables('webRules'), concat(variables('webRules'), createArray(variables('sshRule'))))]"
+      }
+    },
+    {
+      "type": "Microsoft.Network/virtualNetworks",
+      "apiVersion": "2024-05-01",
+      "name": "[variables('vnetName')]",
+      "location": "[parameters('location')]",
+      "tags": "[variables('tags')]",
+      "dependsOn": ["[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgName'))]"],
+      "properties": {
+        "addressSpace": { "addressPrefixes": ["10.43.0.0/16"] },
+        "subnets": [
+          {
+            "name": "app",
+            "properties": {
+              "addressPrefix": "10.43.1.0/24",
+              "defaultOutboundAccess": false,
+              "networkSecurityGroup": {
+                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgName'))]"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Network/publicIPAddresses",
+      "apiVersion": "2024-05-01",
+      "name": "[variables('pipName')]",
+      "location": "[parameters('location')]",
+      "tags": "[variables('tags')]",
+      "sku": { "name": "Standard", "tier": "Regional" },
+      "properties": {
+        "publicIPAllocationMethod": "Static",
+        "publicIPAddressVersion": "IPv4",
+        "dnsSettings": { "domainNameLabel": "[variables('dnsLabel')]" }
+      }
+    },
+    {
+      "type": "Microsoft.Network/networkInterfaces",
+      "apiVersion": "2024-05-01",
+      "name": "[variables('nicName')]",
+      "location": "[parameters('location')]",
+      "tags": "[variables('tags')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/virtualNetworks', variables('vnetName'))]",
+        "[resourceId('Microsoft.Network/publicIPAddresses', variables('pipName'))]"
+      ],
+      "properties": {
+        "enableAcceleratedNetworking": false,
+        "ipConfigurations": [
+          {
+            "name": "primary",
+            "properties": {
+              "primary": true,
+              "privateIPAllocationMethod": "Dynamic",
+              "subnet": {
+                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('vnetName'), 'app')]"
+              },
+              "publicIPAddress": {
+                "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('pipName'))]"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Compute/virtualMachines",
+      "apiVersion": "2024-11-01",
+      "name": "[variables('vmName')]",
+      "location": "[parameters('location')]",
+      "tags": "[variables('tags')]",
+      "dependsOn": ["[resourceId('Microsoft.Network/networkInterfaces', variables('nicName'))]"],
+      "properties": {
+        "hardwareProfile": { "vmSize": "[parameters('vmSize')]" },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "Canonical",
+            "offer": "ubuntu-24_04-lts",
+            "sku": "server",
+            "version": "[parameters('imageVersion')]"
+          },
+          "osDisk": {
+            "name": "[concat(parameters('prefix'), '-osdisk')]",
+            "createOption": "FromImage",
+            "diskSizeGB": 32,
+            "caching": "ReadWrite",
+            "deleteOption": "Detach",
+            "managedDisk": { "storageAccountType": "StandardSSD_LRS" }
+          }
+        },
+        "osProfile": {
+          "computerName": "[variables('vmName')]",
+          "adminUsername": "[parameters('adminUsername')]",
+          "customData": "[parameters('customDataBase64')]",
+          "linuxConfiguration": {
+            "disablePasswordAuthentication": true,
+            "provisionVMAgent": true,
+            "ssh": {
+              "publicKeys": [
+                {
+                  "path": "[concat('/home/', parameters('adminUsername'), '/.ssh/authorized_keys')]",
+                  "keyData": "[parameters('adminPublicKey')]"
+                }
+              ]
+            }
+          }
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('nicName'))]",
+              "properties": { "primary": true, "deleteOption": "Detach" }
+            }
+          ]
+        },
+        "diagnosticsProfile": { "bootDiagnostics": { "enabled": true } }
+      }
+    }
+  ],
+  "outputs": {
+    "vmName": { "type": "string", "value": "[variables('vmName')]" },
+    "fqdn": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Network/publicIPAddresses', variables('pipName'))).dnsSettings.fqdn]"
+    },
+    "publicIp": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Network/publicIPAddresses', variables('pipName'))).ipAddress]"
+    }
+  }
+}

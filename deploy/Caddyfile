@@ -1,0 +1,26 @@
+# Proxy HTTPS único (Let's Encrypt automático para CERES_DOMAIN).
+# Mismo origen: /api/* → FastAPI interno; el resto → Next.js.
+{
+	admin off
+}
+
+{$CERES_DOMAIN} {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy same-origin
+		Permissions-Policy "geolocation=(self), camera=(), microphone=()"
+		-Server
+	}
+
+	handle /api/* {
+		reverse_proxy api:8000
+	}
+
+	handle {
+		reverse_proxy web:3000
+	}
+}

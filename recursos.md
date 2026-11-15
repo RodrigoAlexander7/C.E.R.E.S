@@ -1,6 +1,6 @@
 # Recursos y procedencia de datos de CERES
 
-Inventario para implementación, revisado el 14 de noviembre de 2026. «Documentado» no significa «descargado» ni «integrado». No se ejecutaron llamadas de pago al proveedor de IA. Las series del piloto siguen pendientes: la consulta web de POWER no se completó y el entorno de terminal no resolvió su dominio; esto no prueba una caída del servicio.
+Inventario para implementación, revisado el 14 de noviembre de 2026. «Documentado» no significa «descargado» ni «integrado». No se ejecutaron llamadas de pago al proveedor de IA. Las series del piloto siguen pendientes. La consulta inicial de POWER no se completó desde el entorno local; posteriormente se comprobó conectividad **HTTP 200 desde la VM Azure**, mediante una consulta puntual. Esa comprobación no valida todavía el paquete histórico ni su integración.
 
 ## 1. Decisiones de uso
 
@@ -91,6 +91,10 @@ Los metadatos ADM1/ADM2 respondieron e incluyen enlaces de descarga y licencia p
 | pytest, Playwright, Docker Compose | Pruebas relevantes de motor/autorización/citas, recorrido principal y entorno local reproducible. Son herramientas de desarrollo, no fuentes de evidencia agronómica. |
 
 El equipo deberá configurar una clave y un modelo accesible para validar IA real. No se presupone saldo, suscripción ni proveedor ya contratado. El puerto de IA permitirá sustituir el adaptador sin alterar el motor. No exponer claves en variables `NEXT_PUBLIC_*`, navegador o repositorio.
+
+### Alojamiento Azure acordado posteriormente
+
+Se reutiliza la suscripción Azure for Students y `rodrygo-resource-group`. El usuario autorizó consumo de crédito y permite pago por uso si fuera necesario; el estado y costo real se gestionan en [despliegue.md](/home/totora/Documents/PROFESIONAL/C.E.R.E.S/despliegue.md). Ya se creó **`ceres-vm`**, B2ats v2, Ubuntu 24.04 x64, con Docker/Compose comprobados, disco e IP separados. El beneficio gratuito del cómputo no demuestra gratuidad del conjunto. El desarrollo preparará artefactos para esa VM; la gestión Azure corresponde a este chat, evitando recursos duplicados.
 
 ## 6. Contrato de procedencia común
 

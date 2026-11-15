@@ -1,0 +1,100 @@
+# Compose de PRODUCCIÓN para ceres-vm (Ubuntu 24.04, 2 vCPU, 1 GiB + swap).
+# Solo Caddy publica 80/443. API y PostgreSQL quedan en redes internas.
+# Variables: /opt/ceres/.env (secretos, solo en el servidor) y CERES_TAG (SHA de la imagen).
+name: ceres
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  db:
+    image: postgres:16.15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ceres
+      POSTGRES_DB: ceres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?falta POSTGRES_PASSWORD en /opt/ceres/.env}
+    # Ajuste para una demo pequeña en 1 GiB.
+    command:
+      - postgres
+      - -c
+      - shared_buffers=48MB
+      - -c
+      - effective_cache_size=160MB
+      - -c
+      - work_mem=2MB
+      - -c
+      - maintenance_work_mem=32MB
+      - -c
+      - max_connections=25
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks: [internal]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ceres -d ceres"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    mem_limit: 256m
+    logging: *logging
+
+  api:
+    image: ${CERES_REGISTRY:-ghcr.io/rodrigoalexander7}/ceres-api:${CERES_TAG:?falta CERES_TAG}
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql+psycopg://ceres:${POSTGRES_PASSWORD}@db:5432/ceres
+      APP_ORIGIN: https://${CERES_DOMAIN:?falta CERES_DOMAIN}
+      DEV_INSECURE_COOKIES: "false"
+      SESSION_TTL_HOURS: "72"
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-}
+      REGIONS_LIVE_FETCH: "true"
+    depends_on:
+      db:
+        condition: service_healthy
+    # internal: PostgreSQL. egress: salida a NASA/SERFOR/OpenAI y llegada desde Caddy.
+    networks: [internal, egress]
+    mem_limit: 384m
+    logging: *logging
+
+  web:
+    image: ${CERES_REGISTRY:-ghcr.io/rodrigoalexander7}/ceres-web:${CERES_TAG}
+    restart: unless-stopped
+    networks: [egress]
+    mem_limit: 256m
+    logging: *logging
+
+  caddy:
+    image: caddy:2.11-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      CERES_DOMAIN: ${CERES_DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: [api, web]
+    networks: [egress]
+    mem_limit: 128m
+    logging: *logging
+
+networks:
+  internal:
+    internal: true
+  egress: {}
+
+volumes:
+  # Nombres fijos: un redeploy o un cambio de proyecto nunca crea una base vacía nueva.
+  pgdata:
+    name: ceres_pgdata
+  caddy_data:
+    name: ceres_caddy_data
+  caddy_config:
+    name: ceres_caddy_config

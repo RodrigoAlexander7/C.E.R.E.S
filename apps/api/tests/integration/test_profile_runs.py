@@ -1,0 +1,124 @@
+"""Parcela, perfil progresivo, historial y runs inmutables (PostgreSQL real)."""
+
+import pytest
+
+from tests.conftest import MAJES_POLYGON, create_parcel, profile, register
+
+pytestmark = pytest.mark.db
+
+
+def test_parcel_geodesic_area_pilot_and_recovery_after_reload(make_client):
+    c = make_client()
+    register(c)
+    p = create_parcel(c)
+    assert p["area_origin"] == "geodesica"
+    assert 4.5 < p["area_ha"] < 5.2
+    assert p["in_pilot_zone"] is True
+    assert p["region_codes"]["district_code"] == "040520"
+    cookies = dict(c.cookies)
+    # «Recargar»: un cliente nuevo con la misma cookie recupera perfil e historial.
+    c2 = make_client()
+    for k, v in cookies.items():
+        c2.cookies.set(k, v)
+    me = c2.get("/api/v1/me").json()
+    assert me["active_parcel_id"] == p["id"]
+    detail = c2.get(f"/api/v1/parcels/{p['id']}").json()
+    assert detail["profile"]["profile"]["current_crop_id"] == "maiz_grano"
+    assert detail["crop_events"][0]["status"] == "en_campo"
+
+
+def test_point_without_area_is_not_a_boundary(make_client):
+    c = make_client()
+    register(c)
+    r = c.post("/api/v1/parcels", json={"point": {"lat": -16.35, "lon": -72.19}, "profile": profile()})
+    assert r.status_code == 422 and "punto GPS" in r.json()["error"]["message"]
+
+
+def test_invalid_geometry_and_values(make_client):
+    c = make_client()
+    register(c)
+    bow = {"type": "Polygon", "coordinates": [[[0, 0], [1, 1], [1, 0], [0, 1], [0, 0]]]}
+    assert c.post("/api/v1/parcels", json={"geometry": bow, "profile": profile()}).json()["error"]["code"] == "geometria_invalida"
+    bad = profile(water={"mode": "conozco", "allocation_m3": 1000, "efficiency": 85})
+    r = c.post("/api/v1/parcels", json={"geometry": MAJES_POLYGON, "profile": bad})
+    assert r.status_code == 422 and r.json()["error"]["code"] == "datos_invalidos"
+    assert c.post("/api/v1/geometry/area", json={"geometry": MAJES_POLYGON}).json()["in_pilot_zone"] is True
+
+
+def test_outside_pilot_explores_without_recommending(make_client):
+    c = make_client()
+    register(c)
+    lima = {"type": "Polygon", "coordinates": [[[-77.05, -12.05], [-77.048, -12.05], [-77.048, -12.048], [-77.05, -12.048], [-77.05, -12.05]]]}
+    p = c.post("/api/v1/parcels", json={"geometry": lima, "profile": profile()}).json()
+    assert p["in_pilot_zone"] is False
+    run = c.post(f"/api/v1/parcels/{p['id']}/recommendations", json={}).json()
+    assert run["result"]["strategies"] == [] and run["result"]["blocking"]
+
+
+def test_harvest_and_soil_keep_history(make_client):
+    c = make_client()
+    register(c)
+    p = create_parcel(c)
+    r = c.post(f"/api/v1/parcels/{p['id']}/crop-events", json={"crop_id": "maiz_grano", "status": "cosechado", "actual_harvest": "2027-02-10"})
+    assert r.status_code == 201 and r.json()["new_revision"]["profile"]["current_status"] == "cosechado"
+    r = c.post(f"/api/v1/parcels/{p['id']}/soil-observations", json={"sampled_on": "2027-01-20", "depth_cm": "0-30", "method": "extracto de saturación", "ece_ds_m": 2.1})
+    assert r.status_code == 201
+    soil = r.json()["new_revision"]["profile"]["soil"]
+    assert soil["ece_ds_m"] == 2.1 and soil["ph"] is None  # desconocido sigue desconocido, no cero
+    revs = c.get(f"/api/v1/parcels/{p['id']}/profile-revisions").json()["items"]
+    assert [x["number"] for x in revs] == [3, 2, 1]
+    assert revs[-1]["profile"]["current_status"] == "en_campo"  # el antecedente se conserva
+    events = c.get(f"/api/v1/parcels/{p['id']}/crop-events").json()["items"]
+    assert len(events) == 2
+
+
+def test_scenario_creates_new_run_and_keeps_previous(make_client):
+    c = make_client()
+    register(c)
+    p = create_parcel(c)
+    first = c.post(f"/api/v1/parcels/{p['id']}/recommendations", json={}).json()
+    assert first["result"]["climate_snapshot_id"].startswith("nasa-power-")
+    assert first["dataset_sha256"]
+    second = c.post(f"/api/v1/parcels/{p['id']}/recommendations", json={"scenario": {"allocation_m3": 6000}}).json()
+    assert second["id"] != first["id"]
+    assert set(second["statuses"].values()) == {"no_viable"}
+    assert second["scenario_label"].startswith("dotación 6,000")
+    again = c.get(f"/api/v1/recommendations/{first['id']}").json()
+    assert again["result"] == first["result"]  # el resultado anterior no se reescribe
+    assert c.get(f"/api/v1/recommendations/{first['id']}/reproduce").json() == {"same_versions": True, "identical": True}
+    third = c.post(f"/api/v1/parcels/{p['id']}/recommendations", json={"scenario": {"priority": "agua"}}).json()
+    assert third["result"]["ordering"]["ranked"][0] == "A"
+    assert len(c.get(f"/api/v1/parcels/{p['id']}/recommendations").json()["items"]) == 3
+
+
+def test_profile_change_flags_old_runs(make_client):
+    c = make_client()
+    register(c)
+    p = create_parcel(c)
+    run = c.post(f"/api/v1/parcels/{p['id']}/recommendations", json={}).json()
+    assert run["profile_changed"] is False
+    c.post(f"/api/v1/parcels/{p['id']}/profile-revisions", json={"profile": profile(priority="suelo"), "note": "cambio"})
+    assert c.get(f"/api/v1/recommendations/{run['id']}").json()["profile_changed"] is True
+
+
+def test_unknown_water_is_valid_result_not_error(make_client):
+    c = make_client()
+    register(c)
+    p = create_parcel(c, water={"mode": "no_se"})
+    r = c.post(f"/api/v1/parcels/{p['id']}/recommendations", json={})
+    assert r.status_code == 201
+    assert set(r.json()["statuses"].values()) == {"requiere_datos"}
+
+
+def test_public_demo_and_sources(make_client):
+    from ceres.infrastructure.seed import run_seed
+
+    c = make_client()
+    run_seed(c.container.settings)
+    demo = c.get("/api/v1/public/demo").json()
+    assert demo["parcel"]["is_public_demo"] is True
+    assert demo["run"]["result"]["strategies"]
+    src = c.get("/api/v1/sources/NASA-POWER").json()
+    assert src["kind"] == "observado" and src["fragments"]
+    ctx = c.get("/api/v1/public/context").json()
+    assert ctx["nasa"]["sha256"] and len(ctx["monthly_climatology"]) == 12
