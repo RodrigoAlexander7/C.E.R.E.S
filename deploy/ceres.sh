@@ -107,7 +107,21 @@ start_version() {
   dc up -d --remove-orphans db
   wait_healthy db 120
   dc up -d --remove-orphans api web caddy
+  reload_caddy_if_changed
   wait_healthy api 180 && wait_healthy web 120 && public_check "$tag"
+}
+
+# El Caddyfile se monta como archivo y Caddy (admin off) no recarga solo: si cambió, reiniciar.
+# Los certificados viven en el volumen ceres_caddy_data y se conservan.
+reload_caddy_if_changed() {
+  local new old
+  new=$(sha256sum "$ROOT/Caddyfile" | cut -d' ' -f1)
+  old=$(cat "$STATE/caddyfile.sha256" 2>/dev/null || true)
+  if [[ $new != "$old" ]]; then
+    log "Caddyfile cambió: reiniciando caddy"
+    dc restart caddy >/dev/null
+    echo "$new" > "$STATE/caddyfile.sha256"
+  fi
 }
 
 cmd_backup() {
