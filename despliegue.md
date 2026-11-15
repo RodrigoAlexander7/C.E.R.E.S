@@ -1,24 +1,100 @@
 # Despliegue de CERES en Azure
 
-Definición del 14 de noviembre de 2026. El usuario encargó el despliegue a este chat, utilizando el grupo existente y priorizando la cuota de estudiante. Este documento distingue preparación, aprovisionamiento y publicación de la aplicación.
+Actualizado el 15 de noviembre de 2026 (UTC). Este documento distingue infraestructura, publicación de la aplicación y validaciones. Todo lo marcado como comprobado se ejecutó de verdad contra `ceres-vm`; nada es simulado.
 
-## Estado y comprobaciones
+## Estado actual
 
-- Suscripción conectada: **Azure for Students**, habilitada; límite de gasto observado: **On**.
-- Grupo de destino: **`rodrygo-resource-group`**. No crear otro grupo ni borrar el existente: contiene otros proyectos.
-- Región candidata de los recursos nuevos: **`northcentralus`**. La ubicación del grupo es `eastus2`, lo que no obliga a que cada recurso esté en esa región.
-- Existe una VM de otro proyecto, `vm-inti-ley`, `Standard_B2as_v2`, observada como desasignada. No forma parte de CERES ni está autorizada su modificación.
-- SKU candidata: **`Standard_B2ats_v2`**, 2 vCPU, 1 GiB, x64; sin restricciones de suscripción listadas en la región consultada. `B1s` figura restringida allí.
-- Imagen comprobada: Canonical `ubuntu-24_04-lts:server:24.04.202610250`, x64, generación 2.
-- Plantilla y bootstrap preparados en `infra/azure/vm.arm.json` e `infra/azure/cloud-init.yaml`.
-- El usuario **autorizó consumir crédito estudiantil y permite una eventual migración a pago por uso**. Por ahora se mantiene `spendingLimit: On`; no ha sido necesario cambiar la oferta. La cobertura efectiva del beneficio gratuito y el saldo restante no se han confirmado; no se trataron los campos de costo no interpretables como saldo cero ni como gratuidad.
-- Validación de Azure: **Succeeded**. What-if: **Succeeded**, cinco recursos CERES explícitos previstos para creación y los recursos ajenos como `Ignore`, sin modificación/borrado. El disco del sistema se crea implícitamente con la VM.
-- Aprovisionamiento **`ceres-mvp`: Succeeded**. `ceres-vm` comprobada como **VM running**.
-- IPv4 asignada: **`64.236.243.209`**. FQDN: **`ceres-f7ctifta45nnk.northcentralus.cloudapp.azure.com`**. Son direcciones de la infraestructura; todavía no hay aplicación ni certificado publicados.
-- Reglas NSG comprobadas: solo `allow-http` 80 y `allow-https` 443 como reglas públicas nuevas; SSH no habilitado. Disco CERES etiquetado con proyecto/entorno.
-- Inicialización remota comprobada: **cloud-init `status: done`**, Docker **29.1.3**, Compose **2.40.3** y swap **2 GiB** activa. El sistema informa 887 MiB de memoria utilizable; el consumo del MVP debe medirse una vez desplegado.
-- Servicio Docker comprobado como **active** y API NASA POWER accesible desde la VM con **HTTP 200** en una consulta puntual de conectividad. No equivale a validar un paquete agronómico ni una descarga histórica completa.
-- **La aplicación no está publicada ni validada en esta VM.** Su publicación queda pendiente de los artefactos y verificaciones del desarrollo; aprovisionar la infraestructura no significa publicar un MVP funcional.
+**Aplicación publicada:** <https://ceres-f7ctifta45nnk.northcentralus.cloudapp.azure.com>
+
+| Elemento | Estado comprobado |
+|---|---|
+| Versión en servicio | `5687357637f27c0c29290ab1d8ea826b021aa4a6` (anterior registrada: `7e2efbf…`) |
+| HTTPS | Certificado Let's Encrypt (emisor YE2) para el FQDN, válido hasta el 12-feb-2027, renovación automática por Caddy. HTTP → HTTPS 308; HSTS. |
+| Puertos públicos | Solo 80/443. Desde Internet: 22, 3000, 5432 y 8000 **cerrados** (comprobado desde GitHub y desde fuera). |
+| Base de datos | PostgreSQL 16.15 en red interna Docker, volumen con nombre fijo `ceres_pgdata`; datos conservados entre 4 despliegues y un rollback. |
+| Datos | Seed aplicado: 23 fuentes, instantánea NASA `nasa-power-6182bcf32295` (SHA-256 `6182bcf3…`), caso demo. |
+| Asistente IA | **«IA no conectada»**: no hay `OPENAI_API_KEY`/`OPENAI_MODEL` configuradas (ver «Pendiente»). |
+| Memoria | Reposo: ~165 MiB entre los 4 contenedores; tras 200 peticiones concurrentes: api 115, web 48, caddy 23, db 21 MiB; 457 MiB disponibles de 887. Carga ligera: 200/200 OK, p50 0,76 s, p95 1,46 s (medido desde Perú). No es una prueba de capacidad; el chat con LLM y varios usuarios simultáneos no se han medido. |
+
+Infraestructura (creada antes por este chat, sin cambios en esta fase): suscripción **Azure for Students** con límite de gasto **On**; `rodrygo-resource-group`; `ceres-vm` `Standard_B2ats_v2` en `northcentralus`, Ubuntu 24.04, Docker 29.1.3, Compose 2.40.3, swap 2 GiB; IP `64.236.243.209`; NSG solo 80/443. `vm-inti-ley` y demás recursos de otros proyectos no se han tocado.
+
+## Arquitectura en la VM
+
+```text
+Internet ──443/80──▶ caddy (TLS, cabeceras) ──/api/*──▶ api (FastAPI, 1 worker) ──red interna──▶ db (PostgreSQL)
+                                          └──resto───▶ web (Next.js standalone)
+```
+
+- Archivos en `/opt/ceres`: `compose.yml`, `Caddyfile`, `ceres.sh`, `.env` (600, solo en el servidor), `state/`, `backups/`, `deployments.log`.
+- `.env` contiene `POSTGRES_PASSWORD` (generada en la VM con `openssl rand`, nunca salió de ella), `CERES_DOMAIN`, `CERES_REGISTRY` y, si se configuran, `OPENAI_API_KEY`/`OPENAI_MODEL`.
+- Límites: db 256 MiB, api 384 MiB, web 256 MiB, caddy 128 MiB; logs `json-file` 10 MiB × 3; PostgreSQL con `shared_buffers=48MB`, `max_connections=25`.
+- La red `internal` no tiene salida; la API también está en `egress` para llamar a NASA/SERFOR/OpenAI y recibir de Caddy.
+
+## CI/CD
+
+| Workflow | Disparo | Qué hace |
+|---|---|---|
+| [`.github/workflows/ci.yml`](.github/workflows/ci.yml) | Pull requests (y llamado por Deploy) | 65 pruebas pytest con PostgreSQL real + `alembic check`; `tsc` + build Next.js; E2E Playwright del recorrido de aceptación; en PR, build de ambas imágenes sin publicar. |
+| [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) | `push` a `main` (excepto cambios solo `.md`) y manual | CI → build `linux/amd64` en GitHub → `ghcr.io/rodrigoalexander7/ceres-{api,web}:<SHA>` → despliegue en `ceres-vm` → verificación pública HTTPS. Manual: `deploy` (opcional `tag`), `rollback`, `backup`, `verify-backup`, `restore`, `status`. |
+
+Flujo de despliegue en la VM (`deploy/ceres.sh deploy <sha>`): login temporal en GHCR → `pull` → arranca db → **respaldo previo** si hay esquema → `alembic upgrade head` → seed idempotente → arranca api/web/caddy → espera healthchecks Docker → comprueba `https://<dominio>/api/v1/health` con la **revisión esperada** y certificado válido → registra versión actual/anterior. Si falla, **rollback automático** a la versión anterior.
+
+### Seguridad del canal
+
+- **GitHub → Azure por OIDC**, sin secretos de larga duración: app `ceres-github-deploy` (appId `7d0b29be-df44-412f-a03d-520082e8c33a`), credencial federada solo para `repo:RodrigoAlexander7@213828389/C.E.R.E.S@1457934727:environment:production` (IDs inmutables). El entorno `production` de GitHub solo acepta la rama `main`.
+- **Permisos mínimos:** rol personalizado `CERES VM Run Command Operator` (`infra/azure/role-ceres-runcommand.json`): leer la VM y crear/leer/borrar Run Commands; **asignado solo sobre `ceres-vm`**. No puede tocar otros recursos del grupo.
+- **Sin SSH:** el despliegue usa Azure Run Command administrado. Los valores sensibles (`GITHUB_TOKEN` efímero del job para leer GHCR, `OPENAI_API_KEY`) viajan como **parámetros protegidos**, que Azure no devuelve al consultar el recurso; el Run Command se borra al terminar. Se comprobó que los logs de Actions no contienen tokens.
+- **Registro:** GHCR con el `GITHUB_TOKEN` del job (`packages:write` para publicar, `packages:read` para que la VM descargue). Las credenciales del registro se guardan en un `DOCKER_CONFIG` aislado y se borran tras el `pull`. Los paquetes son **públicos** porque heredan la visibilidad del repositorio público; contienen código y datos públicos, sin secretos. Si el repositorio pasa a privado, poner también los paquetes como privados: el despliegue ya descarga con token y seguirá funcionando.
+- Variables no secretas del entorno `production`: `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`, `AZURE_RESOURCE_GROUP`, `AZURE_VM_NAME`, `AZURE_LOCATION`, `CERES_DOMAIN`.
+- Las imágenes no contienen secretos; cookies `Secure` + `HttpOnly`, CSRF con comprobación de origen (verificado en producción: registro sin origen → 403).
+
+## Verificaciones realizadas (todas reales)
+
+| Fecha (UTC) | Run | Resultado |
+|---|---|---|
+| 15-nov 00:17 | Deploy `57ced9b` (primer despliegue) | Base vacía → migración → seed → healthy → HTTPS OK con certificado nuevo. El primer intento falló en OIDC (subject con IDs inmutables); se corrigió la credencial federada y se relanzó el job. |
+| 15-nov 00:24 | Deploy `7e2efbf` | Respaldo previo automático, migración (sin cambios), HTTPS OK. |
+| 15-nov 00:27 | `verify-backup` | **Falló**: el script no definía `CERES_TAG` fuera de deploy. Corregido en `5687357`. |
+| 15-nov 00:33 | Deploy `5687357` | OK, con respaldo previo. |
+| 15-nov 00:35 | `verify-backup` | Respaldo restaurado en base temporal: conteos idénticos a la base viva (users 1, parcels 1, revisions 1, runs 1, sources 23, messages 0). |
+| 15-nov 00:37 | `rollback` | `5687357` → `7e2efbf` en ~35 s, healthchecks y HTTPS OK con la revisión anterior. |
+| 15-nov 00:41 | `deploy` con `tag=5687357…` | Vuelta a la última versión sin reconstruir imágenes. |
+| 15-nov 00:43–00:45 | `backup` + `restore` (confirmado) | Restauración completa de la base viva desde `ceres-20261115T004255Z-manual.dump` (con respaldo `pre-restore` automático); API healthy y demo servida después. |
+| 15-nov 00:47 | Carga ligera + `status` | 200/200 OK; memoria registrada arriba. |
+
+No se crearon cuentas de usuario en producción: el login, el aislamiento y el recorrido completo se validan con la suite E2E en CI (PostgreSQL real) antes de cada despliegue.
+
+## Rollback y operación
+
+Desde GitHub → Actions → **Deploy** → *Run workflow* (rama `main`):
+
+- **Volver a la versión anterior:** `action = rollback`, `tag` vacío. Usa la versión registrada en `/opt/ceres/state/previous`.
+- **Ir a una versión concreta:** `action = rollback` (o `deploy`) con `tag = <SHA completo>` de una imagen publicada (ver los tags en GHCR o en `deployments.log`).
+- **Re-desplegar la última:** `action = deploy` con `tag = <SHA>`; sin `tag` construye y despliega el commit de `main`.
+
+Equivalente por CLI:
+
+```bash
+gh workflow run deploy.yml -R RodrigoAlexander7/C.E.R.E.S -f action=rollback
+```
+
+```bash
+gh workflow run deploy.yml -R RodrigoAlexander7/C.E.R.E.S -f action=deploy -f tag=5687357637f27c0c29290ab1d8ea826b021aa4a6
+```
+
+**Migraciones:** son solo hacia adelante. El rollback cambia imágenes sin revertir el esquema; funciona mientras las migraciones sean compatibles con la versión anterior (aditivas). Si una migración rompe la compatibilidad, restaurar el respaldo `pre-<sha>` que el despliegue crea automáticamente:
+
+```bash
+gh workflow run deploy.yml -R RodrigoAlexander7/C.E.R.E.S -f action=restore -f backup_file=<archivo.dump> -f confirm=RESTAURAR
+```
+
+`restore` detiene api/web, hace antes un respaldo `pre-restore`, ejecuta `pg_restore --clean` y vuelve a arrancar. `verify-backup` restaura el respaldo más reciente en una base temporal y compara conteos sin tocar la base viva. Se conservan los 14 respaldos más recientes en `/opt/ceres/backups`.
+
+## Pendiente (requiere al usuario)
+
+1. **Asistente IA real.** En GitHub → Settings → Environments → `production`: crear el *secret* `OPENAI_API_KEY` y la *variable* `OPENAI_MODEL` (un modelo al que tenga acceso esa clave). Luego ejecutar Deploy con `action = deploy` y el `tag` actual: el valor se escribe en `/opt/ceres/.env` como parámetro protegido. Verificar con la página de una parcela o con `action = status` (`llm_configured: true`). Las llamadas a OpenAI se facturan aparte; no las cubre el crédito Azure.
+2. **Copia de respaldos fuera de la VM.** Hoy los respaldos están solo en el disco de `ceres-vm`. No hay un destino externo autorizado (crear una cuenta de Storage tendría costo). Indicar un destino para automatizar la copia.
+3. **Revisión agronómica local** y medición de capacidad con usuarios reales (ver `data/catalog/REVISION.md`).
 
 ## Costos y límites
 
@@ -32,52 +108,18 @@ Precios minoristas de referencia consultados para `northcentralus`, USD, sin des
 | IPv4 pública Standard regional | US$0,005/h | US$3,65 por 730 h |
 | SSD Standard E4 LRS, 32 GiB | US$2,40/mes | Más medidores de operaciones y montaje cuando apliquen |
 
-IP y disco representan aproximadamente **US$6–7/mes**, más operaciones/tráfico. Si el cómputo no queda cubierto, el conjunto base se aproxima a **US$13–14/mes**, más esos conceptos. Son estimaciones, no cotización final ni límite automático. Fuente: consultas a [Azure Retail Prices API](https://prices.azure.com/api/retail/prices) filtradas por región, producto y SKU; [precios de IP](https://azure.microsoft.com/en-us/pricing/details/ip-addresses/).
+IP y disco representan aproximadamente **US$6–7/mes**, más operaciones/tráfico. Si el cómputo no queda cubierto, el conjunto base se aproxima a **US$13–14/mes**. Son estimaciones, no cotización final. Fuente: [Azure Retail Prices API](https://prices.azure.com/api/retail/prices); [precios de IP](https://azure.microsoft.com/en-us/pricing/details/ip-addresses/).
 
-El usuario permite pago por uso si fuera necesario. La configuración actual funciona con crédito estudiantil y conserva el límite de gasto; el agente de desarrollo no debe cambiar la suscripción por su cuenta. Una futura migración se coordinará desde el despliegue con su efecto de costo documentado. Azure indica que los consumos fuera de las cantidades gratuitas descuentan crédito y que agotarlo puede deshabilitar la suscripción, afectando también a otros proyectos. [Condiciones de estudiante y crédito](https://learn.microsoft.com/en-us/azure/cost-management-billing/manage/azurestudents-subscription-disabled).
+El CI/CD no añade costos Azure: GitHub Actions y GHCR para repositorios públicos no se facturan; Run Command, la app de Entra ID y el rol personalizado no tienen costo. No se creó registro de pago, Bastion, NAT Gateway, balanceador ni servicios administrados. Se mantiene `spendingLimit: On`; un consumo fuera de las cantidades gratuitas descuenta crédito y agotarlo puede deshabilitar la suscripción, afectando también a otros proyectos. [Condiciones de estudiante](https://learn.microsoft.com/en-us/azure/cost-management-billing/manage/azurestudents-subscription-disabled).
 
-No usar Spot para la demo principal ni habilitar por defecto Bastion, NAT Gateway, balanceador, registro de imágenes de pago, planes Defender o nuevos servicios administrados. Las llamadas a OpenAI son un servicio separado; no asumir que las cubre el crédito Azure.
+## Infraestructura y aprovisionamiento
 
-## Infraestructura prevista
+Despliegue incremental dentro del grupo existente (plantilla `infra/azure/vm.arm.json`, bootstrap `infra/azure/cloud-init.yaml`): `ceres-vm` con clave SSH pública y sin contraseña; `ceres-osdisk` SSD 32 GiB con `deleteOption: Detach`; `ceres-vnet`, `ceres-nsg`, `ceres-nic`, `ceres-pip` con etiqueta DNS. SSH cerrado por defecto; si hiciera falta, habilitarlo solo para un CIDR de administración verificado. Validación, what-if y aprovisionamiento `ceres-mvp` registrados como **Succeeded** antes de esta fase.
 
-Despliegue **incremental dentro del grupo existente**:
-
-- `ceres-vm`, Ubuntu y autenticación SSH por clave pública, sin contraseña.
-- `ceres-osdisk`, SSD Standard de 32 GiB; preservar datos al eliminar únicamente la VM mediante `deleteOption: Detach`.
-- `ceres-vnet`, subred propia y `ceres-nsg`.
-- `ceres-nic` y `ceres-pip`, IPv4 Standard regional con etiqueta DNS.
-- Entradas públicas: TCP 80/443. SSH cerrado por defecto; habilitarlo solo para un CIDR de administración verificado si se necesita. Administración inicial disponible mediante Azure Run Command.
-
-No publicar 3000, 8000 ni 5432 en Internet. La IP de la NIC proporciona salida para paquetes y APIs sin añadir un NAT Gateway. La plantilla no toca recursos existentes de otros proyectos y no incluye operaciones a nivel de creación de grupos.
-
-El bootstrap instala Docker/Compose, limita logs y configura 2 GiB de swap. Swap no aumenta la RAM real ni garantiza capacidad. Construir imágenes fuera de la VM, usar el LLM remoto y comprobar memoria/CPU con la demo completa. Si no cabe, documentar mediciones y revisar costo antes de ampliar.
-
-## Validación y aprovisionamiento
-
-1. Confirmar cuenta, grupo, cobertura/saldo y uso permitido de crédito. Revalidar cuota y disponibilidad al crear; las lecturas actuales no reservan capacidad.
-2. Validar JSON/YAML y ejecutar `az deployment group validate` con la plantilla y la clave **pública** de administración.
-3. Ejecutar `az deployment group what-if` en modo `Incremental`. Revisar que únicamente haya creaciones CERES previstas, sin cambios o borrados de recursos ajenos. What-if no calcula el costo ni confirma gratuidad.
-4. Crear el deployment de grupo solo dentro del alcance de costo acordado. Registrar IDs, estado y salidas; no repetir una creación a ciegas ante timeout.
-5. Comprobar VM, disco, red, salida, estado de cloud-init, Docker y memoria. Etiquetar también el disco creado implícitamente con `project=CERES`.
-6. Registrar resultado real en este documento. No confundir `validate` exitoso con recursos creados, ni VM creada con aplicación desplegada.
-
-Los parámetros son ubicación, prefijo, tamaño, usuario/clave pública, CIDR de administración opcional y cloud-init codificado. La clave privada no se lee para crear Azure y no se almacena en el repositorio. El cloud-init no contiene secretos de aplicación.
-
-## Contrato con el agente de desarrollo
-
-Entregar Dockerfiles de producción y Compose con Next.js, FastAPI, PostgreSQL y proxy HTTPS. Preparar el artefacto de Next.js fuera del VPS y limitar memoria/logs. Un worker API inicial; PostgreSQL ajustado al consumo de la demo. Los límites concretos se fijan después de medir, no por asumir que 1 GiB siempre alcanza.
-
-Transferir imágenes mediante un canal autorizado o registro ya aprobado; no publicar código/imágenes privadas en un registro público por conveniencia. Configurar credenciales en el servidor, fuera de git y de los datos de inicialización. No incluirlas en comandos que se registren ni en la imagen.
-
-El proxy servirá frontend y API bajo el mismo origen y terminará HTTPS; utilizar el FQDN asignado o un dominio del usuario si existe. Obtener y comprobar certificado antes de habilitar el login público. Migraciones y seed se ejecutan explícitamente; un redeploy no debe reiniciar o borrar el volumen PostgreSQL.
-
-Antes de publicar: respaldo comprobado, healthchecks, HTTPS/cookies/CSRF, aislamiento entre cuentas, NASA real y asistente IA con configuración efectiva. Mantener las claves del proveedor exclusivamente en backend. No afirmar una validación de campo por haber desplegado el software.
+Recursos añadidos en esta fase, todos limitados a CERES: app de Entra ID `ceres-github-deploy` + service principal, credencial federada, rol personalizado `CERES VM Run Command Operator` (ámbito asignable: el grupo; asignación: solo la VM) y el entorno `production` del repositorio con sus variables.
 
 ## Operación, datos y apagado
 
-- Registrar identificadores CERES, versión de imagen, migración, fuentes NASA y configuración no secreta de cada publicación.
-- Respaldo PostgreSQL y procedimiento de restauración comprobado antes de actualizaciones relevantes; copiar el respaldo fuera de la misma VM según un destino autorizado.
-- Medir consumo y crédito; evitar monitoreo de pago no solicitado. Un presupuesto/alerta no debe tratarse como un corte de gasto garantizado.
-- Para dejar de consumir cómputo, desasignar la VM desde Azure; apagar solo el sistema invitado no equivale a desasignarla.
-- Disco e IP pueden seguir costando con VM desasignada. El disco y NIC se preservan al eliminar la VM por separado; limpiar únicamente recursos CERES enumerados, después de respaldar datos y con autorización para la eliminación.
-- **Nunca eliminar `rodrygo-resource-group` para limpiar CERES**, porque aloja otros proyectos. No modificar ni detener sus servicios para obtener cuota.
+- Cada publicación queda en `/opt/ceres/deployments.log` (versión, anterior, rollback) y en el historial de GitHub Actions.
+- Para dejar de consumir cómputo, **desasignar** la VM desde Azure; apagar solo el sistema invitado no equivale a desasignarla. Disco e IP siguen costando con la VM desasignada.
+- **Nunca eliminar `rodrygo-resource-group` para limpiar CERES**: aloja otros proyectos. Para retirar CERES, respaldar datos y borrar solo los recursos CERES enumerados, la app `ceres-github-deploy` y el rol personalizado.
