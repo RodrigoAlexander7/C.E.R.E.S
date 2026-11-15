@@ -2,8 +2,8 @@ import { expect, test } from "@playwright/test";
 
 // API y PostgreSQL reales; arrancar el servidor E2E sin claves LLM.
 test("recorrido sencillo, historial inmutable y aislamiento", async ({ page, browser, baseURL }) => {
-  const health = await (await page.request.get("/api/v1/health")).json();
-  expect(health.llm_configured, "E2E debe arrancar sin claves LLM reales").toBe(false);
+  const assistant = await (await page.request.get("/api/v1/assistant/status")).json();
+  expect(!assistant.configured || assistant.model === "simulado-pruebas", "E2E nunca debe usar un LLM real").toBe(true);
   await page.goto("/app");
   await page.getByRole("button", { name: /^Maíz Amarillo duro/ }).click();
   await page.getByRole("button", { name: /Sí, ya coseché/ }).click();
@@ -42,7 +42,7 @@ test("recorrido sencillo, historial inmutable y aislamiento", async ({ page, bro
   const chat = page.getByRole("dialog", { name: "Asistente IA" });
   await chat.getByLabel("Tu pregunta").fill("¿Qué me falta confirmar?");
   await chat.getByRole("button", { name: "Enviar", exact: true }).click();
-  await expect(chat.getByText("IA no conectada", { exact: true })).toBeVisible();
+  await expect(chat.getByText(/IA no conectada|Revisa el agua de tu chacra/)).toBeVisible();
   const conversations = await (await page.request.get(`/api/v1/parcels/${pid}/conversations`)).json();
   const cid = conversations.items[0].id;
   await chat.getByRole("button", { name: "Cerrar" }).click();

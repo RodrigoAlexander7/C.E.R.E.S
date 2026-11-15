@@ -75,7 +75,7 @@ El registro `data/zonas/registro.json` incluye Majes I y Valle de Chilina, cada 
 cd apps/api && uv run pytest
 ```
 
-88 pruebas (incluye supuestos de zona, niveles sencillos, preguntas decisivas y comparación pública sin guardar): ET0 contra el ejemplo 18 de FAO-56, lluvia efectiva FAO, calendario/horizonte/bisiestos, unidades mm→m³, margen por ciclos, restricciones de agua/salinidad/presupuesto, estados, reproducibilidad; integración con PostgreSQL real (dos cuentas aisladas, sesión revocada/expirada, CSRF/origen, historial, runs inmutables); asistente con proveedor **simulado** (citas inventadas, cifras sin respaldo, inyección en fichas, contexto ajeno). Las pruebas automáticas nunca llaman al proveedor real; la conexión real se valida aparte con los dos comandos anteriores.
+101 pruebas: ET0 contra el ejemplo 18 de FAO-56, lluvia efectiva FAO, calendario/horizonte/bisiestos, unidades mm→m³, margen por ciclos, restricciones, zonas y reproducción; integración con PostgreSQL real (propietarios aislados, sesiones, CSRF, historial, runs, HLS y cuaderno); propuestas confirmadas y asistente con proveedor **simulado** (citas inventadas, cifras sin respaldo, inyección y contexto ajeno). Incluyen área desconocida, exclusión de datos simulados de la economía propia y registro fuera de los pilotos sin tomar su clima ni catálogo. Las pruebas automáticas nunca llaman al proveedor real; la conexión real se valida aparte.
 
 E2E del recorrido de aceptación y de la landing (con API y web en marcha):
 
@@ -83,10 +83,23 @@ E2E del recorrido de aceptación y de la landing (con API y web en marcha):
 cd apps/web && npx playwright test
 ```
 
+## Cuaderno, agenda y Ceres
+
+- `/app/cuaderno`: campañas, ventas, gastos y ganancia declarada; revisiones y agenda de labores con fechas. Los gastos incompletos permanecen desconocidos. Tus datos sustituyen los ejemplos del motor al crear otro run.
+- `/app/ceres`: conversación con memoria autorizada del cuaderno. Propone altas y correcciones; la tarjeta «¿Guardo esto?» requiere confirmación. Puede pedir una simulación al motor y guarda un resultado nuevo.
+- Texto y grabación de voz (máximo 2 minutos / 4 MB), sin guardar audio. Voz de salida del navegador. Micrófono y notificaciones son opcionales.
+- `/app/chacra` y `/demo`: NDVI HLS real, mensual, con escena, nubes y píxeles válidos. Dibujar el contorno permite actualizar la serie propia. El seed carga demos reales cacheadas; no descarga satélite al desplegar.
+
+Las cuentas privadas pueden registrar su historia y agenda fuera de los pilotos; las recomendaciones requieren catálogo y clima locales. Cada registro distingue `declarado` de `simulado_demo`. Estos últimos se muestran como ejemplos y no alimentan la economía propia del motor. `scripts/cargar_demo_privada.py` carga un caso idempotente desde archivos locales en `demo-private/`, excluidos de Git, del índice y del contexto Docker; nunca imprime coordenadas ni contraseñas.
+
+Actualizar HLS fuera de peticiones web: `uv run python -m ceres.cli ndvi --parcel ID --start 2025-06-01 --end 2025-08-31`. Memoria máxima medida en local: 185 MiB; la lectura queda acotada por ventana y caché. Hay que medir de nuevo bajo concurrencia antes de ampliar el uso.
+
+E2E completo: arrancar la API explícitamente con `uv run uvicorn tests.e2e_app:app --host 127.0.0.1 --port 8000` y sin claves LLM. Este servidor usa `FakeLanguageModel` y nunca se importa en producción. Luego `npx playwright test` (6 recorridos, incluido R20). La validación real se ejecuta aparte con `uv run python scripts/validar_ceres_real.py`. [Guion de demo de 30 segundos](DEMO.md).
+
 ## Estado de las validaciones del plan
 
 | Validación | Estado |
 |---|---|
 | Datos NASA reales para Majes | **Hecho**: POWER diario 2015–2025, 4 018 días, 0 ausentes, SHA-256 en `data/zonas/majes/*.meta.json`. Celda a 835 m (la pampa está a ~1 400 m): limitación documentada. |
 | Parámetros agronómicos y calendarios | **Revisión documental hecha** (Kc, etapas, salinidad, ET0). Calendarios, umbrales térmicos y economía siguen como supuestos/sin verificar: ver `data/zonas/majes/REVISION.md`. |
-| Credenciales del asistente IA | **Hecho en local (15-nov-2026)** con Gemini `gemini-4-hydrogen`: `check-llm` conectado y 4/4 preguntas reales de la demo (incluida una inyección) aceptadas por la validación de cifras y fuentes. En producción depende de cargar `GEMINI_API_KEY`/`GEMINI_MODEL` en GitHub (ver `despliegue.md`). |
+| Credenciales del asistente IA | **Conectadas en producción y verificadas aparte en local.** El 15-nov, `check-llm` respondió; la última ejecución del asistente clásico validó 3/4 preguntas (una falló por 504). `validar_ceres_real.py`, con respaldo configurado, completó extracción, confirmación, memoria y simulación con cifras/citas validadas. Las comprobaciones históricas están en `despliegue.md`. |

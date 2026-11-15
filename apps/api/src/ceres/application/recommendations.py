@@ -7,7 +7,7 @@ from datetime import date
 from typing import Protocol
 
 from ceres.domain.catalog import Catalog
-from ceres.domain.engine import ClimateInput, evaluate
+from ceres.domain.engine import ENGINE_VERSION, ClimateInput, evaluate
 from ceres.domain.model import (
     ComparisonResult,
     EconomicOverride,
@@ -184,8 +184,15 @@ def frozen_inputs(
     }
 
 
-def evaluate_frozen(inputs: dict, zone: ZoneLike) -> ComparisonResult:
+def evaluate_frozen(inputs: dict, zone: ZoneLike | None) -> ComparisonResult:
     """Reproduce un resultado desde sus entradas congeladas con el catálogo y el clima de SU zona."""
+    if not inputs["in_pilot_zone"] or zone is None:
+        reference = date.fromisoformat(inputs["reference_date"])
+        return ComparisonResult(engine_version=ENGINE_VERSION, catalog_version="sin_catalogo_local",
+            climate_snapshot_id=None, priority=inputs["profile"].get("priority", "equilibrada"),
+            horizon_start=reference, horizon_end=reference, strategies=[], ordering={"ranked": []}, associations=[],
+            notes=["Cuaderno, agenda y NDVI disponibles. El calendario agronómico requiere fichas y clima locales."],
+            blocking=["La parcela está fuera de las zonas piloto. Faltan fichas locales para recomendar."])
     profile = inputs.get("effective_profile", inputs["profile"])
     p = parcel_input(
         profile, inputs["area_ha"], inputs["in_pilot_zone"], date.fromisoformat(inputs["reference_date"]),

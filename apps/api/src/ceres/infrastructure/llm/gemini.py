@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 import time
 
-from ceres.application.ports import ANSWER_SCHEMA, LlmRequest, LlmResult
+from ceres.application.ports import ANSWER_SCHEMA, LlmRequest, LlmResult, provider_schema
 from ceres.config import Settings
 
 
@@ -23,7 +23,7 @@ class GeminiModel:
 
             self._client = genai.Client(
                 api_key=settings.gemini_api_key,
-                http_options=types.HttpOptions(timeout=int(settings.llm_timeout_seconds * 1000)),
+                http_options=types.HttpOptions(timeout=int(settings.llm_timeout_seconds * 1000), retry_options=types.HttpRetryOptions(attempts=1)),
             )
 
     @property
@@ -46,12 +46,14 @@ class GeminiModel:
             role = "model" if h["role"] == "assistant" else "user"
             contents.append(types.Content(role=role, parts=[types.Part(text=h["content"])]))
         contents.append(types.Content(role="user", parts=[types.Part(text=request.question)]))
+        if request.audio:
+            contents.append(types.Content(role="user", parts=[types.Part.from_bytes(data=request.audio, mime_type=request.audio_mime or "audio/webm")]))
         if request.feedback:
             contents.append(types.Content(role="user", parts=[types.Part(text="[Control de la aplicación] " + request.feedback)]))
         config = types.GenerateContentConfig(
             system_instruction=request.system,
             response_mime_type="application/json",
-            response_json_schema=ANSWER_SCHEMA,
+            response_json_schema=provider_schema(request.schema) if request.schema else ANSWER_SCHEMA,
             temperature=0.2,
             max_output_tokens=4096,
             thinking_config=(

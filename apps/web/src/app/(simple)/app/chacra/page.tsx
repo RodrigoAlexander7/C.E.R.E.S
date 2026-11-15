@@ -7,6 +7,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSession } from "@/components/SessionProvider";
+import { Ndvi } from "@/components/simple/ndvi";
 import s from "@/components/simple/simple.module.css";
 import { ApiError, api, fmtNumber } from "@/lib/api";
 import type { Geometry, Parcel } from "@/lib/types";
@@ -89,9 +90,10 @@ export default function Chacra() {
       <div className={s.moduleHead}>
         <p className={s.stepKicker}>Mi chacra</p>
         <h1 id="chacra-t" className={`${s.q} ${s.display}`}>{active ? active.name || "Mi chacra" : "Tu terreno"}</h1>
-        <p>{user ? "Tus parcelas guardadas. Dibujarla en el mapa es opcional: sirve para medir el área y, pronto, para ver su verdor desde el satélite." : "Comprueba si tu terreno está en una zona piloto y cuánto mide. Para guardarlo, ingresa."}</p>
+        <p>{user ? "Tus parcelas guardadas. Dibujarla en el mapa es opcional: sirve para medir el área y consultar su verdor desde el satélite." : "Comprueba si tu terreno está en una zona piloto y cuánto mide. Para guardarlo, ingresa."}</p>
       </div>
 
+      <Ndvi key={active?.id ?? zone?.id} parcelId={active?.id} zone={zone?.id} />
       {msg && <div className={s.panel} role="status"><p className={s.panelText}>{msg}</p></div>}
       {err && <div className={s.error} role="alert">{err}</div>}
 
@@ -105,7 +107,7 @@ export default function Chacra() {
       {active && (
         <div className={s.card}>
           <div className={s.facts}>
-            <div className={s.fact}><strong>{fmtNumber(active.area_ha, active.area_ha % 1 ? 2 : 0)} ha</strong><span>{active.area_origin === "geodesica" ? "medida del dibujo" : "área que indicaste"}</span></div>
+            <div className={s.fact}><strong>{fmtNumber(active.area_ha, active.area_ha % 1 ? 2 : 0)} ha</strong><span>{active.area_origin === "geodesica" ? "medida del dibujo" : active.area_origin === "supuesto_demo" ? "área de ejemplo, por confirmar" : "área que indicaste"}</span></div>
             <div className={s.fact}><strong>{zone?.name ?? "—"}</strong><span>{active.in_pilot_zone ? "zona piloto" : "fuera de zona piloto"}</span></div>
             <div className={s.fact}><strong>{active.region_codes?.district_name ?? "—"}</strong><span>distrito</span></div>
           </div>

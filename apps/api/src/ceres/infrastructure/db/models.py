@@ -220,3 +220,63 @@ class Message(Base):
     payload: Mapped[dict] = mapped_column(JSONType, default=dict)  # fuentes, métricas, faltantes, estado del proveedor
     provider_status: Mapped[str | None] = mapped_column(String(40), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class NdviObservation(Base):
+    __tablename__ = "ndvi_observations"
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    owner_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    parcel_id: Mapped[str] = mapped_column(ForeignKey("parcels.id"), index=True)
+    scene_id: Mapped[str] = mapped_column(String(100))
+    observed_on: Mapped[date] = mapped_column(Date)
+    data: Mapped[dict] = mapped_column(JSONType)
+    geometry_hash: Mapped[str] = mapped_column(String(64))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class NdviJob(Base):
+    __tablename__ = "ndvi_jobs"
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    owner_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    parcel_id: Mapped[str] = mapped_column(ForeignKey("parcels.id"), index=True)
+    status: Mapped[str] = mapped_column(String(20), default="pendiente")
+    detail: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class FieldRecord(Base):
+    """Registro tipado del cuaderno: campaña, venta, costo, ganancia o agenda."""
+    __tablename__ = "field_records"
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    owner_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    parcel_id: Mapped[str] = mapped_column(ForeignKey("parcels.id"), index=True)
+    kind: Mapped[str] = mapped_column(String(20))
+    data: Mapped[dict] = mapped_column(JSONType)
+    revision: Mapped[int] = mapped_column(Integer, default=1)
+    origin: Mapped[str] = mapped_column(String(40), default="declarado")
+    message_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class FieldRevision(Base):
+    __tablename__ = "field_revisions"
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    record_id: Mapped[str] = mapped_column(ForeignKey("field_records.id"), index=True)
+    owner_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    revision: Mapped[int] = mapped_column(Integer)
+    data: Mapped[dict] = mapped_column(JSONType)
+    origin: Mapped[str] = mapped_column(String(40))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class RecordProposal(Base):
+    __tablename__ = "record_proposals"
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    owner_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    parcel_id: Mapped[str] = mapped_column(ForeignKey("parcels.id"), index=True)
+    data: Mapped[dict] = mapped_column(JSONType)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    status: Mapped[str] = mapped_column(String(20), default="pendiente")
+    result_ids: Mapped[list] = mapped_column(JSONType, default=list)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

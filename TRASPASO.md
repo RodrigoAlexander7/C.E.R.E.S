@@ -2,6 +2,22 @@
 
 Este documento es para el agente que continúe. Explica qué se hizo, qué falta, qué decidió el usuario y qué se recomienda.
 
+## Cierre de implementación de incrementos 11–14 (15-nov-2026)
+
+Este apartado sustituye los pendientes funcionales históricos que siguen debajo. La revisión desplegada y el workflow vigente se registran en `despliegue.md` después de comprobar su resultado.
+
+- HLS real con lectura COG acotada, Fmask, calidad, hash, persistencia privada y trabajos en segundo plano. Demos reales cacheadas de Majes y Chilina en `data/hls/`; no se consulta satélite al desplegar. Medición local máxima: 185 MiB.
+- Cuaderno y agenda: campañas/variedades, ventas, costos, ganancia declarada, labores pendiente/hecho, revisiones y aislamiento. Esquema SQL unificado `field_records`/`field_revisions` con unión de tipos validada, en vez de cuatro tablas físicas; decisión en diseño §9. Migraciones aditivas aplicadas y `alembic check` sin diferencias.
+- Los datos reales declarados alimentan el motor y se congelan. Área desconocida sigue `null`; registros `simulado_demo` quedan fuera de la economía propia. Fuera de pilotos funcionan cuaderno/agenda/HLS, pero el run queda bloqueado y sin clima ni catálogo prestados.
+- Texto/audio → propuesta tipada editable → confirmación atómica e idempotente. TTL/rechazo, control de revisiones y rollback. No se guarda audio ni transcripción. Gemini usa contrato plano de transporte; Pydantic valida después el tipo estricto.
+- Ceres recuerda el cuaderno autorizado, propone altas/correcciones con confirmación, consulta registros y crea runs vía `simular_escenario`; cifras/citas verificadas por `application/assistant.py`. Voz de salida con el navegador.
+- 101 pruebas API/PostgreSQL y 6 E2E pasan. El servidor E2E es `tests.e2e_app:app`, con LLM simulado; no usar el servidor real para automatización. Build de producción y revisión móvil/escritorio realizados.
+- Comprobaciones reales separadas: `check-llm` conectado; última ejecución clásica 3/4 preguntas válidas, una con 504. `scripts/validar_ceres_real.py` completó extracción, confirmación, memoria y simulación con Gemini y respaldo. No presentar mocks como conexión real ni afirmar que se probó audio humano real.
+- Índice codebase-memory `ceres` actualizado en modo full: 10 151 nodos y 16 036 relaciones, sin errores de análisis registrados. `demo-private/`, secretos y archivos generados excluidos.
+- El usuario confirmó la corrección del punto anómalo y autorizó guardar las coordenadas **solo en la cuenta privada**. Los archivos de entrada y acceso están en `demo-private/`, ignorados por Git/Docker/índice y con permisos restringidos. No copiar sus valores a documentos públicos. Cargador genérico: `apps/api/scripts/cargar_demo_privada.py`.
+- Caso privado: 16 registros por lote, hechos declarados de 2025 separados de continuaciones simuladas hasta noviembre de 2026. No se comprobó cosecha real. Huayro tiene contorno cruzado pendiente de revisión, sin polígono forzado; su área provisional está etiquetada. Salamanca conserva polígono válido. Ubicación fuera de los pilotos: no crear otra zona con supuestos copiados.
+- Guion de 30 segundos y variante privada en `DEMO.md`. Permanecen externas la revisión agronómica y las sesiones con agricultores/lector de pantalla, marcadas abiertas en tareas.
+
 ## Continuación comprobada con Codex (15-nov-2026)
 
 Este apartado actualiza el estado histórico que sigue debajo.

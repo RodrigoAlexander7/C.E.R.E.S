@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Comparison } from "@/components/Comparison";
+import { Ndvi } from "@/components/simple/ndvi";
 import { ApiError, api, fmtDateTime, fmtNumber } from "@/lib/api";
 import type { Parcel, Run } from "@/lib/types";
 import { useZones } from "@/lib/zones";
@@ -47,6 +48,7 @@ export default function Demo() {
               Para comparar tu propia chacra, <Link href="/app">responde 3 preguntas</Link>.
             </p>
           </div>
+          <Ndvi key={zone.id} zone={zone.id} />
           {data.run?.result ? <Comparison result={data.run.result} /> : <div className="card">Sin comparación cargada.</div>}
         </>
       )}

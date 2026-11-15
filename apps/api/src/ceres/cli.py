@@ -80,6 +80,11 @@ def cmd_check_llm(args: argparse.Namespace) -> int:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="ceres")
     sub = parser.add_subparsers(dest="cmd", required=True)
+    nd = sub.add_parser("ndvi")
+    nd.add_argument("--parcel", required=True)
+    nd.add_argument("--start", default="2025-01-01")
+    nd.add_argument("--end", default="2025-12-31")
+    nd.set_defaults(func=cmd_ndvi)
     p = sub.add_parser("fetch-nasa")
     p.add_argument("--start", default="2015-01-01")
     p.add_argument("--end", default="2025-12-31")
@@ -91,6 +96,27 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("check-llm").set_defaults(func=cmd_check_llm)
     args = parser.parse_args(argv)
     return args.func(args)
+
+
+def cmd_ndvi(args):
+    from ceres.bootstrap import build_container
+    from ceres.infrastructure.db import models as m
+    from ceres.presentation.ndvi import refresh
+    c = build_container()
+    with c.sessions() as db:
+        p = db.get(m.Parcel, args.parcel)
+        if not p or not p.geometry:
+            print("La parcela necesita un contorno")
+            return 1
+        job = m.NdviJob(owner_id=p.owner_id, parcel_id=p.id)
+        db.add(job)
+        db.commit()
+        jid, geom = job.id, p.geometry
+    refresh(c, jid, geom, date.fromisoformat(args.start), date.fromisoformat(args.end))
+    with c.sessions() as db:
+        j = db.get(m.NdviJob, jid)
+        print(json.dumps({"status": j.status, "detail": j.detail}))
+        return 0 if j.status == "completo" else 1
 
 
 if __name__ == "__main__":

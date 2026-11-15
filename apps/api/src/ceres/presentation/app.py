@@ -402,7 +402,7 @@ def create_parcel(body: ParcelCreate, repo: ParcelRepo = Depends(parcel_repo), a
         if body.area_ha is not None and abs(body.area_ha - area) / area > 0.2:
             raise ApiError(422, "area_inconsistente", "El área declarada difiere mucho de la del polígono dibujado")
     elif body.point is not None and body.area_ha is not None:
-        point, area, origin = body.point.model_dump(), body.area_ha, "declarada"
+        point, area, origin = body.point.model_dump(), body.area_ha, body.area_origin
     else:
         raise ApiError(422, "terreno_incompleto", "Dibuja el terreno o indica su ubicación y área. Un punto GPS no delimita la parcela.")
     district = c.regions.locate_point(point["lat"], point["lon"])
@@ -422,9 +422,9 @@ def create_parcel(body: ParcelCreate, repo: ParcelRepo = Depends(parcel_repo), a
             region_codes=region_codes, in_pilot_zone=in_pilot, zone_id=zone.id if zone else None,
         )
     )
-    repo.add_revision(parcel, profile, "Perfil inicial")
+    repo.add_revision(parcel, profile, "Perfil inicial" + (" (simulado para demo)" if profile.get("data_origin") == "supuesto_demo" else ""))
     repo.add_event(
-        m.CropEvent(parcel_id=parcel.id, crop_id=profile["current_crop_id"], status=profile["current_status"], expected_harvest=body.profile.expected_harvest, origin="declarado")
+        m.CropEvent(parcel_id=parcel.id, crop_id=profile["current_crop_id"], status=profile["current_status"], expected_harvest=body.profile.expected_harvest, origin=profile.get("data_origin", "declarado"))
     )
     db.merge(auth.user).active_parcel_id = parcel.id
     return ser.parcel(parcel, True)
@@ -576,8 +576,10 @@ def add_management(parcel_id: str, body: ManagementCreate, repo: ParcelRepo = De
 
 
 def own_economics(repo: ParcelRepo, p: m.Parcel, zone: ZoneRuntime) -> list[dict]:
-    """Rendimientos, precios y costos propios del cuaderno de campo (se completa en el incremento 12)."""
-    return []
+    """Rendimientos, precios y costos reales declarados del cuaderno de campo."""
+    from ceres.infrastructure.db.notebook import records
+    from ceres.domain.notebook import economics
+    return economics(records(repo.db, repo.owner_id, p.id), zone.catalog.crops)
 
 
 def create_run(c: Container, repo: ParcelRepo, p: m.Parcel, scenario: dict | None) -> m.RecommendationRun:
@@ -585,8 +587,8 @@ def create_run(c: Container, repo: ParcelRepo, p: m.Parcel, scenario: dict | Non
     if rev is None:
         raise ApiError(409, "perfil_incompleto", "Completa el perfil de la parcela antes de comparar")
     profile, label = apply_scenario(rev.data, scenario)
-    zone = c.zone(p.zone_id) or c.zones.default  # fuera de zona: el motor bloquea y lo explica
-    inputs = frozen_inputs(profile, p.area_ha, p.in_pilot_zone, _today(c), zone, own_economics(repo, p, zone))
+    zone = c.zone(p.zone_id) if p.zone_id else None
+    inputs = frozen_inputs(profile, p.area_ha, p.in_pilot_zone, _today(c), zone, own_economics(repo, p, zone) if zone else [])
     try:
         result = evaluate_frozen(inputs, zone)
     except InvalidInput as exc:
@@ -600,7 +602,7 @@ def create_run(c: Container, repo: ParcelRepo, p: m.Parcel, scenario: dict | Non
         engine_version=result.engine_version,
         catalog_version=result.catalog_version,
         dataset_snapshot_id=result.climate_snapshot_id,
-        dataset_sha256=zone.snapshot.sha256 if (zone.snapshot and result.climate_snapshot_id) else None,
+        dataset_sha256=zone.snapshot.sha256 if (zone and zone.snapshot and result.climate_snapshot_id) else None,
         result=data,
     )
     run.assessments = [m.StrategyAssessmentRow(strategy_id=s["strategy_id"], status=s["status"], rank=s["rank"], data=s) for s in data["strategies"]]
@@ -634,8 +636,8 @@ def reproduce_run(run_id: str, repo: ParcelRepo = Depends(parcel_repo), c: Conta
     r = repo.run(run_id)
     if r is None:
         raise not_found()
-    zone = c.zone(r.inputs.get("zone_id")) or c.zones.default
-    same_versions = r.catalog_version == zone.catalog.version and r.dataset_snapshot_id == zone.climate.snapshot_id and r.engine_version == ENGINE_VERSION
+    zone = c.zone(r.inputs["zone_id"]) if r.inputs.get("zone_id") else None
+    same_versions = (r.catalog_version == zone.catalog.version and r.dataset_snapshot_id == zone.climate.snapshot_id if zone else r.catalog_version == "sin_catalogo_local" and r.dataset_snapshot_id is None) and r.engine_version == ENGINE_VERSION
     again = evaluate_frozen(r.inputs, zone).to_dict()
     return {"same_versions": same_versions, "identical": again == r.result}
 
@@ -749,4 +751,12 @@ def create_app(c: Container | None = None) -> FastAPI:
 
     app.include_router(public)
     app.include_router(private)
+    from ceres.presentation.ndvi import router as ndvi_router
+    app.include_router(ndvi_router)
+    from ceres.presentation.notebook import router as notebook_router
+    app.include_router(notebook_router)
+    from ceres.presentation.proposals import router as proposals_router
+    app.include_router(proposals_router)
+    from ceres.presentation.ceres import router as ceres_router
+    app.include_router(ceres_router)
     return app

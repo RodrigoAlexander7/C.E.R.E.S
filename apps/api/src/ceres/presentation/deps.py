@@ -11,16 +11,12 @@ from fastapi import Depends, Request
 from sqlalchemy.orm import Session as DbSession
 
 from ceres.bootstrap import Container
+from ceres.application.errors import ApiError
 from ceres.infrastructure.db import models as m
 from ceres.infrastructure.db.repositories import ParcelRepo, SessionRepo, UserRepo
 from ceres.infrastructure.security import token_hash
 
 SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
-
-
-class ApiError(Exception):
-    def __init__(self, status: int, code: str, message: str) -> None:
-        self.status, self.code, self.message = status, code, message
 
 
 def not_found() -> ApiError:

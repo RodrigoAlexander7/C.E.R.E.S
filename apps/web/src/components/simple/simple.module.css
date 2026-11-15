@@ -222,8 +222,8 @@
 .shell:has(.modBottom) .fab { bottom: calc(76px + env(safe-area-inset-bottom)); }
 @media (min-width: 760px) {
   .modBottom { display: none; }
-  .modTop { display: flex; gap: 4px; margin-left: 18px; }
-  .modTopLink { color: var(--s-ink-2); text-decoration: none; font-weight: 700; font-size: 0.92rem; padding: 10px 12px; border-radius: 999px; }
+  .modTop { display: flex; gap: 2px; margin-left: 8px; min-width: 0; }
+  .modTopLink { color: var(--s-ink-2); text-decoration: none; font-weight: 700; font-size: 0.84rem; padding: 10px 8px; border-radius: 999px; white-space: nowrap; }
   .modTopLink[aria-current="page"] { background: var(--s-sage); color: var(--s-forest); }
   .shell:has(.modBottom) .main { padding-bottom: calc(110px + env(safe-area-inset-bottom)); }
   .shell:has(.modBottom) .fab { bottom: calc(18px + env(safe-area-inset-bottom)); }

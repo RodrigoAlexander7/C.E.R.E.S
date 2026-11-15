@@ -59,6 +59,7 @@ class EconomicOverrideData(Strict):
 
 
 class ProfileData(Strict):
+    data_origin: Literal["declarado", "supuesto_demo"] = "declarado"
     current_crop_id: str = Field(pattern=CROP_ID)
     current_status: Literal["en_campo", "cosechado"]
     expected_harvest: date | None = None
@@ -79,6 +80,7 @@ class PointData(Strict):
 
 
 class ParcelCreate(Strict):
+    area_origin: Literal["declarada", "supuesto_demo"] = "declarada"
     name: str | None = Field(None, max_length=120)
     geometry: dict | None = None
     point: PointData | None = None

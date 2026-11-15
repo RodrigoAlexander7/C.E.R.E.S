@@ -199,7 +199,7 @@ export interface Parcel {
   geometry: Geometry | null;
   point: { lat: number; lon: number } | null;
   area_ha: number;
-  area_origin: "geodesica" | "declarada";
+  area_origin: "geodesica" | "declarada" | "supuesto_demo";
   region_codes: { district_code?: string; district_name?: string; provider?: string; source_update?: string; note?: string };
   in_pilot_zone: boolean;
   zone_id?: string | null;

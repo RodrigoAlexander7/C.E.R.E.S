@@ -47,7 +47,7 @@ Estado al 14 de noviembre de 2026: **MVP implementado**, con las excepciones mar
 - [x] Chat vinculado a parcela y run; aviso cuando el perfil cambió. **R03, R09**.
 - [x] Validación de citas/métricas/cifras contra el contexto; fuentes renderizadas desde el registro; chat de solo lectura. **R09**.
 - [x] Pruebas con proveedor simulado: explicación, menos agua, suelo desconocido, cita inventada, cifra sin respaldo, contexto ajeno e inyección en fichas. **R02, R09**.
-- [ ] **Pendiente**: verificar preguntas reales con credenciales. Faltan `OPENAI_API_KEY` y `OPENAI_MODEL` (ver `despliegue.md`). Los mocks solo comprueban el contrato.
+- [x] Verificar preguntas reales con credenciales Gemini, separado de las pruebas automáticas. (`check-llm` conectado; última ejecución clásica 3/4 válidas y un 504; extracción, confirmación, memoria y simulación reales completadas con respaldo. Ver `despliegue.md`.)
 
 ## Incremento 5 — integración y presentación
 
@@ -101,18 +101,18 @@ Estado real de la publicación: ver `despliegue.md`.
 
 ## Incremento 11 — Fase 4: NDVI de la parcela
 
-- [ ] Acceso HLS (Earthdata o catálogo público) comprobado; serie NDVI con nubes enmascaradas para la parcela demo. **R19**.
+- [x] Acceso HLS público comprobado; NDVI real por parcela con Fmask, procedencia y calidad; demos cacheadas de ambas zonas. **R19**. (`data/hls/demo_ndvi.json`, pruebas de máscara/aislamiento/seed; memoria máxima local medida 185 MiB; interfaz en Mi chacra y demo.)
 
 ## Incremento 12 — Fase 5: cuaderno de campo
 
-- [ ] Modelo, migraciones y API de campañas, ventas, costos y ganancia declarada; aislamiento por propietario. **R17**.
-- [ ] El motor usa datos propios cuando existen y lo indica en la procedencia. **R17**.
-- [ ] Vista `/app/cuaderno` con resúmenes por campaña y mes. **R17**.
+- [x] Modelo tipado, migraciones y API de campañas, ventas, costos, ganancia declarada y agenda; historial de revisiones y aislamiento por propietario. **R17**. (`field_records`/`field_revisions`, unión discriminada estricta; `test_notebook.py`.)
+- [x] El motor usa datos propios y los congela con procedencia CUADERNO; gastos incompletos permanecen desconocidos. **R17**. (Integración de campaña, precio ponderado, rendimiento y costo completo; run nuevo.)
+- [x] `/app/cuaderno`: resúmenes por campaña/mes, comparación con el mismo mes anterior, revisiones y agenda pendiente/hecho. **R17**. (E2E R20 y revisión visual 375/800 px.)
 
 ## Incremento 13 — Fase 6: registro por chat y voz
 
-- [ ] `ProposeRecords` (texto/audio) con esquema estricto, tarjeta «¿Guardo esto?» y confirmación obligatoria. **R17**.
-- [ ] Revisión mensual determinista y notificaciones opcionales del navegador. **R17**.
+- [x] `ProposeRecords` (texto/audio), esquema compatible con proveedor y validación estricta backend, tarjeta editable «¿Guardo esto?», alta/corrección con confirmación atómica e idempotente, TTL/rechazo. **R17**. (Pruebas de texto/audio simulado, límites, aislamiento, rollback y revisión; extracción y confirmación con Gemini real por separado.)
+- [x] Agenda y revisión mensual determinista; avisos opcionales y desactivables al abrir la app. **R17**. (Campaña sin cosecha, venta sin precio/cantidad, gastos incompletos o mes sin gastos; dominio e interfaz.)
 
 ## Incremento 15 — Segundo piloto: Valle de Chilina (Arequipa ciudad)
 
@@ -124,5 +124,5 @@ Estado real de la publicación: ver `despliegue.md`.
 
 ## Incremento 14 — Fases 7–8: asistente Ceres, pruebas y demo
 
-- [ ] Ceres con memoria del cuaderno, herramienta `simular_escenario`, voz de entrada/salida. **R18**.
+- [x] Ceres con memoria autorizada, propuestas confirmadas, `consultar_cuaderno`, `simular_escenario` y voz de entrada/salida. **R18**. (101 pytest + 6 E2E; Gemini real: recuerdo de venta y nuevo run con 1000 m³/mes aceptados por validador.)
 - [ ] E2E del recorrido R20, despliegue y guion de demo de 30 segundos.

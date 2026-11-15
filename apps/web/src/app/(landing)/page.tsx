@@ -409,10 +409,10 @@ export default function Landing() {
                 { icon: I.scale, bg: "#d9e8f2", fg: "#2f6f9f", t: "Evidencia y fuentes", d: "Cada cifra enlaza a su fuente: NASA, FAO, SERFOR/INEI o tu propio dato.", live: true },
                 { icon: I.spark, bg: "#f3e6c8", fg: "#8a5a00", t: "Asistente IA con citas", d: "Explica en lenguaje sencillo; una respuesta con cifras sin respaldo se rechaza.", live: true },
                 { icon: I.map, bg: "#ece3d0", fg: "#3d4b40", t: "Cuándo sembrar", d: "Agua y riesgo de helada o calor según el mes de siembra, con años El Niño comparados (NOAA).", live: true },
-                { icon: I.book, bg: "#dfe9d6", fg: "#1f4d2b", t: "Cuaderno de campo", d: "Campañas, ventas, costos y ganancias: tus números reemplazan los supuestos.", live: false },
-                { icon: I.mic, bg: "#f8ddd6", fg: "#9b2f1f", t: "Registro por voz", d: "Manda un audio: «vendí 40 toneladas a un sol diez». CERES propone y tú confirmas.", live: false },
-                { icon: I.chat, bg: "#ebe4f6", fg: "#5d4189", t: "Conversa con Ceres", d: "Un asistente que recuerda tus campañas y simula escenarios contigo.", live: false },
-                { icon: I.sat, bg: "#d9e8f2", fg: "#2f6f9f", t: "Tu chacra desde el satélite", d: "Índice de vegetación mensual (HLS de NASA, 30 m) de tu lote.", live: false },
+                { icon: I.book, bg: "#dfe9d6", fg: "#1f4d2b", t: "Cuaderno de campo", d: "Campañas, ventas, costos y ganancias, con agenda de labores e historial revisable.", live: true },
+                { icon: I.mic, bg: "#f8ddd6", fg: "#9b2f1f", t: "Registro por voz", d: "Manda un audio: «vendí 40 toneladas a un sol diez». CERES propone y tú confirmas.", live: true },
+                { icon: I.chat, bg: "#ebe4f6", fg: "#5d4189", t: "Conversa con Ceres", d: "Un asistente que recuerda tus campañas y simula escenarios contigo.", live: true },
+                { icon: I.sat, bg: "#d9e8f2", fg: "#2f6f9f", t: "Tu chacra desde el satélite", d: "Índice de vegetación mensual (HLS de NASA, 30 m) de tu lote.", live: true },
                 { icon: I.cards, bg: "#f3e6c8", fg: "#8a5a00", t: "Modo sencillo", d: "Tres preguntas, opciones en palabras simples, «¿Por qué?» en capas y ayuda junto a cada término.", live: true },
               ].map((f) => (
                 <article key={f.t} className={s.feature}>
@@ -433,7 +433,7 @@ export default function Landing() {
           <div className={s.container}>
             <div ref={r6} className={`${s.ceres} ${c6}`}>
               <div>
-                <p className={s.kicker}>Próximamente · Ceres</p>
+                <p className={s.kicker}>Disponible · Ceres</p>
                 <h2 className={`${s.display} ${s.h2}`}>Un asistente que te pregunta, te escucha y recuerda.</h2>
                 <p className={s.sub}>Cada mes, Ceres te pregunta lo que falta en tu cuaderno. Respondes con un audio y él lo convierte en registros que tú confirmas. Luego conversa contigo sobre qué sembrar, recordando tus campañas anteriores.</p>
                 <ul className={s.ceresList}>

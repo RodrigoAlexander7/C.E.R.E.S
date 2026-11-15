@@ -24,8 +24,8 @@ test("landing con datos NASA reales, móvil sin scroll horizontal", async ({ pag
   await page.getByRole("group", { name: "Mes de siembra" }).getByRole("button", { name: "Ene", exact: true }).click();
   await expect(total).not.toHaveText(before ?? "");
 
-  // Lo próximo está marcado como tal.
-  await expect(page.getByText("Próximamente").first()).toBeVisible();
+  // Las funciones implementadas aparecen disponibles.
+  await expect(page.getByText("Disponible", { exact: true }).first()).toBeVisible();
 
   await page.getByRole("link", { name: /Ver el caso de Majes/ }).first().click();
   await expect(page).toHaveURL(/\/demo\?zona=majes$/);

@@ -22,12 +22,16 @@ const ICONS: Record<string, string> = {
   sembrar: "M12 21V9m0 3c-3.5 0-5.5-2.2-5.5-5.5C10 6.5 12 8.7 12 12Zm0 3c3.5 0 5.5-2.2 5.5-5.5C14 9.5 12 11.7 12 15Z",
   cuando: "M7 3v3m10-3v3M4 9h16M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm4 9 2 2 4-4",
   chacra: "M3 7l6-3 6 3 6-3v13l-6 3-6-3-6 3V7Zm6-3v13m6-10v13",
+  cuaderno: "M5 3h14v18H5V3Zm4 4h6m-6 4h6m-6 4h4",
+  ceres: "M4 4h16v12H9l-5 4V4Zm4 5h8m-8 3h5",
 };
 
 const MODULES = [
   { href: "/app", label: "Qué sembrar", icon: "sembrar" },
   { href: "/app/cuando", label: "Cuándo sembrar", icon: "cuando" },
   { href: "/app/chacra", label: "Mi chacra", icon: "chacra" },
+  { href: "/app/cuaderno", label: "Cuaderno", icon: "cuaderno" },
+  { href: "/app/ceres", label: "Ceres", icon: "ceres" },
 ];
 
 export default function SimpleLayout({ children }: { children: React.ReactNode }) {

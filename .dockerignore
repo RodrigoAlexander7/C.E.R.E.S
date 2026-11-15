@@ -12,6 +12,7 @@ apps/web/public/maplibre
 .env
 .env.*
 backups
+demo-private
 reports
 research_notes
 *.md

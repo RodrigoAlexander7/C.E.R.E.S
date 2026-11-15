@@ -1,0 +1,352 @@
+{
+  "fetched_at": "2026-11-15T14:44:31.748494+00:00",
+  "method": "HLSv2-NDVI-Fmask-1.0",
+  "zones": {
+    "majes": {
+      "geometry_hash": "6eb6bc3cdbc59b3282313f3d16e1fe7708f8e175c62638f138cda07b3856650b",
+      "observations": [
+        {
+          "ndvi": 0.0754,
+          "note": "Mediana de píxeles válidos; excluye nube, adyacencia, sombra, nieve, agua y aerosol alto. No diagnostica nutrientes ni causas.",
+          "assets": [
+            "https://hls2euwest.blob.core.windows.net/hls2/S30/18/K/YG/2025/06/24/HLS.S30.T18KYG.2025175T145741.v2.0/HLS.S30.T18KYG.2025175T145741.v2.0.B04.tif",
+            "https://hls2euwest.blob.core.windows.net/hls2/S30/18/K/YG/2025/06/24/HLS.S30.T18KYG.2025175T145741.v2.0/HLS.S30.T18KYG.2025175T145741.v2.0.B8A.tif",
+            "https://hls2euwest.blob.core.windows.net/hls2/S30/18/K/YG/2025/06/24/HLS.S30.T18KYG.2025175T145741.v2.0/HLS.S30.T18KYG.2025175T145741.v2.0.Fmask.tif"
+          ],
+          "method": "HLSv2-NDVI-Fmask-1.0",
+          "source": "NASA HLS v2, redistribuido por Microsoft Planetary Computer",
+          "scene_id": "HLS.S30.T18KYG.2025175T145741.v2.0",
+          "cloud_pct": 3.0,
+          "valid_pct": 100.0,
+          "collection": "hls2-s30",
+          "source_url": "https://planetarycomputer.microsoft.com/api/stac/v1/collections/hls2-s30/items/HLS.S30.T18KYG.2025175T145741.v2.0",
+          "observed_on": "2025-06-24",
+          "resolution_m": 30,
+          "valid_pixels": 62,
+          "parcel_pixels": 62,
+          "sample_sha256": "256014c4aa2f6e4f9d6364ff162844ddb02b2cb999bb6e76953f471777ecfbb4"
+        },
+        {
+          "ndvi": 0.074,
+          "note": "Mediana de píxeles válidos; excluye nube, adyacencia, sombra, nieve, agua y aerosol alto. No diagnostica nutrientes ni causas.",
+          "assets": [
+            "https://hls2euwest.blob.core.windows.net/hls2/S30/18/K/ZG/2025/06/02/HLS.S30.T18KZG.2025153T145751.v2.0/HLS.S30.T18KZG.2025153T145751.v2.0.B04.tif",
+            "https://hls2euwest.blob.core.windows.net/hls2/S30/18/K/ZG/2025/06/02/HLS.S30.T18KZG.2025153T145751.v2.0/HLS.S30.T18KZG.2025153T145751.v2.0.B8A.tif",
+            "https://hls2euwest.blob.core.windows.net/hls2/S30/18/K/ZG/2025/06/02/HLS.S30.T18KZG.2025153T145751.v2.0/HLS.S30.T18KZG.2025153T145751.v2.0.Fmask.tif"
+          ],
+          "method": "HLSv2-NDVI-Fmask-1.0",
+          "source": "NASA HLS v2, redistribuido por Microsoft Planetary Computer",
+          "scene_id": "HLS.S30.T18KZG.2025153T145751.v2.0",
+          "cloud_pct": 7.0,
+          "valid_pct": 83.9,
+          "collection": "hls2-s30",
+          "source_url": "https://planetarycomputer.microsoft.com/api/stac/v1/collections/hls2-s30/items/HLS.S30.T18KZG.2025153T145751.v2.0",
+          "observed_on": "2025-06-02",
+          "resolution_m": 30,
+          "valid_pixels": 52,
+          "parcel_pixels": 62,
+          "sample_sha256": "9d67658346d09fd6ab430f4a0c06ba6b0d4834b7213d19805f1b51314c249980"
+        },
+        {
+          "ndvi": 0.0648,
+          "note": "Mediana de píxeles válidos; excluye nube, adyacencia, sombra, nieve, agua y aerosol alto. No diagnostica nutrientes ni causas.",
+          "assets": [
+            "https://hls2euwest.blob.core.windows.net/hls2/L30/18/K/ZG/2025/07/22/HLS.L30.T18KZG.2025203T145327.v2.0/HLS.L30.T18KZG.2025203T145327.v2.0.B04.tif",
+            "https://hls2euwest.blob.core.windows.net/hls2/L30/18/K/ZG/2025/07/22/HLS.L30.T18KZG.2025203T145327.v2.0/HLS.L30.T18KZG.2025203T145327.v2.0.B05.tif",
+            "https://hls2euwest.blob.core.windows.net/hls2/L30/18/K/ZG/2025/07/22/HLS.L30.T18KZG.2025203T145327.v2.0/HLS.L30.T18KZG.2025203T145327.v2.0.Fmask.tif"
+          ],
+          "method": "HLSv2-NDVI-Fmask-1.0",
+          "source": "NASA HLS v2, redistribuido por Microsoft Planetary Computer",
+          "scene_id": "HLS.L30.T18KZG.2025203T145327.v2.0",
+          "cloud_pct": 4.0,
+          "valid_pct": 96.8,
+          "collection": "hls2-l30",
+          "source_url": "https://planetarycomputer.microsoft.com/api/stac/v1/collections/hls2-l30/items/HLS.L30.T18KZG.2025203T145327.v2.0",
+          "observed_on": "2025-07-22",
+          "resolution_m": 30,
+          "valid_pixels": 60,
+          "parcel_pixels": 62,
+          "sample_sha256": "20a01e0cd1287fb9979d829ffd0c67113d991f2c9e2da6279fe522872cfa5b6a"
+        },
+        {
+          "ndvi": 0.0723,
+          "note": "Mediana de píxeles válidos; excluye nube, adyacencia, sombra, nieve, agua y aerosol alto. No diagnostica nutrientes ni causas.",
+          "assets": [
+            "https://hls2euwest.blob.core.windows.net/hls2/S30/18/K/ZG/2025/07/22/HLS.S30.T18KZG.2025203T145751.v2.0/HLS.S30.T18KZG.2025203T145751.v2.0.B04.tif",
+            "https://hls2euwest.blob.core.windows.net/hls2/S30/18/K/ZG/2025/07/22/HLS.S30.T18KZG.2025203T145751.v2.0/HLS.S30.T18KZG.2025203T145751.v2.0.B8A.tif",
+            "https://hls2euwest.blob.core.windows.net/hls2/S30/18/K/ZG/2025/07/22/HLS.S30.T18KZG.2025203T145751.v2.0/HLS.S30.T18KZG.2025203T145751.v2.0.Fmask.tif"
+          ],
+          "method": "HLSv2-NDVI-Fmask-1.0",
+          "source": "NASA HLS v2, redistribuido por Microsoft Planetary Computer",
+          "scene_id": "HLS.S30.T18KZG.2025203T145751.v2.0",
+          "cloud_pct": 5.0,
+          "valid_pct": 91.9,
+          "collection": "hls2-s30",
+          "source_url": "https://planetarycomputer.microsoft.com/api/stac/v1/collections/hls2-s30/items/HLS.S30.T18KZG.2025203T145751.v2.0",
+          "observed_on": "2025-07-22",
+          "resolution_m": 30,
+          "valid_pixels": 57,
+          "parcel_pixels": 62,
+          "sample_sha256": "86587838cebfa94466e4eef69961b6ad8253fc2308ed7b1c48a9d5fd32062a13"
+        },
+        {
+          "ndvi": 0.0605,
+          "note": "Mediana de píxeles válidos; excluye nube, adyacencia, sombra, nieve, agua y aerosol alto. No diagnostica nutrientes ni causas.",
+          "assets": [
+            "https://hls2euwest.blob.core.windows.net/hls2/L30/18/K/ZG/2025/08/15/HLS.L30.T18KZG.2025227T145339.v2.0/HLS.L30.T18KZG.2025227T145339.v2.0.B04.tif",
+            "https://hls2euwest.blob.core.windows.net/hls2/L30/18/K/ZG/2025/08/15/HLS.L30.T18KZG.2025227T145339.v2.0/HLS.L30.T18KZG.2025227T145339.v2.0.B05.tif",
+            "https://hls2euwest.blob.core.windows.net/hls2/L30/18/K/ZG/2025/08/15/HLS.L30.T18KZG.2025227T145339.v2.0/HLS.L30.T18KZG.2025227T145339.v2.0.Fmask.tif"
+          ],
+          "method": "HLSv2-NDVI-Fmask-1.0",
+          "source": "NASA HLS v2, redistribuido por Microsoft Planetary Computer",
+          "scene_id": "HLS.L30.T18KZG.2025227T145339.v2.0",
+          "cloud_pct": 2.0,
+          "valid_pct": 90.3,
+          "collection": "hls2-l30",
+          "source_url": "https://planetarycomputer.microsoft.com/api/stac/v1/collections/hls2-l30/items/HLS.L30.T18KZG.2025227T145339.v2.0",
+          "observed_on": "2025-08-15",
+          "resolution_m": 30,
+          "valid_pixels": 56,
+          "parcel_pixels": 62,
+          "sample_sha256": "b653d8368a8249bfef7c311f0452d75e747a92f48ab7860feab5d647d6e11ccb"
+        },
+        {
+          "ndvi": 0.0728,
+          "note": "Mediana de píxeles válidos; excluye nube, adyacencia, sombra, nieve, agua y aerosol alto. No diagnostica nutrientes ni causas.",
+          "assets": [
+            "https://hls2euwest.blob.core.windows.net/hls2/S30/18/K/ZG/2025/08/13/HLS.S30.T18KZG.2025225T145941.v2.0/HLS.S30.T18KZG.2025225T145941.v2.0.B04.tif",
+            "https://hls2euwest.blob.core.windows.net/hls2/S30/18/K/ZG/2025/08/13/HLS.S30.T18KZG.2025225T145941.v2.0/HLS.S30.T18KZG.2025225T145941.v2.0.B8A.tif",
+            "https://hls2euwest.blob.core.windows.net/hls2/S30/18/K/ZG/2025/08/13/HLS.S30.T18KZG.2025225T145941.v2.0/HLS.S30.T18KZG.2025225T145941.v2.0.Fmask.tif"
+          ],
+          "method": "HLSv2-NDVI-Fmask-1.0",
+          "source": "NASA HLS v2, redistribuido por Microsoft Planetary Computer",
+          "scene_id": "HLS.S30.T18KZG.2025225T145941.v2.0",
+          "cloud_pct": 8.0,
+          "valid_pct": 98.4,
+          "collection": "hls2-s30",
+          "source_url": "https://planetarycomputer.microsoft.com/api/stac/v1/collections/hls2-s30/items/HLS.S30.T18KZG.2025225T145941.v2.0",
+          "observed_on": "2025-08-13",
+          "resolution_m": 30,
+          "valid_pixels": 61,
+          "parcel_pixels": 62,
+          "sample_sha256": "2c054719fd56057ac27d565b8f75abcf8cb49b1d3d665c08b637a753a3a7b2f0"
+        },
+        {
+          "ndvi": 0.0731,
+          "note": "Mediana de píxeles válidos; excluye nube, adyacencia, sombra, nieve, agua y aerosol alto. No diagnostica nutrientes ni causas.",
+          "assets": [
+            "https://hls2euwest.blob.core.windows.net/hls2/S30/18/K/ZG/2025/09/20/HLS.S30.T18KZG.2025263T145741.v2.0/HLS.S30.T18KZG.2025263T145741.v2.0.B04.tif",
+            "https://hls2euwest.blob.core.windows.net/hls2/S30/18/K/ZG/2025/09/20/HLS.S30.T18KZG.2025263T145741.v2.0/HLS.S30.T18KZG.2025263T145741.v2.0.B8A.tif",
+            "https://hls2euwest.blob.core.windows.net/hls2/S30/18/K/ZG/2025/09/20/HLS.S30.T18KZG.2025263T145741.v2.0/HLS.S30.T18KZG.2025263T145741.v2.0.Fmask.tif"
+          ],
+          "method": "HLSv2-NDVI-Fmask-1.0",
+          "source": "NASA HLS v2, redistribuido por Microsoft Planetary Computer",
+          "scene_id": "HLS.S30.T18KZG.2025263T145741.v2.0",
+          "cloud_pct": 7.0,
+          "valid_pct": 93.5,
+          "collection": "hls2-s30",
+          "source_url": "https://planetarycomputer.microsoft.com/api/stac/v1/collections/hls2-s30/items/HLS.S30.T18KZG.2025263T145741.v2.0",
+          "observed_on": "2025-09-20",
+          "resolution_m": 30,
+          "valid_pixels": 58,
+          "parcel_pixels": 62,
+          "sample_sha256": "f8d922c82d9de3c77c621872cd80b01eda377b62df3223b15d529174ce26ccc3"
+        },
+        {
+          "ndvi": 0.0763,
+          "note": "Mediana de píxeles válidos; excluye nube, adyacencia, sombra, nieve, agua y aerosol alto. No diagnostica nutrientes ni causas.",
+          "assets": [
+            "https://hls2euwest.blob.core.windows.net/hls2/S30/18/K/ZG/2025/09/10/HLS.S30.T18KZG.2025253T145741.v2.0/HLS.S30.T18KZG.2025253T145741.v2.0.B04.tif",
+            "https://hls2euwest.blob.core.windows.net/hls2/S30/18/K/ZG/2025/09/10/HLS.S30.T18KZG.2025253T145741.v2.0/HLS.S30.T18KZG.2025253T145741.v2.0.B8A.tif",
+            "https://hls2euwest.blob.core.windows.net/hls2/S30/18/K/ZG/2025/09/10/HLS.S30.T18KZG.2025253T145741.v2.0/HLS.S30.T18KZG.2025253T145741.v2.0.Fmask.tif"
+          ],
+          "method": "HLSv2-NDVI-Fmask-1.0",
+          "source": "NASA HLS v2, redistribuido por Microsoft Planetary Computer",
+          "scene_id": "HLS.S30.T18KZG.2025253T145741.v2.0",
+          "cloud_pct": 10.0,
+          "valid_pct": 93.5,
+          "collection": "hls2-s30",
+          "source_url": "https://planetarycomputer.microsoft.com/api/stac/v1/collections/hls2-s30/items/HLS.S30.T18KZG.2025253T145741.v2.0",
+          "observed_on": "2025-09-10",
+          "resolution_m": 30,
+          "valid_pixels": 58,
+          "parcel_pixels": 62,
+          "sample_sha256": "6dc06478840bce7d0021ead01541df9d04917a36e57937e01248a4187cae19f1"
+        },
+        {
+          "ndvi": 0.0773,
+          "note": "Mediana de píxeles válidos; excluye nube, adyacencia, sombra, nieve, agua y aerosol alto. No diagnostica nutrientes ni causas.",
+          "assets": [
+            "https://hls2euwest.blob.core.windows.net/hls2/S30/18/K/YG/2025/10/22/HLS.S30.T18KYG.2025295T145741.v2.0/HLS.S30.T18KYG.2025295T145741.v2.0.B04.tif",
+            "https://hls2euwest.blob.core.windows.net/hls2/S30/18/K/YG/2025/10/22/HLS.S30.T18KYG.2025295T145741.v2.0/HLS.S30.T18KYG.2025295T145741.v2.0.B8A.tif",
+            "https://hls2euwest.blob.core.windows.net/hls2/S30/18/K/YG/2025/10/22/HLS.S30.T18KYG.2025295T145741.v2.0/HLS.S30.T18KYG.2025295T145741.v2.0.Fmask.tif"
+          ],
+          "method": "HLSv2-NDVI-Fmask-1.0",
+          "source": "NASA HLS v2, redistribuido por Microsoft Planetary Computer",
+          "scene_id": "HLS.S30.T18KYG.2025295T145741.v2.0",
+          "cloud_pct": 3.0,
+          "valid_pct": 100.0,
+          "collection": "hls2-s30",
+          "source_url": "https://planetarycomputer.microsoft.com/api/stac/v1/collections/hls2-s30/items/HLS.S30.T18KYG.2025295T145741.v2.0",
+          "observed_on": "2025-10-22",
+          "resolution_m": 30,
+          "valid_pixels": 62,
+          "parcel_pixels": 62,
+          "sample_sha256": "55b1341da413afa1b388119ca47c76cec481c758b12206ae886b8f8e57c4a95c"
+        },
+        {
+          "ndvi": 0.0758,
+          "note": "Mediana de píxeles válidos; excluye nube, adyacencia, sombra, nieve, agua y aerosol alto. No diagnostica nutrientes ni causas.",
+          "assets": [
+            "https://hls2euwest.blob.core.windows.net/hls2/S30/18/K/ZG/2025/10/22/HLS.S30.T18KZG.2025295T145741.v2.0/HLS.S30.T18KZG.2025295T145741.v2.0.B04.tif",
+            "https://hls2euwest.blob.core.windows.net/hls2/S30/18/K/ZG/2025/10/22/HLS.S30.T18KZG.2025295T145741.v2.0/HLS.S30.T18KZG.2025295T145741.v2.0.B8A.tif",
+            "https://hls2euwest.blob.core.windows.net/hls2/S30/18/K/ZG/2025/10/22/HLS.S30.T18KZG.2025295T145741.v2.0/HLS.S30.T18KZG.2025295T145741.v2.0.Fmask.tif"
+          ],
+          "method": "HLSv2-NDVI-Fmask-1.0",
+          "source": "NASA HLS v2, redistribuido por Microsoft Planetary Computer",
+          "scene_id": "HLS.S30.T18KZG.2025295T145741.v2.0",
+          "cloud_pct": 4.0,
+          "valid_pct": 95.2,
+          "collection": "hls2-s30",
+          "source_url": "https://planetarycomputer.microsoft.com/api/stac/v1/collections/hls2-s30/items/HLS.S30.T18KZG.2025295T145741.v2.0",
+          "observed_on": "2025-10-22",
+          "resolution_m": 30,
+          "valid_pixels": 59,
+          "parcel_pixels": 62,
+          "sample_sha256": "68849a13211fb609462e79cd177296d281fb4bfc9555092fc0c4a609aa2293c6"
+        }
+      ]
+    },
+    "chilina": {
+      "geometry_hash": "5be0f500302a8efdb31db83707e9d95d9edfe33ee0efcc3d9f4ae4fff3307529",
+      "observations": [
+        {
+          "ndvi": 0.0958,
+          "note": "Mediana de píxeles válidos; excluye nube, adyacencia, sombra, nieve, agua y aerosol alto. No diagnostica nutrientes ni causas.",
+          "assets": [
+            "https://hls2euwest.blob.core.windows.net/hls2/S30/18/K/ZG/2025/06/02/HLS.S30.T18KZG.2025153T145751.v2.0/HLS.S30.T18KZG.2025153T145751.v2.0.B04.tif",
+            "https://hls2euwest.blob.core.windows.net/hls2/S30/18/K/ZG/2025/06/02/HLS.S30.T18KZG.2025153T145751.v2.0/HLS.S30.T18KZG.2025153T145751.v2.0.B8A.tif",
+            "https://hls2euwest.blob.core.windows.net/hls2/S30/18/K/ZG/2025/06/02/HLS.S30.T18KZG.2025153T145751.v2.0/HLS.S30.T18KZG.2025153T145751.v2.0.Fmask.tif"
+          ],
+          "method": "HLSv2-NDVI-Fmask-1.0",
+          "source": "NASA HLS v2, redistribuido por Microsoft Planetary Computer",
+          "scene_id": "HLS.S30.T18KZG.2025153T145751.v2.0",
+          "cloud_pct": 7.0,
+          "valid_pct": 100.0,
+          "collection": "hls2-s30",
+          "source_url": "https://planetarycomputer.microsoft.com/api/stac/v1/collections/hls2-s30/items/HLS.S30.T18KZG.2025153T145751.v2.0",
+          "observed_on": "2025-06-02",
+          "resolution_m": 30,
+          "valid_pixels": 12,
+          "parcel_pixels": 12,
+          "sample_sha256": "7886217ff6467683bc68f2eba208cc9482d50c70bab5b03f922e4c3c7e24d3d9"
+        },
+        {
+          "ndvi": 0.0907,
+          "note": "Mediana de píxeles válidos; excluye nube, adyacencia, sombra, nieve, agua y aerosol alto. No diagnostica nutrientes ni causas.",
+          "assets": [
+            "https://hls2euwest.blob.core.windows.net/hls2/S30/18/K/ZG/2025/06/24/HLS.S30.T18KZG.2025175T145741.v2.0/HLS.S30.T18KZG.2025175T145741.v2.0.B04.tif",
+            "https://hls2euwest.blob.core.windows.net/hls2/S30/18/K/ZG/2025/06/24/HLS.S30.T18KZG.2025175T145741.v2.0/HLS.S30.T18KZG.2025175T145741.v2.0.B8A.tif",
+            "https://hls2euwest.blob.core.windows.net/hls2/S30/18/K/ZG/2025/06/24/HLS.S30.T18KZG.2025175T145741.v2.0/HLS.S30.T18KZG.2025175T145741.v2.0.Fmask.tif"
+          ],
+          "method": "HLSv2-NDVI-Fmask-1.0",
+          "source": "NASA HLS v2, redistribuido por Microsoft Planetary Computer",
+          "scene_id": "HLS.S30.T18KZG.2025175T145741.v2.0",
+          "cloud_pct": 7.0,
+          "valid_pct": 100.0,
+          "collection": "hls2-s30",
+          "source_url": "https://planetarycomputer.microsoft.com/api/stac/v1/collections/hls2-s30/items/HLS.S30.T18KZG.2025175T145741.v2.0",
+          "observed_on": "2025-06-24",
+          "resolution_m": 30,
+          "valid_pixels": 12,
+          "parcel_pixels": 12,
+          "sample_sha256": "ff0e1f88a96f8bca6cf13173f7f7de892f52fbef76cf6cac81a5115d6f62ff06"
+        },
+        {
+          "ndvi": 0.0935,
+          "note": "Mediana de píxeles válidos; excluye nube, adyacencia, sombra, nieve, agua y aerosol alto. No diagnostica nutrientes ni causas.",
+          "assets": [
+            "https://hls2euwest.blob.core.windows.net/hls2/L30/19/K/BB/2025/07/23/HLS.L30.T19KBB.2025204T144718.v2.0/HLS.L30.T19KBB.2025204T144718.v2.0.B04.tif",
+            "https://hls2euwest.blob.core.windows.net/hls2/L30/19/K/BB/2025/07/23/HLS.L30.T19KBB.2025204T144718.v2.0/HLS.L30.T19KBB.2025204T144718.v2.0.B05.tif",
+            "https://hls2euwest.blob.core.windows.net/hls2/L30/19/K/BB/2025/07/23/HLS.L30.T19KBB.2025204T144718.v2.0/HLS.L30.T19KBB.2025204T144718.v2.0.Fmask.tif"
+          ],
+          "method": "HLSv2-NDVI-Fmask-1.0",
+          "source": "NASA HLS v2, redistribuido por Microsoft Planetary Computer",
+          "scene_id": "HLS.L30.T19KBB.2025204T144718.v2.0",
+          "cloud_pct": 5.0,
+          "valid_pct": 11.1,
+          "collection": "hls2-l30",
+          "source_url": "https://planetarycomputer.microsoft.com/api/stac/v1/collections/hls2-l30/items/HLS.L30.T19KBB.2025204T144718.v2.0",
+          "observed_on": "2025-07-23",
+          "resolution_m": 30,
+          "valid_pixels": 1,
+          "parcel_pixels": 9,
+          "sample_sha256": "f718cf6e52e23ab8e38aa702c034c3f5352ac37b0b624c12a42d0102049dba02"
+        },
+        {
+          "ndvi": 0.083,
+          "note": "Mediana de píxeles válidos; excluye nube, adyacencia, sombra, nieve, agua y aerosol alto. No diagnostica nutrientes ni causas.",
+          "assets": [
+            "https://hls2euwest.blob.core.windows.net/hls2/S30/18/K/ZG/2025/07/22/HLS.S30.T18KZG.2025203T145751.v2.0/HLS.S30.T18KZG.2025203T145751.v2.0.B04.tif",
+            "https://hls2euwest.blob.core.windows.net/hls2/S30/18/K/ZG/2025/07/22/HLS.S30.T18KZG.2025203T145751.v2.0/HLS.S30.T18KZG.2025203T145751.v2.0.B8A.tif",
+            "https://hls2euwest.blob.core.windows.net/hls2/S30/18/K/ZG/2025/07/22/HLS.S30.T18KZG.2025203T145751.v2.0/HLS.S30.T18KZG.2025203T145751.v2.0.Fmask.tif"
+          ],
+          "method": "HLSv2-NDVI-Fmask-1.0",
+          "source": "NASA HLS v2, redistribuido por Microsoft Planetary Computer",
+          "scene_id": "HLS.S30.T18KZG.2025203T145751.v2.0",
+          "cloud_pct": 5.0,
+          "valid_pct": 100.0,
+          "collection": "hls2-s30",
+          "source_url": "https://planetarycomputer.microsoft.com/api/stac/v1/collections/hls2-s30/items/HLS.S30.T18KZG.2025203T145751.v2.0",
+          "observed_on": "2025-07-22",
+          "resolution_m": 30,
+          "valid_pixels": 12,
+          "parcel_pixels": 12,
+          "sample_sha256": "f23de1f7ca0cca86abde9dfabdae96c101eac31a17861766462221c8998f125c"
+        },
+        {
+          "ndvi": 0.0546,
+          "note": "Mediana de píxeles válidos; excluye nube, adyacencia, sombra, nieve, agua y aerosol alto. No diagnostica nutrientes ni causas.",
+          "assets": [
+            "https://hls2euwest.blob.core.windows.net/hls2/L30/18/K/ZG/2025/08/08/HLS.L30.T18KZG.2025220T144725.v2.0/HLS.L30.T18KZG.2025220T144725.v2.0.B04.tif",
+            "https://hls2euwest.blob.core.windows.net/hls2/L30/18/K/ZG/2025/08/08/HLS.L30.T18KZG.2025220T144725.v2.0/HLS.L30.T18KZG.2025220T144725.v2.0.B05.tif",
+            "https://hls2euwest.blob.core.windows.net/hls2/L30/18/K/ZG/2025/08/08/HLS.L30.T18KZG.2025220T144725.v2.0/HLS.L30.T18KZG.2025220T144725.v2.0.Fmask.tif"
+          ],
+          "method": "HLSv2-NDVI-Fmask-1.0",
+          "source": "NASA HLS v2, redistribuido por Microsoft Planetary Computer",
+          "scene_id": "HLS.L30.T18KZG.2025220T144725.v2.0",
+          "cloud_pct": 7.0,
+          "valid_pct": 33.3,
+          "collection": "hls2-l30",
+          "source_url": "https://planetarycomputer.microsoft.com/api/stac/v1/collections/hls2-l30/items/HLS.L30.T18KZG.2025220T144725.v2.0",
+          "observed_on": "2025-08-08",
+          "resolution_m": 30,
+          "valid_pixels": 4,
+          "parcel_pixels": 12,
+          "sample_sha256": "b9aeaf084abb7282b721451c5a120d8aabe3f7733621b2b5f5853549d08fc118"
+        },
+        {
+          "ndvi": 0.0567,
+          "note": "Mediana de píxeles válidos; excluye nube, adyacencia, sombra, nieve, agua y aerosol alto. No diagnostica nutrientes ni causas.",
+          "assets": [
+            "https://hls2euwest.blob.core.windows.net/hls2/S30/19/K/BB/2025/08/13/HLS.S30.T19KBB.2025225T145941.v2.0/HLS.S30.T19KBB.2025225T145941.v2.0.B04.tif",
+            "https://hls2euwest.blob.core.windows.net/hls2/S30/19/K/BB/2025/08/13/HLS.S30.T19KBB.2025225T145941.v2.0/HLS.S30.T19KBB.2025225T145941.v2.0.B8A.tif",
+            "https://hls2euwest.blob.core.windows.net/hls2/S30/19/K/BB/2025/08/13/HLS.S30.T19KBB.2025225T145941.v2.0/HLS.S30.T19KBB.2025225T145941.v2.0.Fmask.tif"
+          ],
+          "method": "HLSv2-NDVI-Fmask-1.0",
+          "source": "NASA HLS v2, redistribuido por Microsoft Planetary Computer",
+          "scene_id": "HLS.S30.T19KBB.2025225T145941.v2.0",
+          "cloud_pct": 7.0,
+          "valid_pct": 77.8,
+          "collection": "hls2-s30",
+          "source_url": "https://planetarycomputer.microsoft.com/api/stac/v1/collections/hls2-s30/items/HLS.S30.T19KBB.2025225T145941.v2.0",
+          "observed_on": "2025-08-13",
+          "resolution_m": 30,
+          "valid_pixels": 7,
+          "parcel_pixels": 9,
+          "sample_sha256": "617efc46f66a6492c07a12a2d8b31733e416e74f8e11fb8201f63f556ea3f911"
+        }
+      ]
+    }
+  }
+}

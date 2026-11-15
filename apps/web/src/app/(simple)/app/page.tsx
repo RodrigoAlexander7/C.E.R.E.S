@@ -263,7 +263,7 @@ export default function SimpleApp() {
           {!saved && (
             <section className={s.saveCard}>
               <h3 className={s.display}>Guarda tu chacra</h3>
-              <p>Con una cuenta guardas este resultado, le preguntas a la IA por qué y, pronto, llevarás tu cuaderno de campo. Nadie más ve tus datos.</p>
+              <p>Con una cuenta guardas este resultado, le preguntas a la IA por qué y llevas tu cuaderno de campo con agenda. Nadie más ve tus datos.</p>
               <button className={`${s.btn} ${s.btnPrimary} ${s.btnBlock}`} onClick={save} disabled={busy}>{user ? "Guardar en mi cuenta" : "Crear cuenta y guardar"}</button>
             </section>
           )}

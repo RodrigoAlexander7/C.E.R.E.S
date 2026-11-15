@@ -26,6 +26,8 @@ class OpenAIResponsesModel:
         return self._settings.openai_model if self.configured else None
 
     def answer(self, request: LlmRequest) -> LlmResult:
+        if request.audio:
+            return LlmResult(status="error_proveedor", error="Audio directo disponible con Gemini; usa texto con este proveedor")
         if not self.configured:
             return LlmResult(status="no_configurado")
         messages = [{"role": "developer", "content": request.system}]
@@ -41,7 +43,7 @@ class OpenAIResponsesModel:
                 input=messages,
                 store=False,
                 max_output_tokens=900,
-                text={"format": {"type": "json_schema", "name": "respuesta_ceres", "schema": ANSWER_SCHEMA, "strict": True}},
+                text={"format": {"type": "json_schema", "name": "respuesta_ceres", "schema": request.schema or ANSWER_SCHEMA, "strict": True}},
             )
             data = json.loads(resp.output_text)
         except Exception as exc:  # red, autenticación, cuota, modelo inexistente o JSON inválido

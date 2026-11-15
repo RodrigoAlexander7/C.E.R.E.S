@@ -172,10 +172,10 @@ Origen: `main.md` sección 11. Prevalecen sobre R01–R12 cuando los contradigan
 ## R17 — cuaderno de campo y registro por chat/voz
 
 - Registros privados por parcela: campañas (cultivo, área, siembra, cosecha, rendimiento), ventas (cantidad, precio, comprador opcional), costos y ganancia declarada; cada uno con fecha, origen (`declarado`, `declarado_chat_confirmado`) y revisión.
-- El motor usa rendimientos, precios y costos propios cuando existen y lo indica en la procedencia.
+- El motor usa rendimientos, precios y costos propios cuando existen y lo indica en la procedencia. Un total de costos solo se considera completo cuando el agricultor lo confirma explícitamente.
 - Texto o audio se transcriben y se convierten en una **propuesta estructurada**; la interfaz muestra «¿Guardo esto?» con los campos editables. Sin confirmación no se escribe nada.
-- La revisión mensual pregunta solo lo que falta en el cuaderno; las notificaciones del navegador son opcionales y revocables.
-- El audio no se almacena; la transcripción solo se conserva si el usuario confirma el registro.
+- Agenda por parcela con labores, fecha y estado pendiente/hecho; permite introducir y corregir antecedentes conservando revisiones. La revisión mensual pregunta solo lo que falta en el cuaderno; las notificaciones al abrir la app son opcionales y desactivables.
+- El audio no se almacena. La transcripción se muestra temporalmente para revisar; se conservan los campos estructurados confirmados. Las propuestas caducan a los 15 minutos y se vacían al confirmar, rechazar o detectar la caducidad.
 - Pruebas: extracción con proveedor simulado, rechazo de campos inválidos, confirmación obligatoria y aislamiento entre cuentas.
 
 ## R18 — asistente conversacional «Ceres»

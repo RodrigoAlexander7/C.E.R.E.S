@@ -100,7 +100,7 @@ jobs:
           uv sync --locked --no-dev
           uv run alembic upgrade head
           uv run python -m ceres.cli seed > /dev/null
-          nohup uv run uvicorn ceres.main:app --host 127.0.0.1 --port 8000 > /tmp/api.log 2>&1 &
+          nohup uv run uvicorn tests.e2e_app:app --host 127.0.0.1 --port 8000 > /tmp/api.log 2>&1 &
       - name: Web (build y servidor de producción)
         working-directory: apps/web
         run: |

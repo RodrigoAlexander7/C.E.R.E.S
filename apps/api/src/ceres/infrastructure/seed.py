@@ -104,6 +104,20 @@ def run_seed(settings: Settings) -> dict:
                 repo.add_revision(parcel, prof, demo["note"])
                 repo.add_event(m.CropEvent(parcel_id=parcel.id, crop_id=prof["current_crop_id"], status=prof["current_status"], origin="supuesto_demo"))
             latest = repo.runs(parcel.id)[:1]
+            # Copia real previamente calculada: el seed no descarga escenas ni usa datos sintéticos.
+            import json
+            from ceres.infrastructure.hls import geometry_hash
+            pack = settings.data_dir / "hls" / "demo_ndvi.json"
+            if pack.exists():
+                hls = json.loads(pack.read_text())["zones"].get(z.id)
+                if hls and hls["geometry_hash"] == geometry_hash(parcel.geometry):
+                    for observation in hls["observations"]:
+                        exists = db.scalar(select(m.NdviObservation).where(m.NdviObservation.parcel_id == parcel.id,
+                            m.NdviObservation.scene_id == observation["scene_id"], m.NdviObservation.geometry_hash == hls["geometry_hash"]))
+                        if not exists:
+                            db.add(m.NdviObservation(owner_id=parcel.owner_id, parcel_id=parcel.id,
+                                scene_id=observation["scene_id"], observed_on=date.fromisoformat(observation["observed_on"]),
+                                geometry_hash=hls["geometry_hash"], data=observation | {"fetched_at": json.loads(pack.read_text())["fetched_at"]}))
             current = (z.catalog.version, z.climate.snapshot_id, ENGINE_VERSION)
             if latest and (latest[0].catalog_version, latest[0].dataset_snapshot_id, latest[0].engine_version) == current:
                 run = latest[0]  # idempotente: no duplica el run de demostración
