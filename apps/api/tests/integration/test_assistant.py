@@ -149,9 +149,8 @@ def test_private_fragment_of_other_account_not_retrieved(make_client):
 
 
 def test_not_configured_shows_unavailable(make_client):
-    c = make_client()  # adaptador real sin OPENAI_API_KEY en pruebas
-    if c.container.llm.configured:
-        pytest.skip("Hay credenciales reales configuradas")
+    c = make_client()  # adaptador real sin claves (el fixture las retira)
+    assert not c.container.llm.configured
     register(c)
     p = create_parcel(c)
     run = c.post(f"/api/v1/parcels/{p['id']}/recommendations", json={}).json()

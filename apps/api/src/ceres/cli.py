@@ -55,7 +55,7 @@ def cmd_seed(args: argparse.Namespace) -> int:
 
 
 def cmd_check_llm(args: argparse.Namespace) -> int:
-    from ceres.infrastructure.llm.openai_responses import check_connection
+    from ceres.infrastructure.llm.factory import check_connection
 
     result = check_connection(get_settings())
     print(json.dumps(result, indent=2, ensure_ascii=False))

@@ -16,6 +16,7 @@ dependencies = [
     "shapely==2.2.0",
     "pyproj==3.8.0",
     "openai==3.51.0",
+    "google-genai==3.3.0",
 ]
 
 [dependency-groups]

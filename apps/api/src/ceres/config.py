@@ -5,6 +5,7 @@ from __future__ import annotations
 from functools import lru_cache
 from pathlib import Path
 
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
@@ -31,10 +32,15 @@ class Settings(BaseSettings):
     # Solo para desarrollo local por HTTP: desactiva el atributo Secure de las cookies.
     dev_insecure_cookies: bool = False
 
-    # Asistente IA (opcional: sin ellos la interfaz muestra «IA no conectada»).
+    # Asistente IA (opcional: sin claves la interfaz muestra «IA no conectada»).
+    # Proveedor principal: Google Gemini. OpenAI Responses queda como alternativa.
+    gemini_api_key: str | None = None
+    gemini_model: str | None = Field(default=None, validation_alias=AliasChoices("GEMINI_MODEL", "GEMINI_MODE"))
+    # Presupuesto de razonamiento: 0 = respuesta rápida (el motor ya calculó todo); vacío = valor del modelo.
+    gemini_thinking_budget: int | None = 0
     openai_api_key: str | None = None
     openai_model: str | None = None
-    openai_timeout_seconds: float = 30.0
+    llm_timeout_seconds: float = Field(default=40.0, validation_alias=AliasChoices("LLM_TIMEOUT_SECONDS", "OPENAI_TIMEOUT_SECONDS"))
     llm_max_question_chars: int = 600
 
     # Datos y caché.
@@ -48,8 +54,16 @@ class Settings(BaseSettings):
     login_window_seconds: int = 600
 
     @property
+    def llm_provider(self) -> str | None:
+        if self.gemini_api_key and self.gemini_model:
+            return "gemini"
+        if self.openai_api_key and self.openai_model:
+            return "openai"
+        return None
+
+    @property
     def llm_configured(self) -> bool:
-        return bool(self.openai_api_key and self.openai_model)
+        return self.llm_provider is not None
 
 
 @lru_cache

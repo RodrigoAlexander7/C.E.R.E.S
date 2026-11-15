@@ -22,7 +22,8 @@ const nextConfig: NextConfig = {
         source: "/:path*",
         headers: [
           { key: "X-Content-Type-Options", value: "nosniff" },
-          { key: "Referrer-Policy", value: "same-origin" },
+          // OSM bloquea teselas pedidas sin Referer; solo se envía el origen, nunca la ruta (IDs de parcela).
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           { key: "Permissions-Policy", value: "geolocation=(self), camera=(), microphone=()" },
         ],
       },

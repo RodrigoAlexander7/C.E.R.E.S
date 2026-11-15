@@ -41,7 +41,7 @@ cd apps/web && npm ci && npm run dev
 
 Abrir http://localhost:3000. El caso público de demostración está en `/demo`.
 
-Variables: `DATABASE_URL`, `APP_ORIGIN` y `DEV_INSECURE_COOKIES` son necesarias para arrancar (ver `.env.example`). `OPENAI_API_KEY` + `OPENAI_MODEL` habilitan el asistente; sin ellas la interfaz muestra «IA no conectada» y la explicación determinista del motor.
+Variables: `DATABASE_URL`, `APP_ORIGIN` y `DEV_INSECURE_COOKIES` son necesarias para arrancar (ver `.env.example`). `GEMINI_API_KEY` + `GEMINI_MODEL` habilitan el asistente con Google Gemini (proveedor elegido por el equipo; `OPENAI_API_KEY` + `OPENAI_MODEL` quedan como alternativa); sin claves la interfaz muestra «IA no conectada» y la explicación determinista del motor.
 
 ### Datos
 
@@ -61,13 +61,19 @@ Comprobar el asistente con credenciales reales (no imprime la clave):
 cd apps/api && uv run python -m ceres.cli check-llm
 ```
 
+Validar el asistente real de punta a punta (crea una cuenta de prueba en la base de desarrollo y hace las preguntas de la demo):
+
+```bash
+cd apps/api && uv run python scripts/validar_asistente_real.py
+```
+
 ## Pruebas
 
 ```bash
 cd apps/api && uv run pytest
 ```
 
-65 pruebas: ET0 contra el ejemplo 18 de FAO-56, lluvia efectiva FAO, calendario/horizonte/bisiestos, unidades mm→m³, margen por ciclos, restricciones de agua/salinidad/presupuesto, estados, reproducibilidad; integración con PostgreSQL real (dos cuentas aisladas, sesión revocada/expirada, CSRF/origen, historial, runs inmutables); asistente con proveedor **simulado** (citas inventadas, cifras sin respaldo, inyección en fichas, contexto ajeno). Los mocks no validan la conexión real con OpenAI.
+67 pruebas: ET0 contra el ejemplo 18 de FAO-56, lluvia efectiva FAO, calendario/horizonte/bisiestos, unidades mm→m³, margen por ciclos, restricciones de agua/salinidad/presupuesto, estados, reproducibilidad; integración con PostgreSQL real (dos cuentas aisladas, sesión revocada/expirada, CSRF/origen, historial, runs inmutables); asistente con proveedor **simulado** (citas inventadas, cifras sin respaldo, inyección en fichas, contexto ajeno). Las pruebas automáticas nunca llaman al proveedor real; la conexión real se valida aparte con los dos comandos anteriores.
 
 E2E del recorrido de aceptación (con API y web en marcha):
 
@@ -81,4 +87,4 @@ cd apps/web && npx playwright test
 |---|---|
 | Datos NASA reales para Majes | **Hecho**: POWER diario 2015–2025, 4 018 días, 0 ausentes, SHA-256 en `data/nasa/*.meta.json`. Celda a 835 m (la pampa está a ~1 400 m): limitación documentada. |
 | Parámetros agronómicos y calendarios | **Revisión documental hecha** (Kc, etapas, salinidad, ET0). Calendarios, umbrales térmicos y economía siguen como supuestos/sin verificar: ver `data/catalog/REVISION.md`. |
-| Credenciales del asistente IA | **Pendiente**: no hay `OPENAI_API_KEY`/`OPENAI_MODEL` configuradas. Adaptador, validación y estado «IA no conectada» implementados y probados con proveedor simulado. |
+| Credenciales del asistente IA | **Hecho en local (15-nov-2026)** con Gemini `gemini-4-hydrogen`: `check-llm` conectado y 4/4 preguntas reales de la demo (incluida una inyección) aceptadas por la validación de cifras y fuentes. En producción depende de cargar `GEMINI_API_KEY`/`GEMINI_MODEL` en GitHub (ver `despliegue.md`). |

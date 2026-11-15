@@ -14,7 +14,7 @@ from ceres.domain.climate import ClimateSeries, monthly_climatology
 from ceres.domain.engine import ClimateInput
 from ceres.infrastructure.catalog_loader import load_catalog, load_sources_file
 from ceres.infrastructure.db.session import session_factory
-from ceres.infrastructure.llm.openai_responses import OpenAIResponsesModel
+from ceres.infrastructure.llm.factory import build_language_model
 from ceres.infrastructure.nasa_power import NasaPowerError, PowerSnapshot, load_snapshot
 from ceres.infrastructure.regions import RegionsService
 from ceres.infrastructure.security import RateLimiter
@@ -63,7 +63,7 @@ def build_container(settings: Settings | None = None, llm: LanguageModel | None 
         snapshot=snapshot,
         climatology=climatology,
         regions=RegionsService(settings),
-        llm=llm or OpenAIResponsesModel(settings),
+        llm=llm or build_language_model(settings),
         login_limiter=RateLimiter(settings.login_max_attempts, settings.login_window_seconds),
         chat_limiter=RateLimiter(20, 300),
         nasa_error=nasa_error,

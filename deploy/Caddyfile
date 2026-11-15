@@ -11,7 +11,8 @@
 		Strict-Transport-Security "max-age=31536000"
 		X-Content-Type-Options nosniff
 		X-Frame-Options DENY
-		Referrer-Policy same-origin
+		# Envía solo el origen (sin ruta) a terceros: la política de teselas de OSM exige un Referer válido.
+		Referrer-Policy strict-origin-when-cross-origin
 		Permissions-Policy "geolocation=(self), camera=(), microphone=()"
 		-Server
 	}

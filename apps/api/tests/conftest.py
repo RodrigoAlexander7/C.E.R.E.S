@@ -74,8 +74,10 @@ def make_client(migrated_db, base_settings):
         conn.execute(text("TRUNCATE " + ", ".join(TABLES) + " CASCADE"))
 
     def factory(llm=None, **overrides):
+        # Las pruebas automáticas nunca llaman a un proveedor LLM real (aunque .env tenga claves).
+        no_llm = {"gemini_api_key": None, "gemini_model": None, "openai_api_key": None, "openai_model": None}
         settings = base_settings.model_copy(
-            update={"database_url": TEST_DB, "app_origin": ORIGIN, "dev_insecure_cookies": True, **overrides}
+            update={"database_url": TEST_DB, "app_origin": ORIGIN, "dev_insecure_cookies": True, **no_llm, **overrides}
         )
         c = build_container(settings, llm=llm)
         c.extra["today"] = lambda: FIXED_TODAY

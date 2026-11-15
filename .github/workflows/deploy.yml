@@ -152,6 +152,8 @@ jobs:
       - name: Ejecutar en la VM
         env:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}
           BACKUP_FILE: ${{ inputs.backup_file }}
@@ -160,11 +162,13 @@ jobs:
           name="ceres-${ACTION}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           echo "RUN_NAME=$name" >> "$GITHUB_ENV"
           prot=(GHCR_TOKEN="$GHCR_TOKEN")
+          [[ -n "$GEMINI_API_KEY" ]] && prot+=(GEMINI_API_KEY="$GEMINI_API_KEY")
           [[ -n "$OPENAI_API_KEY" ]] && prot+=(OPENAI_API_KEY="$OPENAI_API_KEY")
           az vm run-command create -g "$RG" --vm-name "$VM" -l "$LOCATION" --name "$name" \
             --script @/tmp/runcmd.sh --timeout-in-seconds 1500 \
             --parameters CERES_TAG="$TAG" CERES_DOMAIN="$CERES_DOMAIN" BACKUP_FILE="$BACKUP_FILE" \
-              CERES_REGISTRY="${REGISTRY}/${GITHUB_REPOSITORY_OWNER,,}" GHCR_USER="$GITHUB_ACTOR" OPENAI_MODEL="$OPENAI_MODEL" \
+              CERES_REGISTRY="${REGISTRY}/${GITHUB_REPOSITORY_OWNER,,}" GHCR_USER="$GITHUB_ACTOR" \
+              GEMINI_MODEL="$GEMINI_MODEL" OPENAI_MODEL="$OPENAI_MODEL" \
             --protected-parameters "${prot[@]}" \
             --only-show-errors -o none || true
           view=$(az vm run-command show -g "$RG" --vm-name "$VM" --name "$name" --instance-view \
