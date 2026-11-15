@@ -30,7 +30,7 @@ class Action(Strict):
 
 
 @router.post("/ceres")
-def converse(parcel_id: str, body: CeresRequest, repo=Depends(parcel_repo), db=Depends(get_db), c=Depends(container)):
+def converse(parcel_id: str, body: CeresRequest, repo=Depends(parcel_repo), db=Depends(get_db, scope="function"), c=Depends(container)):
     from ceres.presentation.app import create_run, _run_dict
     p = repo.get(parcel_id)
     if not p: raise not_found()

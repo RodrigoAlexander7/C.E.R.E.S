@@ -11,6 +11,29 @@ from tests.conftest import ORIGIN, create_parcel, register
 pytestmark = pytest.mark.db
 
 
+def test_writes_are_committed_before_success_headers(make_client):
+    c = make_client()
+    observed = []
+
+    class CommitProbe:
+        def __init__(self, app):
+            self.app = app
+
+        async def __call__(self, scope, receive, send):
+            async def capture(message):
+                if message["type"] == "http.response.start" and message["status"] == 201:
+                    with c.container.sessions() as db:
+                        table = m.User if scope["path"].endswith("/auth/register") else m.Parcel
+                        observed.append(db.scalar(select(table.id).limit(1)) is not None)
+                await send(message)
+            await self.app(scope, receive, capture)
+
+    c.app.add_middleware(CommitProbe)
+    register(c)
+    create_parcel(c)
+    assert observed == [True, True]
+
+
 def test_register_login_logout_revokes_session(make_client):
     c = make_client()
     register(c)

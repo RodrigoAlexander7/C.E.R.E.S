@@ -2,6 +2,15 @@
 
 Este documento es para el agente que continúe. Explica qué se hizo, qué falta, qué decidió el usuario y qué se recomienda.
 
+## Reanudación tras el límite de uso (15-nov-2026)
+
+- Se encontraron ocho commits locales posteriores al cierre anterior: precios mayoristas SISAP, catálogo ampliado de Majes, comparación después de alfalfa, plan sugerido con programación dinámica/Monte Carlo y rediseño de portada, resultados y navegación. Las carpetas sin seguimiento `ceres-video/` y `references/` pertenecen al trabajo del usuario; no se modificaron ni se incluyeron en commits.
+- El usuario **autorizó expresamente la consulta HLS de Salamanca**. La autorización sigue vigente; no volver a pedirla. Huayro queda fuera de esa consulta.
+- El primer refresco en producción terminó en error sin observaciones. Diagnóstico real dentro del contenedor: `ImportError: libexpat.so.1`. Corregido el Dockerfile para instalar `libexpat1` y comprobar `import rasterio` durante el build de la imagen final. Imagen local construida correctamente con rasterio 1.5.2. No se cambió la infraestructura ni la suscripción Azure.
+- Versionado el motor como `ceres-engine-0.4.0` por el cambio de algoritmo, para distinguir runs anteriores. El catálogo nuevo de Majes ya declara `catalogo-majes-2026-11-15.2`.
+- Corregida una carrera de transacciones: `get_db` usa `scope="function"` en sus dependencias para confirmar antes de enviar éxito HTTP. Una prueba inspecciona visibilidad desde otra conexión justo antes de las cabeceras: fallaba con `[False, False]` en registro/parcela y pasa con la corrección. Las sesiones, propuestas y registros ya son visibles en la petición siguiente. Referencia: https://fastapi.tiangolo.com/tutorial/dependencies/dependencies-with-yield/#early-exit-and-scope.
+- Suite actual: **116 pruebas API/PostgreSQL y 6 E2E pasan**; build web y build Docker final comprobados. Durante la revisión entró el commit `900e030` de otra sesión que corrige la espera del detalle técnico en E2E; se conservó. Registrar más abajo el despliegue y el resultado privado HLS cuando terminen; no describir una ausencia de píxeles como NDVI cero.
+
 ## Cierre de implementación de incrementos 11–14 (15-nov-2026)
 
 Este apartado sustituye los pendientes funcionales históricos que siguen debajo. La revisión desplegada y el workflow vigente se registran en `despliegue.md` después de comprobar su resultado.

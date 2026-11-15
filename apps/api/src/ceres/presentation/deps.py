@@ -29,6 +29,7 @@ def container(request: Request) -> Container:
 
 
 def get_db(c: Container = Depends(container)) -> Iterator[DbSession]:
+    # Usar scope="function": confirmar antes de enviar éxito o iniciar otra petición.
     db = c.sessions()
     try:
         yield db
@@ -65,7 +66,7 @@ def check_origin(request: Request, c: Container = Depends(container)) -> None:
         _check_origin(request, c)
 
 
-def optional_auth(request: Request, c: Container = Depends(container), db: DbSession = Depends(get_db)) -> Auth | None:
+def optional_auth(request: Request, c: Container = Depends(container), db: DbSession = Depends(get_db, scope="function")) -> Auth | None:
     token = request.cookies.get(c.settings.session_cookie_name)
     if not token:
         return None
@@ -89,5 +90,5 @@ def require_auth(auth: Auth | None = Depends(optional_auth)) -> Auth:
     return auth
 
 
-def parcel_repo(auth: Auth = Depends(require_auth), db: DbSession = Depends(get_db)) -> ParcelRepo:
+def parcel_repo(auth: Auth = Depends(require_auth), db: DbSession = Depends(get_db, scope="function")) -> ParcelRepo:
     return ParcelRepo(db, auth.user_id)

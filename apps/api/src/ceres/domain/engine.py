@@ -30,7 +30,7 @@ from ceres.domain.model import (
     TimelineBlock,
 )
 
-ENGINE_VERSION = "ceres-engine-0.3.0"
+ENGINE_VERSION = "ceres-engine-0.4.0"
 MM_HA_TO_M3 = 10.0  # 1 mm sobre 1 ha = 10 m³
 _METHOD_LABEL = {"goteo": "goteo", "aspersion": "aspersión", "gravedad": "gravedad"}
 MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"]

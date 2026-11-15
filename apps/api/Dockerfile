@@ -14,9 +14,14 @@ RUN --mount=type=cache,target=/root/.cache/uv uv sync --locked --no-dev --no-edi
 FROM python:3.12-slim
 ARG CERES_REVISION=dev
 LABEL org.opencontainers.image.title="ceres-api" org.opencontainers.image.revision="${CERES_REVISION}"
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libexpat1 \
+    && rm -rf /var/lib/apt/lists/*
 RUN useradd --system --uid 10001 --home-dir /app ceres
 WORKDIR /app
 COPY --from=build /app/.venv /app/.venv
+# Verificar las bibliotecas nativas en la imagen final, no solo en el runner de CI.
+RUN /app/.venv/bin/python -c "import rasterio; print('rasterio', rasterio.__version__)"
 COPY apps/api/alembic.ini ./alembic.ini
 COPY apps/api/migrations ./migrations
 # Paquete de datos trazable (NASA real, límites, catálogo, fuentes). La caché de distritos

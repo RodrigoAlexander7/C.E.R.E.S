@@ -98,7 +98,7 @@ private = APIRouter(prefix="/api/v1")
 
 
 @public.get("/health")
-def health(response: Response, c: Container = Depends(container), db: DbSession = Depends(get_db)):
+def health(response: Response, c: Container = Depends(container), db: DbSession = Depends(get_db, scope="function")):
     try:
         db.execute(text("SELECT 1"))
         db_ok = True
@@ -258,13 +258,13 @@ def catalog(zone: str | None = None, c: Container = Depends(container)):
 
 
 @public.get("/sources")
-def sources(db: DbSession = Depends(get_db), auth: Auth | None = Depends(optional_auth)):
+def sources(db: DbSession = Depends(get_db, scope="function"), auth: Auth | None = Depends(optional_auth)):
     items = PublicRepo(db).sources(auth.user_id if auth else None)
     return {"items": sorted(items.values(), key=lambda s: s["id"])}
 
 
 @public.get("/sources/{source_id}")
-def source(source_id: str, db: DbSession = Depends(get_db), auth: Auth | None = Depends(optional_auth)):
+def source(source_id: str, db: DbSession = Depends(get_db, scope="function"), auth: Auth | None = Depends(optional_auth)):
     s = PublicRepo(db).source(source_id, auth.user_id if auth else None)
     if s is None:
         raise not_found()
@@ -272,7 +272,7 @@ def source(source_id: str, db: DbSession = Depends(get_db), auth: Auth | None = 
 
 
 @public.get("/public/demo")
-def public_demo(zone: str | None = None, db: DbSession = Depends(get_db), c: Container = Depends(container)):
+def public_demo(zone: str | None = None, db: DbSession = Depends(get_db, scope="function"), c: Container = Depends(container)):
     repo = PublicRepo(db)
     p = repo.demo_parcel(_zone(c, zone).id)
     if p is None:
@@ -380,7 +380,7 @@ def _start_session(response: Response, db: DbSession, c: Container, user: m.User
 
 
 @public.post("/auth/register", status_code=201, dependencies=[Depends(check_origin)])
-def register(body: Credentials, response: Response, c: Container = Depends(container), db: DbSession = Depends(get_db)):
+def register(body: Credentials, response: Response, c: Container = Depends(container), db: DbSession = Depends(get_db, scope="function")):
     users = UserRepo(db)
     if users.by_email(body.email):
         raise ApiError(409, "email_registrado", "Ese email ya tiene una cuenta; inicia sesión")
@@ -389,7 +389,7 @@ def register(body: Credentials, response: Response, c: Container = Depends(conta
 
 
 @public.post("/auth/login", dependencies=[Depends(check_origin)])
-def login(body: Credentials, request: Request, response: Response, c: Container = Depends(container), db: DbSession = Depends(get_db)):
+def login(body: Credentials, request: Request, response: Response, c: Container = Depends(container), db: DbSession = Depends(get_db, scope="function")):
     key = f"{body.email}|{request.client.host if request.client else '?'}"
     if not c.login_limiter.hit(key):
         raise ApiError(429, "demasiados_intentos", "Demasiados intentos. Espera unos minutos.")
@@ -401,7 +401,7 @@ def login(body: Credentials, request: Request, response: Response, c: Container 
 
 
 @private.post("/auth/logout")
-def logout(response: Response, auth: Auth = Depends(require_auth), db: DbSession = Depends(get_db), c: Container = Depends(container)):
+def logout(response: Response, auth: Auth = Depends(require_auth), db: DbSession = Depends(get_db, scope="function"), c: Container = Depends(container)):
     SessionRepo(db).revoke(db.merge(auth.session))
     response.delete_cookie(c.settings.session_cookie_name, path="/")
     response.delete_cookie(c.settings.csrf_cookie_name, path="/")
@@ -429,7 +429,7 @@ def list_parcels(repo: ParcelRepo = Depends(parcel_repo), auth: Auth = Depends(r
 
 
 @private.post("/parcels", status_code=201)
-def create_parcel(body: ParcelCreate, repo: ParcelRepo = Depends(parcel_repo), auth: Auth = Depends(require_auth), c: Container = Depends(container), db: DbSession = Depends(get_db)):
+def create_parcel(body: ParcelCreate, repo: ParcelRepo = Depends(parcel_repo), auth: Auth = Depends(require_auth), c: Container = Depends(container), db: DbSession = Depends(get_db, scope="function")):
     geometry, point = None, None
     if body.geometry is not None:
         try:
@@ -508,7 +508,7 @@ def patch_parcel(parcel_id: str, body: ParcelPatch, repo: ParcelRepo = Depends(p
 
 
 @private.delete("/parcels/{parcel_id}")
-def delete_parcel(parcel_id: str, repo: ParcelRepo = Depends(parcel_repo), auth: Auth = Depends(require_auth), db: DbSession = Depends(get_db)):
+def delete_parcel(parcel_id: str, repo: ParcelRepo = Depends(parcel_repo), auth: Auth = Depends(require_auth), db: DbSession = Depends(get_db, scope="function")):
     p = _get_parcel(repo, parcel_id)
     repo.soft_delete(p)
     user = db.merge(auth.user)
@@ -518,7 +518,7 @@ def delete_parcel(parcel_id: str, repo: ParcelRepo = Depends(parcel_repo), auth:
 
 
 @private.post("/parcels/{parcel_id}/activate")
-def activate_parcel(parcel_id: str, repo: ParcelRepo = Depends(parcel_repo), auth: Auth = Depends(require_auth), db: DbSession = Depends(get_db)):
+def activate_parcel(parcel_id: str, repo: ParcelRepo = Depends(parcel_repo), auth: Auth = Depends(require_auth), db: DbSession = Depends(get_db, scope="function")):
     p = _get_parcel(repo, parcel_id)
     db.merge(auth.user).active_parcel_id = p.id
     return {"active_parcel_id": p.id}
@@ -714,7 +714,7 @@ def get_conversation(conv_id: str, repo: ParcelRepo = Depends(parcel_repo)):
 
 
 @private.post("/conversations/{conv_id}/messages", status_code=201)
-def ask(conv_id: str, body: MessageCreate, repo: ParcelRepo = Depends(parcel_repo), auth: Auth = Depends(require_auth), c: Container = Depends(container), db: DbSession = Depends(get_db)):
+def ask(conv_id: str, body: MessageCreate, repo: ParcelRepo = Depends(parcel_repo), auth: Auth = Depends(require_auth), c: Container = Depends(container), db: DbSession = Depends(get_db, scope="function")):
     conv = repo.conversation(conv_id)
     if conv is None:
         raise not_found()

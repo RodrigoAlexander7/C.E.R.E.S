@@ -11,14 +11,14 @@ router = APIRouter(prefix="/api/v1/parcels/{parcel_id}")
 
 
 @router.get("/notebook")
-def read_book(parcel_id: str, repo=Depends(parcel_repo), db=Depends(get_db)):
+def read_book(parcel_id: str, repo=Depends(parcel_repo), db=Depends(get_db, scope="function")):
     if not repo.get(parcel_id): raise not_found()
     items = records(db, repo.owner_id, parcel_id)
     return {"items": items, **summary(items, datetime.now(ZoneInfo("America/Lima")).date())}
 
 
 @router.post("/notebook", status_code=201)
-def add_record(parcel_id: str, body: RecordInput, repo=Depends(parcel_repo), db=Depends(get_db), c=Depends(container)):
+def add_record(parcel_id: str, body: RecordInput, repo=Depends(parcel_repo), db=Depends(get_db, scope="function"), c=Depends(container)):
     p = repo.get(parcel_id)
     if not p: raise not_found()
     zone = c.zone(p.zone_id) if p.zone_id else None
@@ -26,7 +26,7 @@ def add_record(parcel_id: str, body: RecordInput, repo=Depends(parcel_repo), db=
 
 
 @router.put("/notebook/{record_id}")
-def update_record(parcel_id: str, record_id: str, body: RecordInput, repo=Depends(parcel_repo), db=Depends(get_db), c=Depends(container)):
+def update_record(parcel_id: str, record_id: str, body: RecordInput, repo=Depends(parcel_repo), db=Depends(get_db, scope="function"), c=Depends(container)):
     p = repo.get(parcel_id)
     if not p: raise not_found()
     zone = c.zone(p.zone_id) if p.zone_id else None
@@ -34,14 +34,14 @@ def update_record(parcel_id: str, record_id: str, body: RecordInput, repo=Depend
 
 
 @router.delete("/notebook/{record_id}")
-def remove_record(parcel_id: str, record_id: str, revision: int, repo=Depends(parcel_repo), db=Depends(get_db)):
+def remove_record(parcel_id: str, record_id: str, revision: int, repo=Depends(parcel_repo), db=Depends(get_db, scope="function")):
     if not repo.get(parcel_id): raise not_found()
     delete(db, repo.owner_id, parcel_id, record_id, revision)
     return {"ok": True}
 
 
 @router.get("/notebook/{record_id}/history")
-def history(parcel_id: str, record_id: str, repo=Depends(parcel_repo), db=Depends(get_db)):
+def history(parcel_id: str, record_id: str, repo=Depends(parcel_repo), db=Depends(get_db, scope="function")):
     if not repo.get(parcel_id): raise not_found()
     # Incluso el historial necesita autorización del registro y de su parcela.
     r = db.scalar(select(m.FieldRecord).where(m.FieldRecord.id == record_id,

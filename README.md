@@ -75,7 +75,7 @@ El registro `data/zonas/registro.json` incluye Majes I y Valle de Chilina, cada 
 cd apps/api && uv run pytest
 ```
 
-101 pruebas: ET0 contra el ejemplo 18 de FAO-56, lluvia efectiva FAO, calendario/horizonte/bisiestos, unidades mm→m³, margen por ciclos, restricciones, zonas y reproducción; integración con PostgreSQL real (propietarios aislados, sesiones, CSRF, historial, runs, HLS y cuaderno); propuestas confirmadas y asistente con proveedor **simulado** (citas inventadas, cifras sin respaldo, inyección y contexto ajeno). Incluyen área desconocida, exclusión de datos simulados de la economía propia y registro fuera de los pilotos sin tomar su clima ni catálogo. Las pruebas automáticas nunca llaman al proveedor real; la conexión real se valida aparte.
+116 pruebas: ET0 contra el ejemplo 18 de FAO-56, lluvia efectiva FAO, calendario/horizonte/bisiestos, unidades mm→m³, margen por ciclos, restricciones, zonas, reproducción, optimización de secuencias y precios SISAP; integración con PostgreSQL real (propietarios aislados, sesiones, CSRF, historial, runs, HLS y cuaderno); propuestas confirmadas y asistente con proveedor **simulado** (citas inventadas, cifras sin respaldo, inyección y contexto ajeno). Incluyen confirmación de transacciones antes de enviar éxito HTTP, área desconocida, exclusión de datos simulados de la economía propia y registro fuera de los pilotos sin tomar su clima ni catálogo. Las pruebas automáticas nunca llaman al proveedor real; la conexión real se valida aparte.
 
 E2E del recorrido de aceptación y de la landing (con API y web en marcha):
 

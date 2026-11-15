@@ -72,7 +72,7 @@ def series(db, parcel):
 
 
 @router.get("/parcels/{parcel_id}/ndvi")
-def read_ndvi(parcel_id: str, repo=Depends(parcel_repo), db=Depends(get_db)):
+def read_ndvi(parcel_id: str, repo=Depends(parcel_repo), db=Depends(get_db, scope="function")):
     p = repo.get(parcel_id)
     if not p:
         raise not_found()
@@ -80,7 +80,7 @@ def read_ndvi(parcel_id: str, repo=Depends(parcel_repo), db=Depends(get_db)):
 
 
 @router.post("/parcels/{parcel_id}/ndvi/refresh", status_code=202)
-def request_refresh(parcel_id: str, tasks: BackgroundTasks, repo=Depends(parcel_repo), db=Depends(get_db), c=Depends(container)):
+def request_refresh(parcel_id: str, tasks: BackgroundTasks, repo=Depends(parcel_repo), db=Depends(get_db, scope="function"), c=Depends(container)):
     p = repo.get(parcel_id)
     if not p:
         raise not_found()
@@ -100,7 +100,7 @@ def request_refresh(parcel_id: str, tasks: BackgroundTasks, repo=Depends(parcel_
 
 
 @router.get("/public/ndvi")
-def demo_ndvi(zone: str = "majes", db=Depends(get_db)):
+def demo_ndvi(zone: str = "majes", db=Depends(get_db, scope="function")):
     p = db.scalar(select(m.Parcel).where(m.Parcel.is_public_demo.is_(True), m.Parcel.zone_id == zone, m.Parcel.deleted_at.is_(None)))
     if not p:
         raise not_found()
