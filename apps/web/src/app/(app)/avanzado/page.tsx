@@ -193,7 +193,7 @@ export default function Home() {
       try {
         sessionStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
       } catch {}
-      router.push("/ingresar?volver=/");
+      router.push("/ingresar?volver=/avanzado");
       return;
     }
     setSaving(true);

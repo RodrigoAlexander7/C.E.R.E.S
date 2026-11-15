@@ -39,7 +39,7 @@ cd apps/api && uv run uvicorn ceres.main:app --host 127.0.0.1 --port 8000
 cd apps/web && npm ci && npm run dev
 ```
 
-Abrir http://localhost:3000. El caso público de demostración está en `/demo`.
+Abrir http://localhost:3000: la landing pública está en `/`, el modo avanzado (mapa y comparación técnica) en `/avanzado` y el caso público de demostración en `/demo`. La nueva dirección de producto (modo sencillo, cuaderno de campo, voz y asistente Ceres) está en `main.md` §11 y `specs/tareas.md` (incrementos 7–14).
 
 Variables: `DATABASE_URL`, `APP_ORIGIN` y `DEV_INSECURE_COOKIES` son necesarias para arrancar (ver `.env.example`). `GEMINI_API_KEY` + `GEMINI_MODEL` habilitan el asistente con Google Gemini (proveedor elegido por el equipo; `OPENAI_API_KEY` + `OPENAI_MODEL` quedan como alternativa); sin claves la interfaz muestra «IA no conectada» y la explicación determinista del motor.
 
@@ -75,7 +75,7 @@ cd apps/api && uv run pytest
 
 67 pruebas: ET0 contra el ejemplo 18 de FAO-56, lluvia efectiva FAO, calendario/horizonte/bisiestos, unidades mm→m³, margen por ciclos, restricciones de agua/salinidad/presupuesto, estados, reproducibilidad; integración con PostgreSQL real (dos cuentas aisladas, sesión revocada/expirada, CSRF/origen, historial, runs inmutables); asistente con proveedor **simulado** (citas inventadas, cifras sin respaldo, inyección en fichas, contexto ajeno). Las pruebas automáticas nunca llaman al proveedor real; la conexión real se valida aparte con los dos comandos anteriores.
 
-E2E del recorrido de aceptación (con API y web en marcha):
+E2E del recorrido de aceptación y de la landing (con API y web en marcha):
 
 ```bash
 cd apps/web && npx playwright test

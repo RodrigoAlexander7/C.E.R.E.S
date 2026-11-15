@@ -69,3 +69,51 @@ Estado real de la publicación: ver `despliegue.md`.
 - [x] Límites de memoria, un worker API, logs rotados y PostgreSQL ajustado; consumo medido (ver `despliegue.md`).
 - [x] Migración, respaldo, verificación de restauración y rollback en `deploy/ceres.sh` (resultado en `despliegue.md`).
 - [x] CI/CD: `.github/workflows/ci.yml` (PR) y `deploy.yml` (main/manual, OIDC, Run Command).
+
+---
+
+# Nueva dirección (15-nov-2026) — `main.md` §11, requisitos R14–R20, diseño §9
+
+## Incremento 7 — Fase 0: especificación y landing
+
+- [x] Registrar la nueva dirección en `main.md` §11 y enmendar §5 (Gemini, chat que propone con confirmación) y §8.
+- [x] Requisitos R14–R20 y enmienda de R09; diseño §9 (rutas, supuestos de zona, cuaderno, extracción, Ceres, NASA visible).
+- [x] Landing pública en `/` con datos NASA reales de la API y funciones disponibles/próximas diferenciadas; mapa actual movido a `/avanzado`. **R14**.
+
+## Incremento 8 — Fase 1: motor sin bloqueos
+
+- [ ] Investigar y registrar valores típicos de Majes I (dotación, eficiencia, salinidad, calendario, precios) con fuente; lo no encontrado queda como `supuesto_zona`. **R16**.
+- [ ] `ZoneDefaults` versionado, aplicado a desconocidos y congelado en el run. **R16**.
+- [ ] Nivel sencillo y `decisive_data` por opción con pregunta observable. **R15, R16**.
+- [ ] Pruebas: «no sé» en todo → tres opciones útiles; supuesto en restricción obligatoria nunca da «Buena opción»; reemplazar supuesto recalcula y conserva el run anterior.
+
+## Incremento 9 — Fase 2: modo sencillo
+
+- [ ] `/app`: alta en 3 preguntas, tres opciones, «¿Por qué?» en capas, glosario + IA bajo demanda. **R15**.
+- [ ] Modo avanzado corregido y enlazado. **R15**.
+- [ ] E2E móvil (375 px): 3 preguntas y 2 toques hasta opciones. **R15, R20**.
+
+## Incremento 10 — Fase 3: momento NASA
+
+- [ ] `sowing-window` por mes de siembra y gráfico en modo sencillo y landing. **R19**.
+- [ ] Comparación de años El Niño/normales con fuente NOAA registrada. **R19**.
+
+## Incremento 11 — Fase 4: NDVI de la parcela
+
+- [ ] Acceso HLS (Earthdata o catálogo público) comprobado; serie NDVI con nubes enmascaradas para la parcela demo. **R19**.
+
+## Incremento 12 — Fase 5: cuaderno de campo
+
+- [ ] Modelo, migraciones y API de campañas, ventas, costos y ganancia declarada; aislamiento por propietario. **R17**.
+- [ ] El motor usa datos propios cuando existen y lo indica en la procedencia. **R17**.
+- [ ] Vista `/app/cuaderno` con resúmenes por campaña y mes. **R17**.
+
+## Incremento 13 — Fase 6: registro por chat y voz
+
+- [ ] `ProposeRecords` (texto/audio) con esquema estricto, tarjeta «¿Guardo esto?» y confirmación obligatoria. **R17**.
+- [ ] Revisión mensual determinista y notificaciones opcionales del navegador. **R17**.
+
+## Incremento 14 — Fases 7–8: asistente Ceres, pruebas y demo
+
+- [ ] Ceres con memoria del cuaderno, herramienta `simular_escenario`, voz de entrada/salida. **R18**.
+- [ ] E2E del recorrido R20, despliegue y guion de demo de 30 segundos.

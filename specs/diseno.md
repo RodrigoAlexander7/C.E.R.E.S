@@ -168,3 +168,44 @@ Pruebas de dominio con casos conocidos: calendario sin solapamientos, restriccio
 Pruebas de asistente con proveedor simulado: citas inexistentes, métricas ajenas, falta de contexto e instrucciones maliciosas dentro de documentos. Comprobación de conexión LLM real separada y explícita. E2E: mapa → login → parcela → ciclos → cambio de agua → fuentes → pregunta → logout/aislamiento.
 
 Documentar comandos reales de arranque, migración, carga de demo y tests. El modo de demo sin red reutiliza archivos NASA reales y geometrías permitidas previamente descargadas; no descarga teselas OSM masivamente. Hasta obtener esos archivos, marcar el paquete de datos como pendiente, sin presentar fixtures sintéticos como evidencia real.
+
+## 9. Diseño de la nueva dirección (15-nov-2026)
+
+Requisitos R14–R20. Se mantienen la arquitectura limpia, el motor como única autoridad de cálculo y la validación de citas/cifras.
+
+### Rutas del frontend
+
+| Ruta | Superficie |
+|---|---|
+| `/` | Landing pública (R14), sin la barra de la aplicación. |
+| `/app` | Modo sencillo (R15): alta en 3 preguntas, opciones, «¿Por qué?», ayuda contextual. |
+| `/app/cuaderno` | Cuaderno de campo (R17). |
+| `/app/ceres` | Asistente conversacional con voz (R18). |
+| `/avanzado` | Modo avanzado: el mapa y el recorrido técnico actuales. |
+| `/demo`, `/fuentes`, `/ingresar`, `/parcelas/*` | Se conservan. |
+
+La landing y la aplicación usan grupos de rutas de Next.js con layouts propios; la sesión y el registro de fuentes se comparten desde el layout raíz.
+
+### Motor: supuestos de zona y sensibilidad
+
+- `ZoneDefaults` versionado en `data/catalog/zona_majes.json`: cada valor con unidad, fuente o `supuesto_zona`, fecha y ámbito. Se aplica solo a campos desconocidos y se registra en las entradas congeladas del run (`kind = supuesto_zona`).
+- Nivel sencillo derivado del estado técnico: `viable_con_supuestos` sin supuestos de zona en restricciones obligatorias → «Buena opción»; con ellos o `requiere_datos` → «Posible, confirma X»; `no_viable` → «No conviene»; `exploratoria` → «Por explorar».
+- Sensibilidad: para cada supuesto de zona que afecta a una restricción, evaluar el umbral que cambia el nivel (p. ej., dotación mínima mensual = mes de mayor demanda bruta; salinidad máxima = umbral del cultivo) y producir `decisive_data` con pregunta observable y valor crítico. Cálculo determinista, sin LLM.
+
+### Cuaderno de campo
+
+Tablas nuevas con propietario y FK a parcela: `Campaign` (cultivo, área, siembra, cosecha, rendimiento comercializable, unidad), `Sale` (campaña, cantidad, precio, fecha), `Cost` (campaña opcional, concepto, monto, fecha), `ProfitDeclaration` (periodo, monto, nota). Origen `declarado` o `declarado_chat_confirmado`, y referencia al mensaje de chat cuando aplique. El motor prioriza rendimientos/precios/costos propios recientes del mismo cultivo y lo indica en `source_ids` (`CUADERNO`).
+
+### Extracción por chat/voz
+
+`ProposeRecords`: audio (webm/ogg, ≤ 2 min) o texto → LLM con esquema JSON estricto de registros → validación Pydantic (unidades, rangos, fechas) → `RecordProposal` pendiente (TTL corto) → la UI muestra la tarjeta editable → `ConfirmProposal` escribe los registros. Sin confirmación no hay escritura. El audio se procesa en memoria y no se guarda. La revisión mensual consulta qué falta (campaña sin cosecha, venta sin precio, mes sin costos) y genera las preguntas de forma determinista; la IA solo las redacta.
+
+### Asistente Ceres
+
+Contexto: cuaderno resumido, últimos runs, fichas FTS. Herramientas permitidas (function calling): `simular_escenario` (crea run con escenario validado), `consultar_cuaderno` (lectura acotada al propietario). Sin herramientas de escritura del cuaderno: los registros pasan por `ProposeRecords`. La validación de cifras admite valores del cuaderno y de los runs creados en la conversación. Voz de salida con `speechSynthesis` del navegador.
+
+### Evidencia NASA visible
+
+- `GET /public/sowing-window?crop=…`: por mes de siembra, ETc del ciclo, riego neto y exposición térmica con la instantánea POWER (mismo motor que la comparación).
+- Años El Niño/normales: lista de fases tomada de NOAA (ONI) con fuente registrada; comparación de ETc/temperaturas por campaña.
+- NDVI: tarea fuera de la petición web que lee escenas HLS (COG) para el polígono, enmascara nubes con Fmask y guarda la serie por parcela; requiere credenciales Earthdata en el servidor.

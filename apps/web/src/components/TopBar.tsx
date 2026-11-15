@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useSession } from "./SessionProvider";
 
 const LINKS = [
-  { href: "/", label: "Mapa" },
+  { href: "/avanzado", label: "Modo avanzado" },
   { href: "/demo", label: "Caso demo" },
   { href: "/parcelas", label: "Mis parcelas", private: true },
   { href: "/fuentes", label: "Fuentes" },

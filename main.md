@@ -23,6 +23,8 @@ Respeta las instrucciones del usuario y los AGENTS.md aplicables. Dentro de la d
 
 Para preparar la publicación, leer también `despliegue.md` e `infra/azure/`. El usuario ha encargado el despliegue en Azure a este chat; el agente de desarrollo preparará los artefactos y no duplicará el aprovisionamiento.
 
+La **sección 11** recoge la dirección de producto acordada el 15-nov-2026 (modo sencillo, cuaderno de campo, voz y asistente con memoria); cuando contradiga una sección anterior, prevalece la sección 11.
+
 `propuesta_v2.md` y `research_notes/Rotaciones agrícolas para Majes/propuesta_original.md` son antecedentes conservados, no requisitos vigentes. No los borres ni los uses para reintroducir malezas, macheteo, alfalfa comparada injustamente o afirmaciones sin verificar. Si detectas una contradicción importante entre documentos actuales, resuélvela siguiendo las decisiones más recientes del usuario y deja constancia.
 
 ## 3. Producto que debe funcionar
@@ -82,9 +84,9 @@ Debe responder preguntas sobre el ciclo propuesto, motivos, agua, costos, suelo 
 
 El motor calcula; el LLM explica. Todas las afirmaciones numéricas deben corresponder a métricas o datos existentes, y las citas a fuentes realmente incluidas en su contexto. Si falta evidencia, responder claramente qué se sabe y qué dato falta. Lenguaje sencillo y breve, con detalle desplegable.
 
-El chat del MVP no modificará parcelas ni ejecutará acciones externas. Para simular otro escenario, el usuario usará los controles que llaman al motor y crean un nuevo resultado. No permitir SQL libre, navegación web arbitraria ni acceso del LLM a datos de otra cuenta.
+El chat no ejecuta acciones externas ni modifica datos por su cuenta. **Actualización del 15-nov-2026 (sección 11):** el asistente puede *proponer* registros extraídos de texto o voz y pedir simulaciones al motor, pero un dato solo se guarda cuando el agricultor lo confirma en la interfaz, y toda simulación crea un resultado nuevo del motor. No permitir SQL libre, navegación web arbitraria ni acceso del LLM a datos de otra cuenta.
 
-Implementar un puerto de LLM con adaptador inicial a OpenAI Responses API. `OPENAI_API_KEY` y `OPENAI_MODEL` se configuran en el servidor; no fijar un modelo inexistente ni exponer claves. Sin configuración, mostrar «IA no conectada» y permitir consultar fichas; no presentar un mock como IA operativa. Las pruebas automatizadas usarán un proveedor simulado, y la comprobación con servicio real se registrará por separado cuando haya credenciales.
+Implementar un puerto de LLM con adaptadores intercambiables. **Proveedor elegido por el equipo: Google Gemini** (`GEMINI_API_KEY`, `GEMINI_MODEL`); OpenAI Responses queda como alternativa (`OPENAI_API_KEY`, `OPENAI_MODEL`). Las claves se configuran en el servidor; no fijar un modelo inexistente ni exponer claves. Sin configuración, mostrar «IA no conectada» y permitir consultar fichas; no presentar un mock como IA operativa. Las pruebas automatizadas usarán un proveedor simulado, y la comprobación con servicio real se registrará por separado.
 
 ## 6. Decisiones técnicas acordadas
 
@@ -100,7 +102,7 @@ Implementar un puerto de LLM con adaptador inicial a OpenAI Responses API. `OPEN
 
 El inventario completo es `recursos.md`; no se presupone que todos los portales tengan API operativa. Priorizar NASA POWER, límites descargados con procedencia y catálogo agronómico pequeño. Preparar datos reales cacheados y supuestos de demo etiquetados. No hacer que cada carga de pantalla o pregunta descargue años de datos externos.
 
-Crear un `.env.example` sin secretos con las variables realmente utilizadas: conexión PostgreSQL, configuración de sesión/origen, `OPENAI_API_KEY`, `OPENAI_MODEL` y opciones de fuentes/caché. Earthdata solo si se implementa HLS. Documentar qué es obligatorio para arrancar y qué habilita funciones adicionales.
+Crear un `.env.example` sin secretos con las variables realmente utilizadas: conexión PostgreSQL, configuración de sesión/origen, `GEMINI_API_KEY`, `GEMINI_MODEL` (u `OPENAI_*`) y opciones de fuentes/caché. Earthdata solo si se implementa HLS. Documentar qué es obligatorio para arrancar y qué habilita funciones adicionales.
 
 Sin claves LLM o acceso a un portal, avanzar con interfaces, persistencia, adaptadores y pruebas independientes. Registrar lo pendiente con causa concreta. **La aceptación de NASA real y de IA conectada no se satisface con mocks.** El usuario ha autorizado preparar el despliegue de CERES en Azure, reutilizando `rodrygo-resource-group` y priorizando el beneficio de estudiante. El agente de desarrollo entregará imágenes y configuración desplegables; el aprovisionamiento y publicación se coordinarán desde este chat según `despliegue.md`. No contratar servicios adicionales, crear otro grupo, cambiar la suscripción a pago por uso ni retirar su límite de gasto por iniciativa propia.
 
@@ -108,7 +110,7 @@ Actualización de autorización: el usuario permite usar crédito estudiantil y 
 
 ## 8. Fuera de alcance
 
-Detección de malezas, fecha de macheteo, herbicidas, clasificación automática de cultivos, predicción propia de clima/precios, diagnóstico de nutrientes por imagen, prescripción automática de dosis sin análisis, recomendaciones clínicas/anemia, WhatsApp real y validación agronómica nacional. La composición alimentaria INS es información complementaria, sin promesas de salud.
+Detección de malezas, fecha de macheteo, herbicidas, clasificación automática de cultivos, predicción propia de clima/precios, diagnóstico de nutrientes por imagen, prescripción automática de dosis sin análisis, recomendaciones clínicas/anemia, WhatsApp/SMS real y validación agronómica nacional. La voz se usa **dentro de la aplicación web** (sección 11), no por canales de mensajería. La composición alimentaria INS es información complementaria, sin promesas de salud.
 
 ## 9. Cómo empezar y cuándo considerar terminada la implementación
 
@@ -128,3 +130,35 @@ Entregar Dockerfiles de producción para web/API y un Compose de despliegue con 
 La configuración candidata es Linux x64 `Standard_B2ats_v2`, 2 vCPU/1 GiB, con swap como apoyo y recursos limitados para una demo pequeña. Su suficiencia debe comprobarse con el recorrido completo; no se promete capacidad de producción. Solo el proxy publica 80/443. Base de datos y API quedan en la red interna; las cookies privadas usan HTTPS y el mismo origen. Las claves LLM se cargan en el servidor, nunca en imagen, repositorio o datos de inicialización de Azure.
 
 El código debe ofrecer healthchecks, migraciones ejecutables, carga de datos reproducible, rotación de logs y un procedimiento de respaldo/restauración. Si el consumo no cabe o se requiere una VM mayor, informar de mediciones y costo antes de cambiar el dimensionamiento. El estado real del despliegue y las condiciones de costo se registran en `despliegue.md`.
+
+## 11. Nueva dirección de producto (15 de noviembre de 2026)
+
+Decisión del usuario tras evaluar el MVP: la versión actual es rigurosa pero compleja para un agricultor que no tiene estudio de suelos y solo recuerda lo que sembró en los últimos meses. Además, casi todas las opciones quedaban en «Requiere datos». CERES pasa de ser una calculadora de una sola vez a ser **el cuaderno de campo del agricultor**, que aprende de su historia y explica sus decisiones.
+
+### Principios
+
+1. **Primero opciones, después el porqué.** El agricultor ve tres opciones claras con una frase cada una; «¿Por qué?» abre la justificación en capas, de lo simple a lo técnico.
+2. **Nunca un callejón sin salida.** Ante un dato desconocido se usa un **supuesto típico de la zona** con fuente o marcado como supuesto, visible y editable, y se dice **qué dato cambiaría la decisión**, preguntado de forma observable («¿ves costras blancas en tu chacra?»). La regla «un dato desconocido no es cero» se mantiene: el supuesto se etiqueta, no se presenta como medición.
+3. **El motor calcula; la IA explica, pregunta y propone.** Las cifras salen del motor o de los registros del agricultor. La IA puede extraer datos de texto/voz y proponerlos, pero solo se guardan con confirmación.
+4. **Lo propio vale más que lo supuesto.** Rendimientos, precios, costos y ganancias registrados por el agricultor sustituyen a los supuestos de demostración en sus cálculos.
+5. **Rigor disponible, no impuesto.** La interfaz actual se conserva como **modo avanzado** para asesores, con correcciones.
+
+### Superficies del producto
+
+- **Landing pública** que explica la propuesta con datos reales y distingue lo disponible de lo próximo.
+- **Modo sencillo** (nueva interfaz, primero para móvil): alta en 3 preguntas (qué sembraste, cuándo cosechas, qué te importa más), tres opciones en lenguaje cotidiano («Buena opción», «Posible, confirma X», «No conviene»), «¿Por qué?» en capas, botón de IA junto a términos difíciles (glosario fijo primero, IA bajo demanda) y mapa opcional.
+- **Modo avanzado**: el recorrido actual (mapa, perfil completo, comparación técnica, simulación, fuentes).
+- **Cuaderno de campo**: campañas (cultivo, hectáreas, fechas, rendimiento), ventas, costos y ganancia declarada por campaña/mes; resúmenes del tipo «el año pasado en este mes…».
+- **Registro por chat y voz**: texto o audio → extracción estructurada → tarjeta «¿Guardo esto?» → registro `declarado (chat, confirmado)`. Revisión mensual dentro de la app y notificaciones opcionales del navegador; el agente pregunta lo que falta. El audio no se conserva, solo la transcripción confirmada.
+- **Asistente conversacional «Ceres»** (el usuario lo llamó modo «Jarvis»; se usa un nombre propio): conversación sobre qué sembrar con memoria del cuaderno, simulaciones pedidas al motor, respuestas con fuentes y voz de salida del navegador. Distingue «ganancia que declaraste» de «margen estimado».
+- **Evidencia NASA visible**: «¿cuándo me conviene sembrar?» según el mes, con los 11 años de NASA POWER, comparación de años El Niño/normales, e índice de vegetación (NDVI, HLS 30 m) de la parcela.
+
+### Orden de implementación
+
+Fase 0 especificación y landing → Fase 1 motor sin bloqueos → Fase 2 modo sencillo → Fase 3 momento NASA → Fase 4 NDVI de la parcela → Fase 5 cuaderno de campo → Fase 6 registro por chat/voz → Fase 7 asistente Ceres → Fase 8 pruebas, despliegue y guion de demo. Detalle en `specs/tareas.md` (incrementos 7–14).
+
+### Decisiones pendientes del usuario
+
+- Canal de las preguntas mensuales: por defecto, revisión al abrir la app + notificaciones del navegador; WhatsApp/SMS sigue fuera de alcance.
+- Cuenta gratuita de NASA Earthdata para HLS (fase 4), o confirmar un catálogo público alternativo.
+- Valores típicos de Majes I (dotación, eficiencia, salinidad, calendario, precios): deben obtenerse de AUTODEMA, Junta de Usuarios, Agencia Agraria o SIEA antes de presentarlos como «típicos»; si no se consiguen, se muestran como supuestos de zona.

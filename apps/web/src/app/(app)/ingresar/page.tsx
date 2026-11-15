@@ -28,7 +28,7 @@ function LoginForm() {
     try {
       await api(mode === "login" ? "/auth/login" : "/auth/register", { method: "POST", json: { email, password } });
       await refresh();
-      router.push(hasDraft ? "/" : safeBack);
+      router.push(hasDraft ? "/avanzado" : safeBack);
     } catch (err) {
       if (err instanceof ApiError && err.details?.length) setError(err.details.map((d) => (d.field === "password" ? "La contraseña debe tener al menos 8 caracteres" : d.field === "email" ? "Email no válido" : d.message)).join(". "));
       else setError(err instanceof ApiError ? err.message : "No se pudo continuar");

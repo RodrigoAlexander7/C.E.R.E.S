@@ -30,10 +30,10 @@ export default function Parcels() {
     <div className="stack">
       <div className="row" style={{ justifyContent: "space-between" }}>
         <h1>Mis parcelas</h1>
-        <Link className="btn btn-primary" style={{ color: "#fff" }} href="/">Agregar parcela</Link>
+        <Link className="btn btn-primary" style={{ color: "#fff" }} href="/avanzado">Agregar parcela</Link>
       </div>
       {error && <div className="notice notice-bad">{error}</div>}
-      {items && items.length === 0 && <div className="card">Todavía no guardaste parcelas. <Link href="/">Delimita tu terreno en el mapa</Link>.</div>}
+      {items && items.length === 0 && <div className="card">Todavía no guardaste parcelas. <Link href="/avanzado">Delimita tu terreno en el mapa</Link>.</div>}
       <div className="grid-3">
         {items?.map((p) => (
           <article key={p.id} className="card stack">

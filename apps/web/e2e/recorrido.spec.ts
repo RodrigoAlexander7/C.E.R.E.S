@@ -16,7 +16,7 @@ async function drawSquare(page: Page) {
 }
 
 test("recorrido principal y aislamiento", async ({ page, browser }) => {
-  await page.goto("/");
+  await page.goto("/avanzado");
   // Tema claro aunque el navegador prefiera oscuro.
   const bg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
   expect(bg).toBe("rgb(246, 244, 238)");
@@ -52,7 +52,7 @@ test("recorrido principal y aislamiento", async ({ page, browser }) => {
   await page.getByLabel(/Contraseña/).fill(userA.password);
   await page.getByRole("button", { name: "Crear cuenta" }).click();
 
-  await expect(page).toHaveURL(/\/$/);
+  await expect(page).toHaveURL(/\/avanzado$/);
   await expect(page.getByRole("button", { name: "Cerrar sesión" })).toBeVisible();
   await expect(page.getByText(/Área estimada:/)).toBeVisible(); // borrador restaurado
   await page.getByRole("button", { name: "Guardar y comparar", exact: true }).click();
@@ -89,7 +89,8 @@ test("recorrido principal y aislamiento", async ({ page, browser }) => {
 
   // Logout y aislamiento.
   await page.getByRole("button", { name: "Cerrar sesión" }).click();
-  await expect(page.getByRole("link", { name: "Ingresar" })).toBeVisible();
+  await expect(page).toHaveURL(/\/$/); // tras cerrar sesión vuelve a la landing pública
+  await expect(page.getByRole("banner").getByRole("link", { name: "Ingresar" })).toBeVisible();
 
   const ctxB = await browser.newContext();
   const pageB = await ctxB.newPage();

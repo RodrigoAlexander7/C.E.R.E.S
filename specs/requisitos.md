@@ -87,7 +87,7 @@ La aplicación evalúa estrategias con los datos y supuestos disponibles. No gar
 - Toda cifra presentada debe tener respaldo en el contexto y toda cita debe resolver a una fuente autorizada y utilizada. No aceptar enlaces inventados ni atribuciones generales que no sustentan la afirmación.
 - Puede explicar «por qué frejol después del maíz», «qué cambia con menos agua» y «qué falta saber del suelo», distinguiendo evidencia de hipótesis.
 - Cuando no haya respaldo, lo reconoce y pide el dato concreto necesario. No diagnostica suelo, prescribe herbicidas ni hace promesas médicas.
-- El motor sigue siendo la única autoridad de cálculos/estados. El chat no modifica datos, hace SQL libre ni ejecuta acciones externas.
+- El motor sigue siendo la única autoridad de cálculos/estados. El chat no hace SQL libre ni ejecuta acciones externas. Solo puede *proponer* registros y simulaciones según R17–R18; nada se guarda sin confirmación del usuario.
 - No se recupera contexto ajeno aunque el usuario lo pida o un documento contenga instrucciones. Los textos recuperados son evidencia, no instrucciones de sistema.
 - Sin clave/modelo o ante fallo del proveedor, mostrar indisponibilidad y acceso a fichas; no simular una respuesta generativa exitosa.
 - Guardar conversación vinculada a propietario, parcela y versión del resultado; mostrar si el perfil actual ya cambió respecto al resultado consultado.
@@ -138,3 +138,65 @@ Para declarar **demo completa**, NASA real y el asistente conectado deben estar 
 - El agente de desarrollo no duplica infraestructura ni modifica otros proyectos; despliegue coordinado por este chat en `rodrygo-resource-group`.
 - Documentar versión, pruebas y configuración no secreta de cada publicación. No incluir claves en imagen, repositorio o cloud-init.
 - Distinguir infraestructura creada de aplicación publicada; seguir el estado y autorización de costos de `despliegue.md`.
+
+---
+
+# Requisitos de la nueva dirección (15-nov-2026)
+
+Origen: `main.md` sección 11. Prevalecen sobre R01–R12 cuando los contradigan; R02 (aislamiento), R04 (NASA real), R09 (citas/cifras validadas) y R10 (procedencia) siguen vigentes.
+
+## R14 — landing pública
+
+- Explica en menos de 10 segundos qué hace CERES, para quién y qué decisión ayuda a tomar, en español sencillo.
+- Muestra evidencia **real**: la serie NASA POWER de Majes (meses, ET0, lluvia) se obtiene de la API, no de cifras escritas a mano.
+- Distingue funciones **disponibles** de **próximas**; no presenta como operativo algo que no lo esté.
+- Lleva a probar (caso demo y comparación de parcela) sin exigir cuenta.
+- Responsive, accesible por teclado, solo tema claro, respeta `prefers-reduced-motion` y carga sin bloquear por el mapa.
+
+## R15 — modo sencillo y modo avanzado
+
+- Alta en tres preguntas: cultivo actual o último, fecha de cosecha (o «ya coseché») y prioridad. Ubicación por zona o mapa opcional; área declarada aceptada.
+- Resultado: tres opciones con un nivel en lenguaje cotidiano («Buena opción», «Posible, confirma X», «No conviene») y una frase que las justifique; el estado técnico R06 se conserva y se muestra en «¿Por qué?».
+- «¿Por qué?» se abre en capas: razón principal → datos usados y supuestos → detalle técnico y fuentes.
+- Junto a términos difíciles hay un botón de ayuda: primero un glosario fijo y, bajo demanda, explicación de la IA con fuentes.
+- El recorrido completo funciona en un móvil de 375 px con tres preguntas y dos toques hasta ver opciones.
+- El modo avanzado conserva la funcionalidad actual y es accesible desde el modo sencillo.
+
+## R16 — supuestos de zona y dato decisivo
+
+- Un dato desconocido puede sustituirse por un **supuesto de zona** con valor, unidad, fuente (o etiqueta `supuesto_zona` si no hay fuente) y fecha; nunca se presenta como medición ni declaración.
+- Con supuestos de zona el motor puede clasificar una opción como «Posible, confirma X», pero no como «Buena opción» si el supuesto afecta a una restricción obligatoria (agua mensual, salinidad de cultivo sensible, presupuesto).
+- Para cada opción, el motor identifica el **dato que cambiaría la decisión** (sensibilidad: con qué valor cambia el nivel) y lo formula como una pregunta observable.
+- Reemplazar el supuesto por un dato propio recalcula y conserva el resultado anterior (R06).
+
+## R17 — cuaderno de campo y registro por chat/voz
+
+- Registros privados por parcela: campañas (cultivo, área, siembra, cosecha, rendimiento), ventas (cantidad, precio, comprador opcional), costos y ganancia declarada; cada uno con fecha, origen (`declarado`, `declarado_chat_confirmado`) y revisión.
+- El motor usa rendimientos, precios y costos propios cuando existen y lo indica en la procedencia.
+- Texto o audio se transcriben y se convierten en una **propuesta estructurada**; la interfaz muestra «¿Guardo esto?» con los campos editables. Sin confirmación no se escribe nada.
+- La revisión mensual pregunta solo lo que falta en el cuaderno; las notificaciones del navegador son opcionales y revocables.
+- El audio no se almacena; la transcripción solo se conserva si el usuario confirma el registro.
+- Pruebas: extracción con proveedor simulado, rechazo de campos inválidos, confirmación obligatoria y aislamiento entre cuentas.
+
+## R18 — asistente conversacional «Ceres»
+
+- Conversa sobre qué sembrar usando el cuaderno, los resultados y las fichas autorizadas; recuerda campañas anteriores citando el registro concreto (fecha, cultivo, cifra).
+- Puede pedir al motor una simulación; el resultado se guarda como run nuevo y se muestra como tal. No calcula cifras por su cuenta.
+- Distingue «ganancia que declaraste» (registro) de «margen estimado» (motor).
+- Voz de entrada (audio) y de salida (síntesis del navegador), opcionales.
+- Mantiene la validación de citas y cifras de R09 y el rechazo de instrucciones insertadas.
+
+## R19 — evidencia NASA visible y NDVI
+
+- «¿Cuándo me conviene sembrar?»: para cada mes de siembra, demanda de agua y exposición térmica calculadas con los 11 años de NASA POWER; cambiar el mes cambia la cifra.
+- Comparación de años El Niño y normales dentro de la serie, con las fases tomadas de una fuente citada (NOAA).
+- NDVI mensual de la parcela desde HLS (30 m), con fecha de escena, nubosidad y advertencia de que no diagnostica nutrientes ni causas.
+
+## R20 — aceptación de la nueva dirección
+
+1. Visitante entra a la landing, entiende la propuesta y ve datos NASA reales de Majes.
+2. En modo sencillo responde tres preguntas (aceptando «no sé») y ve tres opciones útiles, sin callejones sin salida.
+3. Abre «¿Por qué?» y llega hasta las fuentes; ve qué dato cambiaría la decisión.
+4. Registra por voz o texto una cosecha y una venta, confirma y ve el cuaderno actualizado.
+5. Conversa con Ceres, que recuerda ese registro y pide una simulación al motor.
+6. Pasa al modo avanzado y encuentra la misma comparación con detalle técnico.

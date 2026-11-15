@@ -23,7 +23,7 @@ export default function Demo() {
         <div className="notice notice-warn">{data.note} Agua, suelo y precios son supuestos de demostración etiquetados; el clima es la serie real de NASA POWER.</div>
         <p className="muted" style={{ margin: 0 }}>
           {fmtNumber(data.parcel.area_ha, 2)} ha dibujadas en el distrito {data.parcel.region_codes.district_name}. Comparación calculada el {data.run ? fmtDateTime(data.run.created_at) : "—"}.
-          Para comparar tu propia parcela y usar el asistente, <Link href="/">delimítala en el mapa</Link> e inicia sesión.
+          Para comparar tu propia parcela y usar el asistente, <Link href="/avanzado">delimítala en el mapa</Link> e inicia sesión.
         </p>
       </div>
       {data.run?.result ? <Comparison result={data.run.result} /> : <div className="card">Sin comparación cargada.</div>}
