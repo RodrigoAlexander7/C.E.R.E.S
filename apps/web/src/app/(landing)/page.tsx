@@ -138,27 +138,29 @@ const CROP_COLOR: Record<string, string> = { maiz_grano: "#d9a53a", frejol_grano
 const SHORT: Record<string, string> = { maiz_grano: "Maíz", frejol_grano: "Frejol", cebolla_roja: "Cebolla" };
 
 function PhonePreview({ strategies, zoneName, nameOf, areaHa }: { strategies: Strategy[] | null; zoneName: string; nameOf: (id: string) => string; areaHa: number | null }) {
+  const preview = strategies ? strategies.slice(0, 3) : null;
   return (
     <div className={s.phone} aria-label={`Vista previa del modo sencillo con el caso demo de ${zoneName}`}>
       <div className={s.phoneScreen}>
         <div className={s.phoneTop}><span>CERES</span><span>Caso demo · {zoneName}</span></div>
         <p className={s.phoneTitle}>Opciones del caso público</p>
         <p className={s.phoneSub}>Comparación del motor{areaHa != null ? ` para ${fmt(areaHa, 2)} ha de demostración` : ""}</p>
-        {!strategies &&
+        {!preview &&
           [0, 1, 2].map((i) => <div key={i} className={`${s.opt} ${s.skeleton}`} style={{ height: 96 }} />)}
-        {strategies?.map((st) => {
+        {preview?.map((st) => {
           const lvl = st.simple ? { label: st.simple.label, cls: SIMPLE_CLS[st.simple.level] } : LEVEL[st.status];
           const margin = st.metrics[`${st.strategy_id}.eco.margen`]?.value;
           const water = st.metrics[`${st.strategy_id}.agua.bruto_m3`]?.value ?? null;
           const total = st.timeline.reduce((a, b) => a + (Date.parse(b.end) - Date.parse(b.start)), 0) || 1;
+          const title = st.sequence.length > 0 ? st.sequence.map(nameOf).join(" → ") : st.name;
           return (
             <div key={st.strategy_id} className={s.opt}>
               <div className={s.optHead}>
-                <span className={s.optName}>{st.sequence.map(nameOf).join(" → ")}</span>
+                <span className={s.optName}>{title}</span>
                 <span className={`${s.pill} ${lvl.cls}`}>{lvl.label}</span>
               </div>
               <p className={s.optLine}>
-                {margin != null ? <>Margen bruto estimado ≈ S/ {fmt(margin)}</> : "Margen pendiente"}
+                {margin != null ? <>Margen bruto estimado ≈ S/ {fmt(margin)}</> : (st.simple?.headline ?? "Margen pendiente")}
                 {water != null ? <> · demanda de riego ≈ {fmt(water)} m³</> : null}
               </p>
               <div className={s.bar} aria-hidden="true">

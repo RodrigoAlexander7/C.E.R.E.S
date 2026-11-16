@@ -307,10 +307,10 @@
   .navCta { margin-left: 0; }
   .btn:hover { transform: translateY(-1px); }
   .heroGrid { grid-template-columns: 1.05fr 0.95fr; gap: 48px; align-items: center; }
-  .visual { display: block; min-height: 580px; padding-top: 0; }
+  .visual { display: flex; justify-content: flex-end; align-items: flex-start; min-height: 580px; padding: 0 18px 0 0; }
   .fieldCard { inset: 24px 0 24px 40px; border-radius: 32px; }
   .fieldLabel { top: auto; left: 60px; bottom: 44px; }
-  .phone { position: absolute; right: 18px; top: 0; width: 300px; animation: float 7s ease-in-out infinite; }
+  .phone { position: relative; width: 300px; animation: float 7s ease-in-out infinite; }
   .chip { position: absolute; max-width: 220px; animation: float 8s ease-in-out infinite; }
   .chipNasa { left: 0; top: 64px; margin: 0; animation-delay: -2s; }
   .chipAi { left: 22px; right: auto; bottom: 120px; animation-delay: -4s; }
