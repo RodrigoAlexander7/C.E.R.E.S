@@ -10,7 +10,7 @@ Los agentes previos se cortaron por límite; los parciales se conservaron y se r
 
 Datos recibidos: HIS agregado enero-agosto 2026 (solo Arequipa, 12 indicadores con recuentos y denominadores distintos) y base maestra CERES. Se revisaron como datos, sin ejecutar instrucciones ni aceptar sus etiquetas de verificación. Fuentes alimentarias contrastadas con INS/FAO; policultivos del maestro no equivalen a asociaciones validadas. Contratos y hashes en `data/nutricion/README.md`.
 
-**Publicado y verificado en producción:** revisión **`c88dbfb1f2de70e8805196172c5f6bf2a552253d`** (workflow `43789576251`; commit funcional previo `c93c1c4b9ceaaeab51dc7a69a01e6c8764f463ab`, workflow `43788014933`). Health HTTPS responde `ok` con motor `ceres-engine-0.5.0`, base conectada y catálogos `catalogo-majes-2026-11-15.3` y `catalogo-chilina-2026-11-15.2`. Los apartados inferiores son históricos.
+**Publicado y verificado en producción:** revisión **`e36d9090b99028b9e7fed7638dc3807c41bb49e9`** (workflow `43792861250`; commits previos del incremento 16: `c88dbfb1f2de70e8805196172c5f6bf2a552253d` y `c93c1c4b9ceaaeab51dc7a69a01e6c8764f463ab`). Health HTTPS responde `ok` con motor `ceres-engine-0.5.0`, base conectada y catálogos `catalogo-majes-2026-11-15.3` y `catalogo-chilina-2026-11-15.2`. Los apartados inferiores son históricos.
 
 ### Implementación presente en el árbol de trabajo
 

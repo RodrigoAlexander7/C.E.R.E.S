@@ -4,9 +4,9 @@ Actualizado el 15 de noviembre de 2026 (UTC). Este documento distingue infraestr
 
 ## Estado actual
 
-Validación del 16-nov-2026 (UTC): revisión **`c88dbfb1f2de70e8805196172c5f6bf2a552253d`** (anterior del incremento 16: `c93c1c4b9ceaaeab51dc7a69a01e6c8764f463ab`), motor `ceres-engine-0.5.0`, zonas Majes I (`catalogo-majes-2026-11-15.3`) y Valle de Chilina (`catalogo-chilina-2026-11-15.2`). CI remoto pasó **305 pruebas API/PostgreSQL**, migraciones (`alembic check`), tipos, build y **22 E2E**, incluidos R20, R22 y R23. [Workflow exitoso](https://github.com/RodrigoAlexander7/C.E.R.E.S/actions/runs/43789576251).
+Validación del 16-nov-2026 (UTC): revisión **`e36d9090b99028b9e7fed7638dc3807c41bb49e9`** (anterior del incremento 16: `c88dbfb1f2de70e8805196172c5f6bf2a552253d`), motor `ceres-engine-0.5.0`, zonas Majes I (`catalogo-majes-2026-11-15.3`) y Valle de Chilina (`catalogo-chilina-2026-11-15.2`). CI remoto pasó **305 pruebas API/PostgreSQL**, migraciones (`alembic check`), tipos, build y **22 E2E**, incluidos R20, R22 y R23. [Workflow exitoso](https://github.com/RodrigoAlexander7/C.E.R.E.S/actions/runs/43792861250).
 
-Comprobación posterior al despliegue: `/api/v1/health` responde `ok` con `revision: "c88dbfb1f2de70e8805196172c5f6bf2a552253d"`, `database: true`, `llm_configured: true`, `engine_version: "ceres-engine-0.5.0"` y ambas zonas; `/`, `/app`, `/app/cuaderno`, `/app/ceres` y `/demo` responden 200. HLS público conserva **5 meses reales en Majes y 3 en Chilina**, con hashes y procedencia. Acceso al cuaderno sin sesión devuelve 401. Se conserva la cuenta demo privada autorizada con dos lotes y 16 registros por lote: una campaña declarada y 15 continuaciones simuladas etiquetadas. Ninguna parcela se publica como demo; fuera de piloto, los runs no toman clima ni catálogo de otra zona. Coordenadas y credenciales solo en los archivos locales ignorados y en la cuenta privada.
+Comprobación posterior al despliegue: `/api/v1/health` responde `ok` con `revision: "e36d9090b99028b9e7fed7638dc3807c41bb49e9"`, `database: true`, `llm_configured: true`, `engine_version: "ceres-engine-0.5.0"` y ambas zonas; `/`, `/app`, `/app/cuaderno`, `/app/ceres`, `/demo`, `/logo-mark.png` e `/icon.png` responden 200. HLS público conserva **5 meses reales en Majes y 3 en Chilina**, con hashes y procedencia. Acceso al cuaderno sin sesión devuelve 401. Se conserva la cuenta demo privada autorizada con dos lotes y 16 registros por lote: una campaña declarada y 15 continuaciones simuladas etiquetadas. Ninguna parcela se publica como demo; fuera de piloto, los runs no toman clima ni catálogo de otra zona. Coordenadas y credenciales solo en los archivos locales ignorados y en la cuenta privada.
 
 En este cierre del incremento 16, `uv run python -m ceres.cli check-llm` en local devolvió 429 por cuota del proyecto de Google AI; la observación visual de fotos de suelo está validada con modelo simulado (40 pruebas unitarias/integración y E2E), quedando la comprobación con Gemini real pendiente de cuota. Los formularios y el motor funcionan sin IA.
 
@@ -14,7 +14,7 @@ En este cierre del incremento 16, `uv run python -m ceres.cli check-llm` en loca
 
 | Elemento | Estado comprobado |
 |---|---|
-| Versión en servicio | `c88dbfb1f2de70e8805196172c5f6bf2a552253d` (anterior: `c93c1c4…`) |
+| Versión en servicio | `e36d9090b99028b9e7fed7638dc3807c41bb49e9` (anterior: `c88dbfb…`) |
 | HTTPS | Certificado Let's Encrypt (emisor YE2) para el FQDN, válido hasta el 12-feb-2027, renovación automática por Caddy. HTTP → HTTPS 308; HSTS. |
 | Puertos públicos | Solo 80/443. Desde Internet: 22, 3000, 5432 y 8000 **cerrados** (comprobado desde GitHub y desde fuera). |
 | Base de datos | PostgreSQL 16.15 en red interna Docker, volumen con nombre fijo `ceres_pgdata`; datos conservados entre 4 despliegues y un rollback. |
