@@ -15,6 +15,7 @@ from ceres.domain.engine import ClimateInput
 from ceres.domain.model import ZoneContext
 from ceres.infrastructure.catalog_loader import load_catalog
 from ceres.infrastructure.nasa_power import NasaPowerError, PowerSnapshot, load_snapshot
+from ceres.infrastructure.nutrition import load_nutrition
 
 log = logging.getLogger("ceres")
 
@@ -134,7 +135,9 @@ def _load_zone(data_dir: Path, zone_id: str) -> ZoneRuntime:
         nasa_error = str(exc)
         climate = ClimateInput(None, None, source_id=source_id)
         climatology = []
-    return ZoneRuntime(zone_id, data, catalog, climate, snapshot, climatology, nasa_error, nasa_rel)
+    nutrition = load_nutrition(data_dir / "nutricion" / "arequipa_context.json")
+    return ZoneRuntime(zone_id, data, catalog, climate, snapshot, climatology, nasa_error, nasa_rel,
+                       extra={"nutrition": nutrition})
 
 
 def load_zones(data_dir: Path) -> ZoneRegistry:

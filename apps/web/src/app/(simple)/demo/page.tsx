@@ -45,7 +45,7 @@ export default function Demo() {
             <div className="notice notice-warn">{data.note}. Agua, suelo y precios son supuestos etiquetados; el clima es la serie real de NASA POWER de {zone.name}.</div>
             <p className="muted" style={{ margin: 0 }}>
               {fmtNumber(data.parcel.area_ha, 2)} ha dibujadas en el distrito {data.parcel.region_codes.district_name}. Comparación calculada el {data.run ? fmtDateTime(data.run.created_at) : "—"}.
-              Para comparar tu propia chacra, <Link href="/app">responde 3 preguntas</Link>.
+              Para comparar tu propia chacra, <Link href="/app">delimita tu campo y cuéntanos qué cultivas y cuánta agua esperas</Link>.
             </p>
           </div>
           <Ndvi key={zone.id} zone={zone.id} />

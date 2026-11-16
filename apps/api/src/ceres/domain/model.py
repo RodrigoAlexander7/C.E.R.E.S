@@ -37,6 +37,7 @@ class WaterInput:
     allocation_min_m3: float | None = None
     allocation_max_m3: float | None = None
     method: IrrigationMethod | None = None
+    availability: Literal["muy_poca", "poca", "media", "alta", "no_es_problema"] | None = None
 
     def validate(self) -> None:
         for v in (self.allocation_m3, self.allocation_min_m3, self.allocation_max_m3):
@@ -122,12 +123,15 @@ class ParcelInput:
     # Campos completados con supuestos de zona (p. ej. "water.allocation", "water.efficiency").
     assumed: frozenset[str] = frozenset()
     zone: ZoneContext = field(default_factory=ZoneContext)
+    current_crop_streak: int = 1
 
     def validate(self) -> None:
         if not (self.area_ha > 0):
             raise InvalidInput("El área debe ser positiva")
         if self.area_ha > 10_000:
             raise InvalidInput("Área fuera de rango para una parcela")
+        if self.current_crop_streak not in (1, 2):
+            raise InvalidInput("Indica una o dos campañas consecutivas; dos incluye dos o más")
         if self.budget_soles is not None and self.budget_soles < 0:
             raise InvalidInput("El presupuesto no puede ser negativo")
         for o in self.economic_overrides:
@@ -194,6 +198,7 @@ class StrategyAssessment:
     decisive: list[dict[str, Any]] = field(default_factory=list)
     # Monte Carlo (año NASA, precio, rendimiento) y precio de equilibrio; None sin economía completa.
     risk: dict[str, Any] | None = None
+    nutrition: dict[str, Any] | None = None
 
 
 @dataclass

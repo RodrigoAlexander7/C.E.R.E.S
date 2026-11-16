@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { CROP_LABELS, type Profile } from "@/lib/types";
 import { METHOD_LABEL, type Zone } from "@/lib/zones";
+import { SoilPhotoCapture } from "@/components/simple/SoilPhotoCapture";
 
 export const EMPTY_PROFILE: Profile = {
   current_crop_id: "maiz_grano",
@@ -11,7 +12,7 @@ export const EMPTY_PROFILE: Profile = {
   planned_next_crop_id: null,
   water: { mode: "no_se", allocation_period: "mensual" },
   soil: {},
-  priority: "equilibrada",
+  priority: "dinero",
   budget_soles: null,
   residue_management: "no_se",
   economic_overrides: [],
@@ -51,12 +52,22 @@ export function ProfileForm({ value, onChange, compact = false, zone = null }: {
     <div className="stack">
       <div className="field">
         <label htmlFor="crop">¿Qué sembraste? <span className="hint">Cultivo actual o el último que cosechaste</span></label>
-        <select id="crop" value={p.current_crop_id} onChange={(e) => set({ current_crop_id: e.target.value })}>
+        <select id="crop" value={p.current_crop_id} onChange={(e) => set({ current_crop_id: e.target.value, current_crop_streak: null })}>
           {cropOptions.map(([k, v]) => (
             <option key={k} value={k}>{v}</option>
           ))}
         </select>
         {p.current_crop_id === "alfalfa" && <p className="hint">Comparamos qué sembrar después de levantar la alfalfa; mantenerla (perenne) no se compara en esta versión.</p>}
+      </div>
+
+      <div className="field">
+        <label htmlFor="crop-streak">¿Cuántas campañas seguidas llevas con ese cultivo?</label>
+        <select id="crop-streak" value={p.current_crop_streak ?? ""} onChange={(e) => set({ current_crop_streak: e.target.value ? Number(e.target.value) as 1 | 2 : null })}>
+          <option value="">No sé (se supondrán dos por prudencia)</option>
+          <option value="1">Una campaña</option>
+          <option value="2">Dos o más campañas</option>
+        </select>
+        <p className="hint">CERES impide recomendar una tercera campaña consecutiva del mismo producto.</p>
       </div>
 
       <fieldset>
@@ -76,9 +87,18 @@ export function ProfileForm({ value, onChange, compact = false, zone = null }: {
       <fieldset>
         <legend>¿Cuánta agua de riego recibes?</legend>
         <div className="choice">
-          <label><input type="radio" name="water" checked={p.water.mode === "no_se"} onChange={() => setWater({ mode: "no_se" })} /> No sé</label>
-          <label><input type="radio" name="water" checked={p.water.mode === "conozco"} onChange={() => setWater({ mode: "conozco", allocation_period: p.water.allocation_period ?? "mensual" })} /> Lo sé</label>
+          <label><input type="radio" name="water" checked={p.water.mode === "no_se"} onChange={() => setWater({ mode: "no_se", allocation_m3: null })} /> Puedo estimarla</label>
+          <label><input type="radio" name="water" checked={p.water.mode === "conozco"} onChange={() => setWater({ mode: "conozco", availability: null, allocation_min_m3: null, allocation_max_m3: null, allocation_period: p.water.allocation_period ?? "mensual" })} /> Conozco el volumen</label>
         </div>
+        {p.water.mode === "no_se" && (
+          <div className="field">
+            <label htmlFor="water-level">Agua que esperas recibir para el tamaño de tu campo</label>
+            <select id="water-level" value={p.water.availability ?? ""} onChange={(e) => setWater({ availability: (e.target.value || null) as Profile["water"]["availability"], allocation_min_m3: null, allocation_max_m3: null })}>
+              <option value="">Todavía no puedo estimarla</option>
+              <option value="muy_poca">Muy poca</option><option value="poca">Poca</option><option value="media">Media</option><option value="alta">Alta</option><option value="no_es_problema">No es problema</option>
+            </select>
+          </div>
+        )}
         {p.water.mode === "no_se" && (
           <p className="hint" style={{ marginTop: "0.4rem" }}>
             {typical
@@ -116,14 +136,7 @@ export function ProfileForm({ value, onChange, compact = false, zone = null }: {
         )}
       </fieldset>
 
-      <fieldset>
-        <legend>¿Qué te importa más?</legend>
-        <div className="choice">
-          {([["equilibrada", "Equilibrado"], ["dinero", "Dinero"], ["agua", "Agua"], ["suelo", "Cuidado del suelo"]] as const).map(([k, l]) => (
-            <label key={k}><input type="radio" name="prio" checked={p.priority === k} onChange={() => set({ priority: k })} /> {l}</label>
-          ))}
-        </div>
-      </fieldset>
+      <p className="hint">Buscamos un mejor margen, respetando la disponibilidad de agua y la rotación para cuidar tu suelo.</p>
 
       <details open={open} onToggle={(e) => setOpen((e.target as HTMLDetailsElement).open)}>
         <summary>Más datos (opcional): plan, suelo, presupuesto y precios</summary>
@@ -141,12 +154,13 @@ export function ProfileForm({ value, onChange, compact = false, zone = null }: {
             <legend>Análisis de suelo</legend>
             <div className="field" style={{ marginBottom: "0.6rem" }}>
               <label htmlFor="signs">¿Ves costras blancas o manchas de sal? <span className="hint">Sirve si no tienes análisis; no lo reemplaza</span></label>
-              <select id="signs" value={p.soil.salinity_signs ?? ""} onChange={(e) => setSoil({ salinity_signs: (e.target.value || null) as Profile["soil"]["salinity_signs"] })}>
+              <select id="signs" value={p.soil.salinity_signs ?? ""} onChange={(e) => setSoil({ salinity_signs: (e.target.value || null) as Profile["soil"]["salinity_signs"], photo_assessment: null })}>
                 <option value="">No sé</option>
                 <option value="sin_signos">No, no veo</option>
                 <option value="con_signos">Sí, se ven</option>
               </select>
             </div>
+            <SoilPhotoCapture onApply={(analysis) => setSoil({ photo_assessment: analysis, salinity_signs: analysis.salinity_signs === "no_concluyente" ? null : analysis.salinity_signs })} />
             <div className="grid-2">
               <div>
                 <label htmlFor="ece">Salinidad CE (dS/m)</label>

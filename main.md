@@ -53,7 +53,7 @@ El login recupera datos guardados; no mide el suelo ni descubre automáticamente
 2. Iniciar sesión si se desea personalización, conservando el borrador de selección.
 3. Indicar último cultivo o cultivo actual y si ya se cosechó o su fecha prevista de cosecha.
 4. Indicar disponibilidad de riego, admitiendo «no sé».
-5. Elegir prioridad: dinero, agua o cuidado del suelo; opción equilibrada como valor inicial.
+5. Estimar el agua para el tamaño del campo: muy poca, poca, media, alta o no es problema. Buscar margen respetando agua y cuidado del suelo.
 6. Ver comparación, ciclo, razones, fuentes y datos pendientes.
 
 Suelo, costos, abonos e historial adicional se completarán progresivamente. No exijas un formulario técnico interminable para explorar, ni inventes esos datos para personalizar.
@@ -146,7 +146,7 @@ Decisión del usuario tras evaluar el MVP: la versión actual es rigurosa pero c
 ### Superficies del producto
 
 - **Landing pública** que explica la propuesta con datos reales y distingue lo disponible de lo próximo.
-- **Modo sencillo** (nueva interfaz, primero para móvil): alta en 3 preguntas (qué sembraste, cuándo cosechas, qué te importa más), tres opciones en lenguaje cotidiano («Buena opción», «Posible, confirma X», «No conviene»), «¿Por qué?» en capas, botón de IA junto a términos difíciles (glosario fijo primero, IA bajo demanda) y mapa opcional.
+- **Modo sencillo** (primero para móvil): delimitar y confirmar ubicación y hectáreas antes de estimar; después cultivo, repeticiones, cosecha y disponibilidad cualitativa de agua. Opciones en lenguaje cotidiano, «¿Por qué?» en capas y ayuda contextual. El contorno es indispensable para predicciones; el cuaderno y la agenda pueden usarse sin él.
 - **Módulos**: «Qué sembrar», «Cuándo sembrar» y «Mi chacra», junto con «Cuaderno y agenda» y «Ceres». Mapa opcional en «Mi chacra»; comparación técnica, perfil completo e historial en «Ver más». Las rutas antiguas redirigen a la aplicación.
 - **Cuaderno de campo y agenda**: campañas (cultivo, hectáreas, fechas, rendimiento), ventas, costos y ganancia declarada por campaña/mes; resúmenes del tipo «el año pasado en este mes…», labores con fecha y estado pendiente/hecho, correcciones con historial de revisiones y uso de datos propios en el motor.
 - **Registro por chat y voz**: texto o audio → extracción estructurada → tarjeta «¿Guardo esto?» → registro `declarado (chat, confirmado)`. Revisión mensual dentro de la app y notificaciones opcionales del navegador; el agente pregunta lo que falta. El audio no se conserva; se guardan los campos estructurados confirmados. La transcripción se muestra durante la revisión y después se descarta.
@@ -160,6 +160,14 @@ Fase 0 especificación y landing → Fase 1 motor sin bloqueos → Fase 2 modo s
 ### Segundo piloto: Valle de Chilina, Arequipa ciudad (decisión del 15-nov-2026)
 
 Además de Majes I, CERES tendrá un segundo piloto en la **campiña del Valle de Chilina** (río Chili, ciudad de Arequipa). Implica pasar de un piloto fijo a **zonas piloto configurables**: límites/distritos de la zona (verificar con SERFOR/INEI cuáles abarca el valle), su propia instantánea NASA POWER (otra celda y otra altitud que Majes), sus supuestos de zona con fuente (agua de la junta de usuarios correspondiente, método de riego habitual) o marcados como `supuesto_zona`, y fichas/calendarios revisados para sus cultivos habituales. No trasladar valores de Majes a Chilina. Detalle en `specs/tareas.md` (incremento 15).
+
+### Ajustes tras conversar con agricultores (15-nov-2026)
+
+Primero se delimita el campo y se confirman ubicación y hectáreas; no usar área de ejemplo ni centro de zona para predicciones personales. El agua es una restricción obligatoria, estimable como «muy poca», «poca», «media», «alta» o «no es problema». Los intervalos numéricos derivados son escenarios CERES etiquetados, no dotaciones medidas. Se busca margen económico cuidando el suelo, sin preguntar una prioridad genérica.
+
+Incluir monocultivos, rotaciones y policultivos con sus motivos y límites; los policultivos sin parámetros locales permanecen exploratorios sin sumar resultados de monocultivos. Prohibir una tercera siembra consecutiva del mismo producto, contando el antecedente y las campañas propias conocidas; un descanso no reinicia la racha. Mostrar cultivos con ilustración y nombre, campañas/fechas y cifras rotuladas: margen bruto estimado, costos directos, demanda de agua y riesgo.
+
+Los signos de sal admiten respuesta manual o hasta cuatro fotos con observación visual de Gemini revisada por el usuario. No inferir EC, pH, NPK ni ausencia de salinidad; no guardar las fotos. Añadir aporte alimentario explícito por estrategia, separado de fertilidad. El HIS humano de Arequipa es contexto regional agregado, sin efectos clínicos atribuidos a una siembra.
 
 ### Decisiones pendientes del usuario
 

@@ -1,16 +1,17 @@
 """R21: optimizador del plan de siembra (programación dinámica + Monte Carlo) con NASA POWER real."""
 
 import time
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from datetime import date, timedelta
 
 import pytest
 
 from ceres.application.recommendations import apply_zone_defaults, parcel_input
 from ceres.domain.engine import evaluate
-from ceres.domain.model import SoilInput
+from ceres.domain.model import ParcelInput, SoilInput
 from ceres.domain.optimizer import (
     Draws,
+    Arc,
     _arcs,
     _validated_crops,
     best_paths,
@@ -32,18 +33,21 @@ def make(zone, **over):
     return parcel_input(eff, 5, True, START, assumed, zone.context())
 
 
-def brute_force(arcs, start, prep, first_family):
+def brute_force(arcs, start, prep, first_family, first_crop=None, current_crop_streak=1):
     best = 0.0
 
-    def dfs(avail, fam, total):
+    def dfs(avail, fam, total, previous, streak):
         nonlocal best
         best = max(best, total)
         for a in arcs:
             if a.plant >= avail + timedelta(days=prep):
+                next_streak = streak + 1 if a.crop == previous else 1
+                if next_streak > 2:
+                    continue
                 own = a.value_repeat_ha if a.family == fam else a.value_ha
-                dfs(a.harvest + timedelta(days=1), a.family, total + own)
+                dfs(a.harvest + timedelta(days=1), a.family, total + own, a.crop, next_streak)
 
-    dfs(start, first_family, 0.0)
+    dfs(start, first_family, 0.0, first_crop, current_crop_streak)
     return best
 
 
@@ -51,9 +55,9 @@ def brute_force(arcs, start, prep, first_family):
 def test_dynamic_programming_matches_brute_force(majes, water):
     p = make(majes, water=water)
     arcs = _arcs(p, majes.catalog, majes.climate, _validated_crops(majes.catalog), START, END, p.water.bounds()[1])
-    paths = best_paths(arcs, START, majes.catalog.prep_days, "Poaceae", False)
+    paths = best_paths(arcs, START, majes.catalog.prep_days, "Poaceae", False, first_crop=p.current_crop_id)
     assert paths
-    assert abs(paths[0][0] - brute_force(arcs, START, majes.catalog.prep_days, "Poaceae")) < 1e-6
+    assert abs(paths[0][0] - brute_force(arcs, START, majes.catalog.prep_days, "Poaceae", p.current_crop_id)) < 1e-6
     assert [v for v, _ in paths] == sorted((v for v, _ in paths), reverse=True)
 
 
@@ -64,7 +68,11 @@ def test_plan_respects_water_rotation_window_and_horizon(majes):
     # Con el agua típica ya no deja la chacra casi vacía: repetir familia se permite (rinde 10 % menos).
     assert r.best and len(r.best.cycles) >= 2
     for plan in [x for x in (r.best, r.explore) if x] + r.candidates:
+        previous, streak = p.current_crop_id, getattr(p, "current_crop_streak", 1)
         for cid, d in plan.cycles:
+            streak = streak + 1 if cid == previous else 1
+            assert streak <= 2
+            previous = cid
             crop = majes.catalog.crop(cid)
             assert any(w.contains(d) for w in crop.windows)
             assert d + timedelta(days=crop.cycle_days - 1) <= END
@@ -139,3 +147,54 @@ def test_engine_adds_suggested_plan_with_risk_and_it_is_fast(majes, catalog, cli
         d = next(s for s in r.strategies if s.strategy_id == "D")
         assert "Plan sugerido por CERES" in d.simple["tags"]
         assert not any(rr.rule_id == "AGU-04" for rr in d.reasons)  # cabe en el agua típica
+
+
+@pytest.mark.parametrize("first_crop,streak,max_new", [(None, 1, 2), ("a", 1, 1), ("a", 2, 0)])
+def test_best_paths_excludes_third_even_with_huge_profit_and_long_rest(first_crop, streak, max_new):
+    plants = [date(2027, 1, 1), date(2027, 3, 1), date(2027, 6, 1), date(2028, 9, 1)]
+    arcs = [Arc("a", "Fabaceae", True, d, d + timedelta(days=10), 10**12, 10**12) for d in plants]
+    paths = best_paths(arcs, date(2026, 12, 1), 7, "Fabaceae", False,
+                       first_crop=first_crop, current_crop_streak=streak)
+    assert bool(paths) == bool(max_new)
+    for _, path in paths:
+        assert len(path) <= max_new
+    if paths:
+        assert len(paths[0][1]) == max_new
+
+
+@pytest.mark.parametrize("streak", [1, 2])
+def test_best_paths_matches_exhaustive_search_with_product_streak_and_same_family(streak):
+    start = date(2026, 12, 1)
+    arcs = [Arc(cid, "Fabaceae", True, date(2027, month, 1), date(2027, month, 10), value, value)
+            for month in range(1, 7) for cid, value in (("a", 100), ("b", 60))]
+    paths = best_paths(arcs, start, 7, "Fabaceae", False, k=30, first_crop="a", current_crop_streak=streak)
+    assert paths[0][0] == brute_force(arcs, start, 7, "Fabaceae", "a", streak)
+    assert any(len(path) == 6 for _, path in paths)  # cambiar producto permite continuar, aun con igual familia
+    for _, path in paths:
+        previous, n = "a", streak
+        for arc in path:
+            n = n + 1 if arc.crop == previous else 1
+            assert n <= 2
+            previous = arc.crop
+
+
+@dataclass(frozen=True)
+class ParcelWithStreak(ParcelInput):
+    current_crop_streak: int = 1
+
+
+def test_optimizer_and_simulation_include_declared_two_crop_antecedent(majes):
+    p = ParcelWithStreak(**(vars(make(majes)) | {"current_crop_streak": 2}))
+    r = optimize(p, majes.catalog, majes.climate, START, END)
+    assert r.best
+    for plan in r.candidates + [x for x in (r.best, r.explore) if x]:
+        assert plan.sequence[0] != p.current_crop_id
+        previous, streak = p.current_crop_id, p.current_crop_streak
+        for cid in plan.sequence:
+            streak = streak + 1 if cid == previous else 1
+            assert streak <= 2
+            previous = cid
+    if r.portfolio:
+        assert all(lot["sequence"][0] != p.current_crop_id for lot in r.portfolio["lots"])
+    assert simulate([("maiz_grano", date(2027, 1, 1))], p, majes.catalog, majes.climate, Draws.make(n=10), None) is None
+    assert "tercer consecutivo" in r.note

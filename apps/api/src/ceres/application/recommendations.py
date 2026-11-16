@@ -8,6 +8,7 @@ from typing import Protocol
 
 from ceres.domain.catalog import Catalog
 from ceres.domain.engine import ENGINE_VERSION, ClimateInput, evaluate
+from ceres.domain.nutrition import nutrition_impact
 from ceres.domain.model import (
     ComparisonResult,
     EconomicOverride,
@@ -40,8 +41,19 @@ ALLOWED_PATCHES = {
     "water.allocation_min_m3",
     "water.allocation_max_m3",
     "water.method",
+    "water.availability",
     "soil.salinity_signs",
     "priority",
+}
+
+# Escenarios metodológicos CERES, no conversión medida ni equivalencia validada.
+# Las cotas abiertas conservan el desconocimiento (nunca se transforman en cero).
+WATER_SCENARIOS = {
+    "muy_poca": (None, 0.35),
+    "poca": (0.35, 0.65),
+    "media": (0.65, 1.0),
+    "alta": (1.0, 1.35),
+    "no_es_problema": (1.35, None),
 }
 
 
@@ -98,7 +110,13 @@ def apply_zone_defaults(profile: dict, area_ha: float, zone: dict | None) -> tup
     typical = (zone.get("water_m3_ha_year") or {}).get("value")
     if typical is not None and not knows_exact and not has_bounds and w.get("allocation_period", "mensual") == "mensual":
         monthly = typical / 12 * area_ha
-        w.update(mode="conozco", allocation_m3=round(monthly), allocation_period="mensual")
+        if w.get("availability") in WATER_SCENARIOS:
+            lo, hi = WATER_SCENARIOS[w["availability"]]
+            w.update(mode="no_se", allocation_m3=None,
+                     allocation_min_m3=round(monthly * lo, 4) if lo is not None else None,
+                     allocation_max_m3=round(monthly * hi, 4) if hi is not None else None)
+        else:
+            w.update(mode="conozco", allocation_m3=round(monthly), allocation_period="mensual")
         assumed.append("water.allocation")
     return p, assumed
 
@@ -122,6 +140,7 @@ def parcel_input(
         in_pilot_zone=in_pilot,
         current_crop_id=profile["current_crop_id"],
         current_status=profile["current_status"],
+        current_crop_streak=profile.get("current_crop_streak") or 2,
         expected_harvest=_d(profile.get("expected_harvest")),
         planned_next_crop_id=profile.get("planned_next_crop_id") or None,
         water=WaterInput(
@@ -133,6 +152,7 @@ def parcel_input(
             allocation_min_m3=w.get("allocation_min_m3"),
             allocation_max_m3=w.get("allocation_max_m3"),
             method=w.get("method"),
+            availability=w.get("availability"),
         ),
         soil=SoilInput(
             ece_ds_m=s.get("ece_ds_m"),
@@ -168,9 +188,27 @@ class ZoneLike(Protocol):
 def frozen_inputs(
     profile: dict, area_ha: float, in_pilot: bool, reference_date: date, zone: ZoneLike | None = None,
     own_economics: list[dict] | None = None,
+    field_context: dict | None = None,
 ) -> dict:
     """Entradas congeladas: perfil declarado, perfil efectivo con supuestos de zona, la zona y sus versiones."""
     effective, assumed = apply_zone_defaults(profile, area_ha, zone.data if (zone and in_pilot) else None)
+    if profile.get("current_crop_streak") is None:
+        effective = {**effective, "current_crop_streak": 2}
+        assumed.append("current_crop_streak")
+    if (profile.get("soil") or {}).get("photo_assessment"):
+        assumed.append("soil.salinity_signs")
+    extra = getattr(zone, "extra", {}) if zone else {}
+    water = profile.get("water") or {}
+    scenario = None
+    if water.get("availability"):
+        scenario = {
+            "availability": water["availability"], "kind": "supuesto_zona",
+            "factors": WATER_SCENARIOS[water["availability"]],
+            "reference": copy.deepcopy((zone.data.get("water_m3_ha_year") or {}) if zone else {}),
+            "source_ids": ["CERES-AGUA-CUALITATIVA"],
+            "method": "Referencia anual de SU zona / 12 × área geodésica × factores de escenario CERES",
+            "limitation": "Respuesta cualitativa declarada; intervalo supuesto, sin equivalencia medida. Confirma los turnos de agua.",
+        }
     return {
         "profile": profile,
         "effective_profile": effective,
@@ -181,21 +219,37 @@ def frozen_inputs(
         "area_ha": area_ha,
         "in_pilot_zone": in_pilot,
         "reference_date": reference_date.isoformat(),
+        "field_verified": field_context.get("verified", False) if field_context is not None else True,
+        "field_context": copy.deepcopy(field_context),
+        "water_scenario": scenario,
+        "nutrition_context": copy.deepcopy(extra.get("nutrition")),
     }
 
 
 def evaluate_frozen(inputs: dict, zone: ZoneLike | None) -> ComparisonResult:
     """Reproduce un resultado desde sus entradas congeladas con el catálogo y el clima de SU zona."""
-    if not inputs["in_pilot_zone"] or zone is None:
+    if not inputs.get("field_verified", False) or not inputs["in_pilot_zone"] or zone is None:
         reference = date.fromisoformat(inputs["reference_date"])
         return ComparisonResult(engine_version=ENGINE_VERSION, catalog_version="sin_catalogo_local",
             climate_snapshot_id=None, priority=inputs["profile"].get("priority", "equilibrada"),
             horizon_start=reference, horizon_end=reference, strategies=[], ordering={"ranked": []}, associations=[],
             notes=["Cuaderno, agenda y NDVI disponibles. El calendario agronómico requiere fichas y clima locales."],
-            blocking=["La parcela está fuera de las zonas piloto. Faltan fichas locales para recomendar."])
+            blocking=["Delimita y confirma el contorno de tu campo antes de calcular estimaciones." if not inputs.get("field_verified", False)
+                      else "La parcela está fuera de las zonas piloto. Faltan fichas locales para recomendar."])
     profile = inputs.get("effective_profile", inputs["profile"])
     p = parcel_input(
         profile, inputs["area_ha"], inputs["in_pilot_zone"], date.fromisoformat(inputs["reference_date"]),
         inputs.get("assumed"), zone.context(), inputs.get("own_economics"),
     )
-    return evaluate(p, zone.catalog, zone.climate)
+    result = evaluate(p, zone.catalog, zone.climate)
+    for strategy in result.strategies:
+        strategy.nutrition = nutrition_impact(strategy.sequence, inputs.get("nutrition_context"))
+    for association in result.associations:
+        components = association.get("components") or []
+        ids = [x if isinstance(x, str) else x["crop_id"] for x in components]
+        association["nutrition"] = nutrition_impact(ids, inputs.get("nutrition_context"))
+    if "current_crop_streak" in inputs.get("assumed", []):
+        result.notes.append("No conoces la repetición previa: por prudencia se supone que el cultivo actual ya lleva dos campañas seguidas.")
+    if inputs.get("water_scenario"):
+        result.notes.append(inputs["water_scenario"]["limitation"])
+    return result

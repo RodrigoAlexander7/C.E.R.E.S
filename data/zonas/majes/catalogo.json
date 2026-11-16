@@ -1,5 +1,5 @@
 {
-  "version": "catalogo-majes-2026-11-15.2",
+  "version": "catalogo-majes-2026-11-15.3",
   "review_note": "Kc, duración de etapas y tolerancia a sales comprobados contra FAO-56 (tablas 11 y 12) y FAO 29 (tabla 4) el 14-nov-2026. Ventanas de siembra, preparación, costos, rendimientos y precios son supuestos de demostración sin revisión agronómica local. Ver data/zonas/majes/REVISION.md. 15-nov-2026: solo cambia el formato (nombre corto y secuencias explícitas), no los valores. 15-nov-2026 (.2): el precio en chacra de frejol y cebolla se deriva del mayorista MIDAGRI-SISAP de Arequipa (1–14 nov) × un factor chacra supuesto que conserva los valores previos.",
   "market_region": "Arequipa",
   "horizon_months": 24,
@@ -492,6 +492,17 @@
       ],
       "source_ids": ["UNSA-MAJES", "FAO56-KC"],
       "warning": "Ficha exploratoria: no se recomienda ni se cuantifica. No se suman consumos ni ingresos de dos monocultivos."
+    },
+    {
+      "id": "majes_choclo_frejol_zapallo_exploratorio",
+      "name": "Choclo, frejol y zapallo macre — propuesta por evaluar",
+      "components": ["maiz_choclo", "frejol_grano", "zapallo_macre"],
+      "structure": "Tres especies durante una misma campaña; calendario y arreglo pendientes",
+      "status": "exploratoria",
+      "known": ["La base maestra del usuario propone esta combinación para evaluar en Majes (P002).", "Se puede estudiar diversificación de productos y alimentos; no se ha verificado una ventaja agronómica local.", "Choclo es grano fresco, distinto del maíz amarillo duro seco del catálogo; no se trasladan sus rendimientos."],
+      "missing": ["Fichas agronómicas locales de choclo y zapallo macre", "Compatibilidad, densidades y arreglo espacial probados", "Calendario relativo y manejo de riego", "Rendimientos, precios y costos propios del conjunto", "Revisión agronómica local"],
+      "source_ids": ["CERES-BASE-MAESTRA-NUTRICION-2026"],
+      "warning": "Candidato de un documento aportado por el usuario, no validado en campo. Se muestran aportes alimentarios de referencia, sin calcular agua ni margen y sin sumar monocultivos."
     }
   ],
   "templates": [

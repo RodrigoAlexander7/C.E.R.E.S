@@ -1,5 +1,29 @@
 export type Geometry = { type: "Polygon"; coordinates: number[][][] } | { type: "MultiPolygon"; coordinates: number[][][][] };
 
+export interface FieldContext {
+  geometry: Geometry;
+  geometry_sha256?: string;
+  area_ha: number;
+  zone_id: string | null;
+  zone_name: string | null;
+  centroid: { lat: number; lon: number };
+  district?: { code?: string; name?: string } | null;
+}
+
+export interface NutritionImpact {
+  foods: { crop_id: string; food: string | null; status: string; nutrients: string[] | null; explanation: string; source_ids: string[] }[];
+  explanation: string;
+  source_ids: string[];
+  regional_context: {
+    region: string;
+    population: string;
+    period: { start: string; end: string; label: string };
+    indicators: { id: string; label: string; count: number; denominator: number; percent: number; percent_unit: string }[];
+    limitations: string[];
+    source_ids: string[];
+  } | null;
+}
+
 export interface RegionNode {
   id: string;
   level: "departamento" | "provincia" | "distrito";
@@ -81,12 +105,15 @@ export interface Strategy {
   rank: number | null;
   simple?: SimpleLayer;
   decisive?: Decisive[];
+  nutrition?: NutritionImpact | null;
   risk?: (RiskFacts & { role?: "sugerido" | "explorar" | null }) | { role?: "sugerido" | "explorar" | null } | null;
 }
 
 export type SimpleLevel = "buena" | "posible" | "explorar" | "sin_datos" | "no_conviene";
 
 export interface SimpleLayer {
+  type?: "monocultivo" | "rotacion";
+  rationale?: string;
   level: SimpleLevel;
   label: string;
   names: string;
@@ -170,6 +197,10 @@ export interface Association {
   missing: string[];
   source_ids: string[];
   warning: string;
+  type?: "policultivo";
+  components?: string[];
+  rationale?: string;
+  nutrition?: NutritionImpact | null;
 }
 
 export interface ComparisonResult {
@@ -208,7 +239,7 @@ export interface Run {
   dataset_snapshot_id: string | null;
   dataset_sha256?: string | null;
   created_at: string;
-  inputs?: { profile: Profile; effective_profile?: Profile; assumed?: string[]; zone_id?: string | null; zone_version?: string | null; area_ha: number; in_pilot_zone: boolean; reference_date: string };
+  inputs?: { profile: Profile; effective_profile?: Profile; assumed?: string[]; zone_id?: string | null; zone_version?: string | null; area_ha: number; in_pilot_zone: boolean; reference_date: string; field_verified?: boolean; field_context?: { geometry_sha256: string | null } | null; nutrition_context?: NutritionImpact["regional_context"] };
   result?: ComparisonResult;
   profile_changed?: boolean;
 }
@@ -223,6 +254,7 @@ export interface Water {
   allocation_min_m3?: number | null;
   allocation_max_m3?: number | null;
   method?: "goteo" | "aspersion" | "gravedad" | null;
+  availability?: "muy_poca" | "poca" | "media" | "alta" | "no_es_problema" | null;
 }
 
 export interface Soil {
@@ -234,11 +266,13 @@ export interface Soil {
   method?: string | null;
   kind?: "observado" | "declarado" | "supuesto_demo";
   salinity_signs?: "sin_signos" | "con_signos" | null;
+  photo_assessment?: { salinity_signs: "sin_signos" | "con_signos" | "no_concluyente"; description: string; limitations: string; source: "gemini_visual" } | null;
 }
 
 export interface Profile {
   current_crop_id: string;
   current_status: "en_campo" | "cosechado";
+  current_crop_streak?: 1 | 2 | null;
   expected_harvest?: string | null;
   planned_next_crop_id?: string | null;
   water: Water;
@@ -331,6 +365,8 @@ export const CROP_LABELS: Record<string, string> = {
   tomate: "Tomate (fruto fresco)",
   trigo: "Trigo (grano)",
   maiz_chala: "Maíz chala (forraje)",
+  maiz_choclo: "Maíz choclo (grano fresco)",
+  zapallo_macre: "Zapallo macre",
   otro: "Otro cultivo",
 };
 

@@ -73,6 +73,8 @@ export default function MapView(props: MapViewProps) {
   const latest = useRef(props);
   latest.current = props;
 
+  const focusKey = useRef<string | null>(null);
+
   useEffect(() => {
     let disposed = false;
     (async () => {
@@ -91,7 +93,7 @@ export default function MapView(props: MapViewProps) {
         const ev = e as { sourceId?: string; tile?: unknown };
         if (ev.sourceId === "osm" && ev.tile) setTileError(false);
       });
-      m.on("load", () => {
+      m.on("style.load", () => {
         m.addSource("children", { type: "geojson", data: empty });
         m.addSource("focus", { type: "geojson", data: empty });
         m.addSource("parcels", { type: "geojson", data: empty });
@@ -143,6 +145,9 @@ export default function MapView(props: MapViewProps) {
   useEffect(() => {
     const m = map.current;
     if (!ready || !m) return;
+    const key = props.focus ? JSON.stringify(props.focus) : "";
+    if (focusKey.current === key) return;
+    focusKey.current = key;
     (m.getSource("focus") as GeoJSONSource).setData(props.focus ? { type: "Feature", properties: {}, geometry: props.focus as GeoJSON.Geometry } : empty);
     const b = props.focus ? bboxOf(props.focus) : null;
     m.fitBounds(b ?? PERU_BOUNDS, { padding: 40, duration: 700, maxZoom: 17 });
@@ -169,6 +174,8 @@ export default function MapView(props: MapViewProps) {
       feats.push({ type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: props.draft } });
     }
     (m.getSource("draft") as GeoJSONSource).setData({ type: "FeatureCollection", features: feats });
+    if (props.drawing || props.picking) m.doubleClickZoom.disable();
+    else m.doubleClickZoom.enable();
     m.getCanvas().style.cursor = props.drawing || props.picking ? "crosshair" : "";
   }, [ready, props.draft, props.closed, props.drawing, props.picking]);
 
@@ -191,7 +198,7 @@ export default function MapView(props: MapViewProps) {
   }, [ready, satellite]);
 
   return (
-    <div className="map" role="region" aria-label="Mapa interactivo. También puedes usar los selectores de la izquierda.">
+    <div className="map" role="region" aria-busy={!ready} aria-label="Mapa interactivo. También puedes usar los selectores de la izquierda.">
       <div ref={el} style={{ position: "absolute", inset: 0 }} />
       <button
         type="button"

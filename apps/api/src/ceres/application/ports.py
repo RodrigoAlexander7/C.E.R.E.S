@@ -6,6 +6,8 @@ from dataclasses import dataclass, field
 from typing import Literal, Protocol
 
 ProviderStatus = Literal["ok", "no_configurado", "error_proveedor", "respuesta_no_validada"]
+ImageMime = Literal["image/jpeg", "image/png", "image/webp"]
+LlmImage = tuple[ImageMime, bytes]
 
 
 def provider_schema(schema: dict) -> dict:
@@ -38,6 +40,7 @@ class LlmRequest:
     schema: dict | None = None
     audio: bytes | None = None
     audio_mime: str | None = None
+    images: list[LlmImage] = field(default_factory=list, repr=False)  # MIME y bytes sin metadatos; opcional
 
 
 @dataclass

@@ -51,6 +51,10 @@ class GeminiModel:
         contents.append(types.Content(role="user", parts=[types.Part(text=request.question)]))
         if request.audio:
             contents.append(types.Content(role="user", parts=[types.Part.from_bytes(data=request.audio, mime_type=request.audio_mime or "audio/webm")]))
+        if request.images:
+            contents.append(types.Content(role="user", parts=[
+                types.Part.from_bytes(data=data, mime_type=mime) for mime, data in request.images
+            ]))
         if request.feedback:
             contents.append(types.Content(role="user", parts=[types.Part(text="[Control de la aplicación] " + request.feedback)]))
         config = types.GenerateContentConfig(

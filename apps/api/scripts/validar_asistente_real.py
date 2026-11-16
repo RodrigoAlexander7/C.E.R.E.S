@@ -42,6 +42,7 @@ def main() -> int:
     client.headers["X-CSRF-Token"] = r.json()["csrf_token"]
     profile = {
         "current_crop_id": "maiz_grano", "current_status": "en_campo", "expected_harvest": "2027-02-15",
+        "current_crop_streak": 1,
         "water": {"mode": "conozco", "allocation_m3": 12000, "efficiency": 0.85},
         "soil": {}, "priority": "dinero", "residue_management": "incorporar",
     }

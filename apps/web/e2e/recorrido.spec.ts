@@ -1,14 +1,14 @@
 import { expect, test } from "@playwright/test";
+import { MAJES_FIELD, answerProfile, delimitField } from "./helpers/field";
 
 // API y PostgreSQL reales; arrancar el servidor E2E sin claves LLM.
 test("recorrido sencillo, historial inmutable y aislamiento", async ({ page, browser, baseURL }) => {
   const assistant = await (await page.request.get("/api/v1/assistant/status")).json();
   expect(!assistant.configured || assistant.model === "simulado-pruebas", "E2E nunca debe usar un LLM real").toBe(true);
   await page.goto("/app");
-  await page.getByRole("button", { name: /^Maíz Amarillo duro/ }).click();
-  await page.getByRole("button", { name: /Sí, ya coseché/ }).click();
-  await page.getByRole("button", { name: /Un poco de todo/ }).click();
-  await expect(page.locator("article").nth(2)).toBeVisible(); // 3 plantillas (+ plan sugerido y por explorar)
+  await delimitField(page);
+  await answerProfile(page);
+  await expect(page.locator("article[aria-labelledby^='opt-']").nth(2)).toBeVisible();
   await page.getByRole("button", { name: "Crear cuenta y guardar" }).click();
   await page.getByRole("button", { name: "Regístrate" }).click();
   await page.getByLabel("Email").fill(`e2e-rec-${Date.now()}@ceres.test`);
@@ -17,6 +17,9 @@ test("recorrido sencillo, historial inmutable y aislamiento", async ({ page, bro
   await expect(page.getByText("Guardado en tu cuenta")).toBeVisible();
   const parcels = await (await page.request.get("/api/v1/parcels")).json();
   const pid = parcels.items[0].id;
+  const storedParcel = await (await page.request.get(`/api/v1/parcels/${pid}`)).json();
+  expect(storedParcel.geometry).toEqual(MAJES_FIELD);
+  expect(storedParcel.area_origin).toBe("geodesica");
   const initialRuns = await (await page.request.get(`/api/v1/parcels/${pid}/recommendations`)).json();
   const firstId = initialRuns.items[0].id;
   await page.reload();
@@ -25,13 +28,15 @@ test("recorrido sencillo, historial inmutable y aislamiento", async ({ page, bro
   const history = page.locator("details").filter({ has: page.locator("summary", { hasText: /^Resultados anteriores$/ }) });
   await expect(history.locator("li")).toHaveCount(1);
   const created = page.waitForResponse(r => r.url().endsWith(`/parcels/${pid}/recommendations`) && r.request().method() === "POST" && r.ok());
-  await page.locator("#agua").getByRole("button", { name: /^Menos de/ }).click();
+  await page.getByRole("button", { name: /^Agua:/ }).click();
+  await page.getByRole("button", { name: /^Poca/ }).click();
+  await page.getByRole("button", { name: "1 campaña", exact: true }).click();
   await created;
   await history.locator("summary").click();
   await history.locator("summary").click();
   await expect(history.locator("li")).toHaveCount(2);
   const original = await (await page.request.get(`/api/v1/recommendations/${firstId}`)).json();
-  expect(original.inputs.profile.water.allocation_max_m3).toBeFalsy();
+  expect(original.inputs.profile.water.availability).toBe("media");
   await page.getByText("Detalle técnico de la comparación", { exact: true }).click();
   await expect(page.locator(".strategy-card").nth(2)).toBeVisible(); // ≥ 3 opciones (espera a que abra el detalle)
   await page.getByText("¿Por qué este estado? Reglas, datos faltantes y fuentes", { exact: true }).click();

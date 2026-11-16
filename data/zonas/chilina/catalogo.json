@@ -1,5 +1,5 @@
 {
-  "version": "catalogo-chilina-2026-11-15.1",
+  "version": "catalogo-chilina-2026-11-15.2",
   "review_note": "Cultivos habituales de la campiña según SENAMHI (boletín agroclimático DZ6, abril 2025: ajo, cebolla, maíz; papa en la campiña). Kc (FAO-56 tabla 12), duración de etapas (FAO-56 tabla 11, fila más parecida a la zona) y tolerancia a sales (FAO 29 tabla 4) copiados de las tablas FAO el 15-nov-2026. El ajo no figura en la tabla 11 de FAO-56 ni en la tabla 4 de FAO 29: queda sin ficha. No hay calendario oficial: la cebolla usa la siembra observada por SENAMHI (junio–julio, inferida) y papa y maíz no restringen el mes. No hay precios ni rendimientos locales verificados: la economía queda pendiente hasta que el agricultor registre los suyos. Nada se copió del catálogo de Majes. Ver data/zonas/chilina/REVISION.md.",
   "horizon_months": 24,
   "prep_days": 15,
@@ -308,7 +308,19 @@
       "nutrition_note": "Cereal exigente en nitrógeno; no fija nitrógeno. La dosis requiere análisis de suelo."
     }
   ],
-  "associations": [],
+  "associations": [
+    {
+      "id": "chilina_maiz_haba_exploratorio",
+      "name": "Maíz y haba verde juntos — idea por evaluar en Chilina",
+      "components": ["maiz_grano", "haba_verde"],
+      "structure": "Dos especies en una misma campaña; arreglo espacial pendiente",
+      "status": "exploratoria",
+      "known": ["Son dos productos distintos con fichas individuales en el catálogo de Chilina; la de haba verde ya es exploratoria.", "Diversificar productos simultáneamente es el motivo para estudiar esta alternativa, sin ventaja conjunta demostrada."],
+      "missing": ["Ensayo o revisión agronómica de compatibilidad en Chilina", "Calendario relativo, densidad y distribución espacial", "Rendimientos, costos y agua conjuntos", "Destino comercial y manejo de cosechas"],
+      "source_ids": ["MOTOR", "ZONA-CHILINA"],
+      "warning": "Hipótesis de diseño CERES para estudiar con asesor local, no práctica local acreditada ni recomendación viable. Sin cifras trasladadas de Majes ni suma de monocultivos."
+    }
+  ],
   "templates": [
     {
       "id": "A",

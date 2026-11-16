@@ -28,21 +28,21 @@ export interface Zone {
   zone_source_id: string;
 }
 
-let cache: { default: string; items: Zone[] } | null = null;
+let cache: { default: string; items: Zone[]; engine_version: string } | null = null;
 
 export function useZones() {
   const [data, setData] = useState(cache);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     if (cache) return;
-    api<{ default: string; items: Zone[] }>("/public/zones")
+    api<{ default: string; items: Zone[]; engine_version: string }>("/public/zones")
       .then((d) => {
         cache = d;
         setData(d);
       })
       .catch(() => setError("No se pudieron cargar las zonas piloto"));
   }, []);
-  return { zones: data?.items ?? [], defaultId: data?.default ?? "majes", error };
+  return { zones: data?.items ?? [], defaultId: data?.default ?? "majes", engineVersion: data?.engine_version ?? null, error };
 }
 
 export const METHOD_LABEL: Record<string, string> = { goteo: "goteo", aspersion: "aspersión", gravedad: "gravedad" };

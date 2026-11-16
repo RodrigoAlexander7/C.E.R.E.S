@@ -30,8 +30,9 @@ from ceres.domain.model import (
     TimelineBlock,
 )
 
-ENGINE_VERSION = "ceres-engine-0.4.0"
+ENGINE_VERSION = "ceres-engine-0.5.0"
 PERENNIAL_CROP_ID = "alfalfa"
+MAX_CONSECUTIVE_SOWINGS = 2
 MM_HA_TO_M3 = 10.0  # 1 mm sobre 1 ha = 10 m³
 _METHOD_LABEL = {"goteo": "goteo", "aspersion": "aspersión", "gravedad": "gravedad"}
 MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"]
@@ -140,18 +141,22 @@ class Cycle:
 
 
 def build_cycles(
-    seq: list[str], catalog: Catalog, release: date, horizon_end: date, plants: tuple = ()
-) -> tuple[list[Cycle], list[str]]:
+    seq: list[str], catalog: Catalog, release: date, horizon_end: date, plants: tuple = (),
+    *, current_crop_id: str | None = None, current_crop_streak: int = 1,
+) -> tuple[list[Cycle], list[Reason]]:
     """Ciclos completos dentro del horizonte; nunca trunca una cosecha.
 
     Con `plants` (plan explícito del optimizador) la secuencia no se repite y cada ciclo se siembra en
     su fecha, siempre que respete la preparación y la ventana; si no, se usa la primera fecha válida.
+    El antecedente cuenta en el máximo de dos siembras consecutivas del mismo producto. Esperar o
+    dejar descanso no reinicia la racha: hace falta sembrar otro producto.
     """
     cycles: list[Cycle] = []
-    notes: list[str] = []
+    notes: list[Reason] = []
     available = release
+    previous, streak = current_crop_id, current_crop_streak
     i = 0
-    while True:
+    while seq:
         if plants and i >= len(seq):
             break
         crop = catalog.crop(seq[i % len(seq)])
@@ -164,16 +169,29 @@ def build_cycles(
         else:
             plant = next_window_date(crop, earliest, horizon_end)
         if plant is None:
-            notes.append(f"No cabe otra siembra de {crop.name} dentro de su ventana antes del fin del horizonte.")
+            notes.append(Reason("CAL-03", "informacion", f"No cabe otra siembra de {crop.name} dentro de su ventana antes del fin del horizonte."))
             break
         harvest = plant + timedelta(days=crop.cycle_days - 1)
         if harvest > horizon_end:
-            notes.append(
+            notes.append(Reason("CAL-03", "informacion",
                 f"{crop.name} sembrado el {fmt(plant)} se cosecharía el {fmt(harvest)}, después del horizonte: "
                 "no se incluye un ciclo incompleto."
-            )
+            ))
+            break
+        next_streak = streak + 1 if crop.id == previous else 1
+        if next_streak > MAX_CONSECUTIVE_SOWINGS:
+            notes.append(Reason(
+                "ANT-02", "advertencia" if cycles else "no_cumple",
+                f"Se excluye la siembra de {crop.name} del {fmt(plant)}: sería la {next_streak}.ª consecutiva "
+                "del mismo producto. El límite de planificación CERES es de 2, contando el cultivo actual "
+                f"(racha considerada: {current_crop_streak}). El plan se trunca aquí; para continuar hay que "
+                "cambiar de producto, aunque haya descanso entre siembras.",
+                source_ids=["PARCELA"],
+                assumptions=["Límite preventivo de planificación CERES; no es un umbral agronómico local cuantificado."],
+            ))
             break
         cycles.append(Cycle(crop, available, plant, harvest, (plant - earliest).days))
+        previous, streak = crop.id, next_streak
         available = harvest + timedelta(days=1)
         i += 1
         if i > 20:
@@ -290,14 +308,31 @@ def _assess(
             "Requiere ficha agronómica del cultivo planeado.",
         )
 
-    cycles, cal_notes = build_cycles(seq, catalog, start, horizon_end, t.plants)
+    cycles, cal_notes = build_cycles(
+        seq, catalog, start, horizon_end, t.plants,
+        current_crop_id=p.current_crop_id, current_crop_streak=getattr(p, "current_crop_streak", 1),
+    )
+    # La secuencia pública describe solo las siembras aceptadas; nunca conserva un tercer consecutivo.
+    seq = [c.crop.id for c in cycles]
+    reasons.extend(cal_notes)
+    strategy_type = "rotacion" if len(set(seq)) > 1 else "monocultivo"
+    reasons.append(Reason(
+        "EST-02", "informacion",
+        ("Rotación: productos distintos en ciclos sucesivos; no son una asociación simultánea. "
+         if strategy_type == "rotacion" else
+         "Monocultivo: un solo producto por ciclo, con un máximo de 2 siembras consecutivas incluido el antecedente. ")
+        + t.rationale,
+        source_ids=list(t.source_ids),
+    ))
     timeline = _timeline(cycles, catalog, start, horizon_end, p)
 
     if not cycles:
-        reasons.append(Reason("CAL-01", "no_cumple", "No cabe ningún ciclo completo en el horizonte común. " + " ".join(cal_notes)))
+        limited = any(r.rule_id == "ANT-02" for r in cal_notes)
+        if not limited:
+            reasons.append(Reason("CAL-01", "no_cumple", "No cabe ningún ciclo completo en el horizonte común. " + " ".join(r.message for r in cal_notes)))
         return StrategyAssessment(
             sid, t.name, t.short, "no_viable", seq, timeline, metrics, reasons, assumptions, missing, [], {},
-            "Ningún ciclo completo cabe en el horizonte.",
+            "No se permite una tercera siembra consecutiva del mismo producto." if limited else "Ningún ciclo completo cabe en el horizonte.",
         )
 
     # --- calendario
@@ -323,8 +358,6 @@ def _assess(
         assumptions.append("Sin calendario local verificado para algún cultivo: no se restringe el mes de siembra; revisa el riesgo de helada de cada mes.")
     if "sin_verificar" in window_status:
         assumptions.append("Alguna ventana de siembra se infiere de observaciones de campo publicadas, sin un calendario oficial.")
-    for n in cal_notes:
-        reasons.append(Reason("CAL-03", "informacion", n))
     metrics[f"{sid}.ciclos"] = Metric(f"{sid}.ciclos", "Ciclos completos en el horizonte", len(cycles), "ciclos", "derivado", "calendario")
 
     # --- antecedente
@@ -389,6 +422,7 @@ def _assess(
                         "con esa observación, que no reemplaza un análisis de CE.",
                         source_ids=list(crop.salinity_source_ids) + ["PARCELA"],
                         assumptions=["Sin signos visibles de sal (tu observación, no una medición)."],
+                        assumed_inputs=["soil.salinity_signs"] if "soil.salinity_signs" in p.assumed else [],
                     )
                 )
             assumptions.append("Sin signos visibles de sal (observación del agricultor, no medición).")
@@ -473,6 +507,8 @@ def _assess(
     if "water.efficiency" in p.assumed:
         water_sources.append(z.zone_source_id)
     water_sources = _dedupe(water_sources)
+    if p.water.availability and "water.allocation" in p.assumed:
+        water_sources.append("CERES-AGUA-CUALITATIVA")
     if p.water.allocation_period == "anual" and p.water.mode == "conozco":
         crit_missing = True
         missing.append("Dotación desagregada por mes")
@@ -524,7 +560,8 @@ def _assess(
                 f"Riego por {_METHOD_LABEL.get(z.default_method or '', z.default_method)} supuesto "
                 f"(eficiencia {p.water.efficiency * 100:.0f} %, FAO) porque no indicaste cómo riegas."
             )
-        who = "el agua típica de la zona" if "water.allocation" in p.assumed else "tu dotación"
+        who = ("el intervalo supuesto para tu respuesta de agua" if p.water.availability
+               else "el agua típica de la zona") if "water.allocation" in p.assumed else "tu dotación"
         if hi is not None and need > hi:
             hard_fail = True
             exceeded = [m for m in monthly_water if m["gross_m3"] is not None and m["gross_m3"] > hi]
@@ -575,8 +612,8 @@ def _assess(
                 ref,
                 "m³/mes",
                 "supuesto_zona" if "water.allocation" in p.assumed else "declarado",
-                f"{z.water_label} ÷ 12 × área" if "water.allocation" in p.assumed else "declaración del agricultor",
-                source_ids=[*z.water_source_ids, z.zone_source_id] if "water.allocation" in p.assumed else ["PARCELA"],
+                f"{z.water_label} ÷ 12 × área" + (" × factor de escenario cualitativo CERES" if p.water.availability else "") if "water.allocation" in p.assumed else "declaración del agricultor",
+                source_ids=[*z.water_source_ids, z.zone_source_id, *(["CERES-AGUA-CUALITATIVA"] if p.water.availability else [])] if "water.allocation" in p.assumed else ["PARCELA"],
             )
 
     # --- economía
@@ -956,6 +993,7 @@ def _economics(sid, cycles, p: ParcelInput, catalog: Catalog, salinity_factor, m
     overrides = {o.crop_id: o for o in p.economic_overrides}
     events: list[tuple[date, float]] = []
     central = low = high = 0.0
+    direct_costs = 0.0
     lacking: list[str] = []
     kinds: set[str] = set()
     own: set[str] = set()  # PARCELA (perfil) y/o CUADERNO (registros propios)
@@ -985,6 +1023,7 @@ def _economics(sid, cycles, p: ParcelInput, catalog: Catalog, salinity_factor, m
         y_eff = y * salinity_factor.get(c.crop.id, 1.0)
         trans = catalog.transition_cost_soles_ha or 0.0
         margin = (y_eff * 1000 * pr - cost - trans) * p.area_ha
+        direct_costs += (cost + trans) * p.area_ha
         ly, lp = catalog.scenario_low
         hy, hp = catalog.scenario_high
         central += margin
@@ -1015,6 +1054,11 @@ def _economics(sid, cycles, p: ParcelInput, catalog: Catalog, salinity_factor, m
         f"{sid}.eco.margen", "Margen bruto estimado (escenario central)", central, "S/", kind,
         "Σ ciclos (rendimiento comercializable × precio en chacra − costos variables − transición) × área",
         source_ids=src, detail="No es ganancia neta: excluye alquiler de tierra, depreciación, impuestos y costo financiero.",
+    )
+    metrics[f"{sid}.eco.costos_directos"] = Metric(
+        f"{sid}.eco.costos_directos", "Costos directos de todas las campañas del periodo", direct_costs, "S/", kind,
+        "Σ ciclos (costos variables + transición) × área", source_ids=src,
+        detail="Suma de insumos y labores del escenario; distinta del margen y del capital máximo previo a las cosechas.",
     )
     metrics[f"{sid}.eco.margen_bajo"] = Metric(
         f"{sid}.eco.margen_bajo", "Margen bruto, escenario bajo", low, "S/", kind,
@@ -1150,10 +1194,23 @@ def _association_card(a) -> dict:
     return {
         "id": a.id,
         "name": a.name,
+        "type": "policultivo",
+        "components": list(a.components),
         "structure": a.structure,
-        "status": a.status,
+        "status": "exploratoria",
+        "rationale": "Considerar como alternativa de diversificación simultánea para revisión agronómica local. "
+        "Las fichas individuales y la evidencia de rotación no validan un policultivo ni demuestran ventajas.",
         "known": list(a.known),
-        "missing": list(a.missing),
+        "missing": _dedupe([*a.missing,
+            "Agua del policultivo: coeficiente conjunto y manejo de riego validados localmente",
+            "Economía del policultivo: rendimientos, precios y costos conjuntos verificados",
+            "Densidad de cada componente y arreglo espacial validados localmente",
+        ]),
+        "water_m3": None,
+        "margin_soles": None,
+        "density_plants_ha": None,
+        "advantage": None,
         "source_ids": list(a.source_ids),
-        "warning": a.warning,
+        "warning": a.warning + " Agua, economía y densidad desconocidas. No se suman márgenes, agua ni Kc "
+        "de los componentes; no es una recomendación validada.",
     }

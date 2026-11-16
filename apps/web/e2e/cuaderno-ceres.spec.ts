@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { answerProfile, delimitField } from "./helpers/field";
 
 test("R20: captura confirmada, agenda, memoria de Ceres y run nuevo", async ({ page }) => {
   const status=await (await page.request.get("/api/v1/assistant/status")).json();
@@ -6,9 +7,8 @@ test("R20: captura confirmada, agenda, memoria de Ceres y run nuevo", async ({ p
   await page.setViewportSize({width:375,height:812});
   await page.goto("/");
   await page.goto("/app");
-  await page.getByRole("button",{name:/^Maíz Amarillo duro/}).click();
-  await page.getByRole("button",{name:/Sí, ya coseché/}).click();
-  await page.getByRole("button",{name:/Un poco de todo/}).click();
+  await delimitField(page);
+  await answerProfile(page);
   await page.getByRole("button",{name:"Crear cuenta y guardar"}).click();
   await page.getByRole("button",{name:"Regístrate"}).click();
   await page.getByLabel("Email").fill(`r20-${Date.now()}@ceres.test`);

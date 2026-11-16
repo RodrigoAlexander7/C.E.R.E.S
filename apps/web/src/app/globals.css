@@ -123,7 +123,7 @@ button:disabled { opacity: 0.6; cursor: not-allowed; }
 .map-wrap .map { position: absolute; inset: 0; }
 .map-toolbar { position: absolute; top: 0.6rem; left: 0.6rem; z-index: 5; display: flex; gap: 0.4rem; flex-wrap: wrap; max-width: calc(100% - 4rem); }
 .map-toolbar button { box-shadow: var(--shadow); }
-.map-status { position: absolute; left: 0.6rem; bottom: 2rem; z-index: 5; max-width: 70%; }
+.map-status { position: absolute; left: 0.6rem; bottom: 2rem; z-index: 5; max-width: 70%; pointer-events: none; }
 @media (max-width: 960px) { .map-wrap { height: 420px; } }
 
 /* Comparación */

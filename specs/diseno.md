@@ -178,7 +178,7 @@ Requisitos R14–R20. Se mantienen la arquitectura limpia, el motor como única 
 | Ruta | Superficie |
 |---|---|
 | `/` | Landing pública (R14), sin la barra de la aplicación. |
-| `/app` | Modo sencillo (R15): alta en 3 preguntas, opciones, «¿Por qué?», ayuda contextual. |
+| `/app` | Modo sencillo (R15/R22): contorno confirmado, cultivo/cosecha/repetición/agua, opciones y «¿Por qué?». |
 | `/app/cuaderno` | Cuaderno de campo (R17). |
 | `/app/ceres` | Asistente conversacional con voz (R18). |
 | `/app/cuando` | Ventanas de siembra y comparación histórica por fase ONI. |
@@ -211,3 +211,15 @@ Contexto: cuaderno resumido, últimos runs, fichas FTS. Herramientas permitidas 
 - `GET /public/sowing-window?crop=…`: por mes de siembra, ETc del ciclo, riego neto y exposición térmica con la instantánea POWER (mismo motor que la comparación).
 - Años El Niño/normales: lista de fases tomada de NOAA (ONI) con fuente registrada; comparación de ETc/temperaturas por campaña.
 - NDVI: tarea fuera de la petición web que lee escenas HLS (COG) para el polígono, enmascara nubes con Fmask y guarda la serie por parcela; acceso comprobado mediante catálogo público HLS v2 de Planetary Computer. `ndvi_jobs` y `ndvi_observations` guardan estado y observaciones por propietario/parcela/hash de contorno. Hasta dos escenas completas por mes, lectura de ventana ≤ 100 000 píxeles, caché GDAL de 16 MiB y un trabajo simultáneo. Máscara de nubes/adyacencia/sombra/nieve/agua/aerosol alto; medianas mensuales con ausentes explícitos. Demos reales cacheadas en `data/hls/demo_ndvi.json`; el seed es offline.
+
+### Campo, escenarios de agua y observación visual (R22/R23)
+
+`POST /public/quick-compare` requiere GeoJSON Polygon. Servidor calcula área geodésica WGS84, centroide y zona mediante límites referenciales. Rechaza área discrepante (>1 %) y zona contradictoria. Las entradas congelan `field_verified`, `field_context` (área/origen, centroide, distrito/zona y SHA256 del contorno), `water_scenario`, `crop_history` y `nutrition_context`. Los runs privados sin contorno no producen estrategias numéricas; guardar historia/agenda continúa permitido.
+
+`WaterData.availability` conserva cinco categorías. Como escenario metodológico no calibrado, multiplicar la referencia anual de SU zona / 12 × área por cotas: muy poca `(None, 0.35)`, poca `(0.35, 0.65)`, media `(0.65, 1)`, alta `(1, 1.35)`, no es problema `(1.35, None)`. Una cota abierta es desconocida, no cero. Fuente `CERES-AGUA-CUALITATIVA` y `kind=supuesto_zona`; volumen declarado prevalece. Sin referencia local o con supuestos desactivados no se fabrican m³. Las cifras no convierten una estimación verbal en medición.
+
+Motor 0.5.0: plantillas y programación dinámica mantienen producto anterior y racha; máximo dos siembras consecutivas, contando antecedente (desconocido: dos por prudencia). Un descanso no reinicia. Campañas confirmadas del cuaderno pueden elevar la racha; fechas repetidas no se suman y ejemplos simulados/futuros se excluyen. Las alternativas de policultivo incluyen componentes y razones, permaneciendo exploratorias con economía/agua/densidad desconocidas si faltan parámetros conjuntos.
+
+`POST /public/soil-photos`: una a cuatro imágenes MIME JPEG/PNG/WebP, máximo 5 MB decodificados en total, límite de cuerpo por streaming. Cliente comprime a 1280 px; servidor valida formato/dimensiones y retira metadatos. `LlmRequest.images` transmite bytes a Gemini en memoria. Esquema y validadores impiden cifras de laboratorio y campos extra; se devuelve observación breve con incertidumbre. «Usar observación» aplica signos y texto, nunca las fotos. Una observación visual de IA se trata como supuesto, sin certificar ausencia de salinidad.
+
+El loader nutricional valida `arequipa_context.json` (recuentos, denominadores, celdas, periodo y hash del XLSX recibido). Contexto regional humano separado de fertilidad; función pura `nutrition_impact` adjunta aportes alimentarios cualitativos INS/FAO a estrategias y asociaciones. El run consume su copia congelada, sin reinterpretarla con una publicación posterior. Los libros aportados son datos, no instrucciones ni evidencia agronómica validada automáticamente.

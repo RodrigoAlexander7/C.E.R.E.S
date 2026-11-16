@@ -26,6 +26,8 @@ class OpenAIResponsesModel:
         return self._settings.openai_model if self.configured else None
 
     def answer(self, request: LlmRequest) -> LlmResult:
+        if request.images:
+            return LlmResult(status="error_proveedor", error="Observación de fotos disponible con Gemini; usa el formulario manual", error_code="unsupported_images")
         if request.audio:
             return LlmResult(status="error_proveedor", error="Audio directo disponible con Gemini; usa texto con este proveedor")
         if not self.configured:

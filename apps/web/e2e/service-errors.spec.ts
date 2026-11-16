@@ -1,11 +1,13 @@
 import { expect, test } from "@playwright/test";
+import { MAJES_FIELD, assertFakeAssistant } from "./helpers/field";
 
 test("cuota de IA conserva texto y HLS distingue falta de píxeles de un fallo", async ({ page, baseURL }) => {
+  await assertFakeAssistant(page);
   const origin = new URL(baseURL!).origin;
   const auth = await page.request.post("/api/v1/auth/register", { headers: { Origin: origin }, data: { email: `errores-${Date.now()}@ceres.test`, password: "prueba-errores-123" } });
   expect(auth.status()).toBe(201);
   const parcel = await page.request.post("/api/v1/parcels", { headers: { Origin: origin, "X-CSRF-Token": (await auth.json()).csrf_token }, data: {
-    name: "Parcela de prueba", point: { lat: -16.35, lon: -72.19 }, area_ha: 1,
+    name: "Parcela de prueba", geometry: MAJES_FIELD,
     profile: { current_crop_id: "maiz_grano", current_status: "cosechado", water: { mode: "no_se" } },
   } });
   expect(parcel.status()).toBe(201);

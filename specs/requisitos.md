@@ -155,11 +155,11 @@ Origen: `main.md` sección 11. Prevalecen sobre R01–R12 cuando los contradigan
 
 ## R15 — aplicación sencilla por módulos y detalle progresivo
 
-- Alta en tres preguntas: cultivo actual o último, fecha de cosecha (o «ya coseché») y prioridad. Ubicación por zona o mapa opcional; área declarada aceptada.
+- Antes de estimar, delimitar el campo y confirmar ubicación y área geodésica; después cultivo, repeticiones, cosecha y agua cualitativa. El mapa o la entrada GeoJSON delimitan; un punto GPS o área de ejemplo no bastan.
 - Resultado: tres opciones con un nivel en lenguaje cotidiano («Buena opción», «Posible, confirma X», «No conviene») y una frase que las justifique; el estado técnico R06 se conserva y se muestra en «¿Por qué?».
 - «¿Por qué?» se abre en capas: razón principal → datos usados y supuestos → detalle técnico y fuentes.
 - Junto a términos difíciles hay un botón de ayuda: primero un glosario fijo y, bajo demanda, explicación de la IA con fuentes.
-- El recorrido completo funciona en un móvil de 375 px con tres preguntas y dos toques hasta ver opciones.
+- El recorrido completo funciona en un móvil de 375 px, con nombres y etiquetas comprensibles, sin desbordamiento horizontal.
 - Una sola aplicación sencilla por módulos. «Ver más» permite consultar la misma comparación técnica, editar el perfil completo y recuperar resultados anteriores. El mapa es opcional en «Mi chacra».
 
 ## R16 — supuestos de zona y dato decisivo
@@ -195,7 +195,7 @@ Origen: `main.md` sección 11. Prevalecen sobre R01–R12 cuando los contradigan
 ## R20 — aceptación de la nueva dirección
 
 1. Visitante entra a la landing, entiende la propuesta y ve datos NASA reales de Majes.
-2. En modo sencillo responde tres preguntas (aceptando «no sé») y ve tres opciones útiles, sin callejones sin salida.
+2. Delimita y confirma su campo, declara cultivo/cosecha y estima su agua; ve opciones explicadas y sus limitaciones, sin inventar datos personales.
 3. Abre «¿Por qué?» y llega hasta las fuentes; ve qué dato cambiaría la decisión.
 4. Registra por voz o texto una cosecha y una venta, confirma y ve el cuaderno actualizado.
 5. Conversa con Ceres, que recuerda ese registro y pide una simulación al motor.
@@ -208,3 +208,18 @@ Origen: `main.md` sección 11. Prevalecen sobre R01–R12 cuando los contradigan
 - Método reproducible y sin LLM: programación dinámica (K mejores caminos) y Monte Carlo con semilla fija y números aleatorios comunes; precios de equilibrio y de cambio por bisección.
 - El plan sugerido usa solo cultivos validados en la zona; el mejor plan con cultivos por explorar se muestra aparte y nunca mejor que «Por explorar».
 - Cada opción muestra rango probable de ganancia, probabilidad de perder y el precio en chacra con el que no pierde. El plan sugerido pasa por las mismas reglas del motor que las demás opciones.
+
+## R22 — campo, agua estimada y opciones comprensibles
+
+- `POST /public/quick-compare` exige polígono válido; área y zona se derivan en servidor. Una zona o área enviada que no coincide se rechaza. Un run privado sin contorno queda bloqueado, sin estrategias numéricas; cuaderno/agenda siguen disponibles.
+- El agua cualitativa es obligatoria en el alta sencilla: muy poca, poca, media, alta o no es problema. Conservar la declaración y congelar el intervalo supuesto, metodología y fuente de SU zona. No es conversión medida ni permite «Buena opción» por sí sola. Falta de referencia local mantiene cantidades desconocidas.
+- Máximo dos siembras consecutivas del mismo producto, incluyendo antecedente. Racha desconocida se considera dos por prudencia. La programación dinámica y las plantillas aplican la misma prohibición; un descanso no la reinicia.
+- Mostrar monocultivo/rotación y policultivos candidatos con razones. Sin evidencia local conjunta, policultivo exploratorio con agua, economía y densidad desconocidas. No sumar monocultivos.
+- Tarjetas con nombres, ilustraciones, campañas y fechas; dinero distingue margen bruto estimado, costos directos y capital previo a la cosecha. Explicitar hectáreas y zona, fuentes y supuestos.
+
+## R23 — fotos de suelo y aporte alimentario de Arequipa
+
+- Alternativa manual o una a cuatro fotos JPEG/PNG/WebP: procesar en memoria, retirar metadatos y limitar tamaño. Gemini devuelve signos visibles, descripción breve y límites con esquema estricto. El usuario revisa antes de aplicar; fotos y audio no se guardan.
+- No diagnosticar salinidad ni nutrientes por foto, no inferir EC/pH/NPK. «Sin signos» no confirma ausencia de sal; una observación IA no satisface por sí sola una restricción obligatoria.
+- Aporte alimentario cualitativo explícito por opción con fuente INS/FAO, alimento y forma cuando estén verificados. Forraje y datos ausentes no son nutrientes humanos cero ni beneficios automáticos.
+- Contexto humano exclusivamente Arequipa: HIS con periodo, población evaluada, recuentos, denominadores, celdas y hash. No es fertilidad ni prevalencia poblacional ni evidencia causal de beneficios clínicos de una siembra. Congelar el contexto utilizado en el run.

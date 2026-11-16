@@ -137,13 +137,13 @@ const SIMPLE_CLS: Record<string, string> = { buena: s.pillGood, posible: s.pillM
 const CROP_COLOR: Record<string, string> = { maiz_grano: "#d9a53a", frejol_grano: "#5b9a45", cebolla_roja: "#a2456f" };
 const SHORT: Record<string, string> = { maiz_grano: "Maíz", frejol_grano: "Frejol", cebolla_roja: "Cebolla" };
 
-function PhonePreview({ strategies, zoneName, nameOf }: { strategies: Strategy[] | null; zoneName: string; nameOf: (id: string) => string }) {
+function PhonePreview({ strategies, zoneName, nameOf, areaHa }: { strategies: Strategy[] | null; zoneName: string; nameOf: (id: string) => string; areaHa: number | null }) {
   return (
     <div className={s.phone} aria-label={`Vista previa del modo sencillo con el caso demo de ${zoneName}`}>
       <div className={s.phoneScreen}>
         <div className={s.phoneTop}><span>CERES</span><span>Caso demo · {zoneName}</span></div>
-        <p className={s.phoneTitle}>Tus 3 opciones</p>
-        <p className={s.phoneSub}>Comparación real del motor</p>
+        <p className={s.phoneTitle}>Opciones del caso público</p>
+        <p className={s.phoneSub}>Comparación del motor{areaHa != null ? ` para ${fmt(areaHa, 2)} ha de demostración` : ""}</p>
         {!strategies &&
           [0, 1, 2].map((i) => <div key={i} className={`${s.opt} ${s.skeleton}`} style={{ height: 96 }} />)}
         {strategies?.map((st) => {
@@ -158,8 +158,8 @@ function PhonePreview({ strategies, zoneName, nameOf }: { strategies: Strategy[]
                 <span className={`${s.pill} ${lvl.cls}`}>{lvl.label}</span>
               </div>
               <p className={s.optLine}>
-                {margin != null ? <>Margen ≈ S/ {fmt(margin)}</> : "Margen pendiente"}
-                {water != null ? <> · agua ≈ {fmt(water)} m³</> : null}
+                {margin != null ? <>Margen bruto estimado ≈ S/ {fmt(margin)}</> : "Margen pendiente"}
+                {water != null ? <> · demanda de riego ≈ {fmt(water)} m³</> : null}
               </p>
               <div className={s.bar} aria-hidden="true">
                 {st.timeline.map((b, i) => (
@@ -170,7 +170,7 @@ function PhonePreview({ strategies, zoneName, nameOf }: { strategies: Strategy[]
             </div>
           );
         })}
-        <p className={s.phoneNote}>Cifras reales del motor con supuestos de demostración</p>
+        <p className={s.phoneNote}>Ejemplo con supuestos etiquetados. Para estimar tu resultado, primero delimita tu campo.</p>
       </div>
     </div>
   );
@@ -200,6 +200,7 @@ export default function Landing() {
   const zone = zones.find((z) => z.id === (zoneId ?? defaultId)) ?? null;
   const [ctx, setCtx] = useState<PublicContext | null>(null);
   const [strategies, setStrategies] = useState<Strategy[] | null>(null);
+  const [demoArea, setDemoArea] = useState<number | null>(null);
   const sowingCrops = useMemo(() => (zone?.crops ?? []).filter((c) => c.in_catalog).map((c) => ({ id: c.id, name: c.name })), [zone]);
   const [r1, c1] = useReveal<HTMLDivElement>();
   const [r2, c2] = useReveal<HTMLDivElement>();
@@ -214,12 +215,13 @@ export default function Landing() {
   useEffect(() => {
     if (!zid) return;
     setStrategies(null);
+    setDemoArea(null);
     setCtxState("loading");
     api<PublicContext>(`/public/context?zone=${zid}`)
       .then((c) => { setCtx(c); setCtxState("ok"); })
       .catch(() => { setCtx(null); setCtxState("error"); });
     api<{ items: PriceItem[] }>(`/public/prices?zone=${zid}`).then((r) => setPrices(r.items.filter((i) => i.markets.length))).catch(() => setPrices([]));
-    api<{ run: { result: { strategies: Strategy[] } } | null }>(`/public/demo?zone=${zid}`).then((d) => setStrategies(d.run?.result.strategies ?? [])).catch(() => setStrategies([]));
+    api<{ parcel: { area_ha: number }; run: { result: { strategies: Strategy[] } } | null }>(`/public/demo?zone=${zid}`).then((d) => { setStrategies(d.run?.result.strategies ?? []); setDemoArea(d.parcel.area_ha); }).catch(() => setStrategies([]));
   }, [zid]);
   const zoneTabs = zones.length > 1 && (
     <div className={s.zoneTabs} role="group" aria-label="Zona piloto">
@@ -283,7 +285,7 @@ export default function Landing() {
             </div>
             <div className={s.visual}>
               <div className={s.fieldCard}><FieldIllustration /><span className={s.fieldLabel}>{zone?.zone ?? "Irrigación Majes I"}</span></div>
-              <PhonePreview strategies={strategies} zoneName={zoneName} nameOf={shortName} />
+              <PhonePreview strategies={strategies} zoneName={zoneName} nameOf={shortName} areaHa={demoArea} />
               {yearly && (
                 <div className={`${s.chip} ${s.chipNasa}`}>
                   <small>NASA POWER · demanda anual</small>
@@ -365,20 +367,20 @@ export default function Landing() {
         <section id="como" className={s.section}>
           <div ref={r2} className={`${s.container} ${c2}`}>
             <p className={s.kicker}>Cómo funciona</p>
-            <h2 className={`${s.display} ${s.h2}`}>Tres preguntas, tres opciones, un porqué.</h2>
+            <h2 className={`${s.display} ${s.h2}`}>Tu campo, tus opciones y un porqué.</h2>
             <div className={s.steps}>
               <article className={s.step}>
                 <span className={s.stepNum} aria-hidden="true">1</span>
                 <div className={s.stepIcon}><Icon d={I.chat} /></div>
-                <h3>Cuéntanos lo básico</h3>
-                <p>Sin estudios de suelo ni formularios largos. Si no sabes algo, responde «no sé».</p>
-                <ul className={s.qList}><li>¿Qué sembraste?</li><li>¿Cuándo cosechas?</li><li>¿Qué te importa más?</li></ul>
+                <h3>Primero delimita tu campo</h3>
+                <p>Confirma su ubicación y hectáreas. Después cuéntanos lo básico; no necesitas medir el agua.</p>
+                <ul className={s.qList}><li>¿Qué sembraste y cuántas campañas seguidas?</li><li>¿Cuándo cosechas?</li><li>¿Esperas muy poca, poca, media o alta disponibilidad de agua, o no es problema?</li></ul>
               </article>
               <article className={s.step}>
                 <span className={s.stepNum} aria-hidden="true">2</span>
                 <div className={s.stepIcon}><Icon d={I.cards} /></div>
                 <h3>Mira tus opciones</h3>
-                <p>Tu plan, dos alternativas y el plan sugerido por CERES sobre los mismos 24 meses: cuándo sembrar, agua por mes, ganancia probable y si es viable con tu agua.</p>
+                <p>Monocultivo, rotación y policultivos por explorar: por qué considerarlos, cuándo sembrar, demanda de agua, margen bruto estimado y costos directos. Sin parámetros locales, el policultivo queda pendiente de validación.</p>
               </article>
               <article className={s.step}>
                 <span className={s.stepNum} aria-hidden="true">3</span>
@@ -450,7 +452,7 @@ export default function Landing() {
                 { icon: I.mic, bg: "#f8ddd6", fg: "#9b2f1f", t: "Registro por voz", d: "Manda un audio: «vendí 40 toneladas a un sol diez». CERES propone y tú confirmas.", live: true },
                 { icon: I.chat, bg: "#ebe4f6", fg: "#5d4189", t: "Conversa con Ceres", d: "Un asistente que recuerda tus campañas y simula escenarios contigo.", live: true },
                 { icon: I.sat, bg: "#d9e8f2", fg: "#2f6f9f", t: "Tu chacra desde el satélite", d: "Índice de vegetación mensual (HLS de NASA, 30 m) de tu lote.", live: true },
-                { icon: I.cards, bg: "#f3e6c8", fg: "#8a5a00", t: "Modo sencillo", d: "Tres preguntas, opciones en palabras simples, «¿Por qué?» en capas y ayuda junto a cada término.", live: true },
+                { icon: I.cards, bg: "#f3e6c8", fg: "#8a5a00", t: "Modo sencillo", d: "Delimita tu campo, estima tu agua y compara opciones explicadas con nombres de cultivos y fuentes.", live: true },
               ].map((f) => (
                 <article key={f.t} className={s.feature}>
                   <div className={s.featureTop}>

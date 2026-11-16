@@ -1,6 +1,6 @@
 "use client";
 
-// Alta en 3 preguntas (R15): qué sembraste, si ya cosechaste (y cuándo), qué te importa más.
+// Perfil mínimo después de delimitar el campo: cultivo, cosecha, agua y repetición.
 // Cada respuesta es un toque; el mes de cosecha es un segundo toque solo si el cultivo sigue en campo.
 
 import { useMemo, useState } from "react";
@@ -12,7 +12,8 @@ export interface Answers {
   crop: string | null;
   status: "en_campo" | "cosechado" | null;
   harvest: string | null; // YYYY-MM-15
-  priority: Profile["priority"] | null;
+  availability: NonNullable<Profile["water"]["availability"]> | null;
+  streak: 1 | 2 | null;
 }
 
 const COLOR: Record<string, string> = {
@@ -21,18 +22,21 @@ const COLOR: Record<string, string> = {
   haba_verde: "#e1eed3", tomate: "#f3d9d4", trigo: "#f1e6c8",
 };
 
-const PRIORITIES: { id: Profile["priority"]; name: string; hint: string }[] = [
-  { id: "dinero", name: "Ganar más", hint: "Lo que más margen deja" },
-  { id: "agua", name: "Ahorrar agua", hint: "Lo que menos riego pide" },
-  { id: "suelo", name: "Cuidar mi suelo", hint: "Rotar y no cansarlo" },
-  { id: "equilibrada", name: "Un poco de todo", hint: "Ver los compromisos" },
+const WATER: { id: NonNullable<Answers["availability"]>; name: string; hint: string }[] = [
+  { id: "muy_poca", name: "Muy poca", hint: "El agua limita mucho lo que puedo sembrar" },
+  { id: "poca", name: "Poca", hint: "Debo cuidar cada riego" },
+  { id: "media", name: "Media", hint: "Alcanza con cuidado" },
+  { id: "alta", name: "Alta", hint: "Tengo buena disponibilidad" },
+  { id: "no_es_problema", name: "El agua no es un problema", hint: "Puedo cubrir el riego que necesito" },
 ];
+
+export const WATER_NAME = Object.fromEntries(WATER.map((water) => [water.id, water.name]));
 
 const MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
 
 export function Wizard({
-  initial, startStep = 0, onDone, zone, zones, onZone,
-}: { initial: Answers; startStep?: number; onDone: (a: Answers) => void; zone: Zone; zones: Zone[]; onZone: (id: string) => void }) {
+  initial, startStep = 0, onDone, zone,
+}: { initial: Answers; startStep?: number; onDone: (a: Answers) => void; zone: Zone }) {
   const CROPS = zone.crops.filter((c) => c.id !== "otro");
   const [a, setA] = useState<Answers>(initial);
   const [step, setStep] = useState(startStep);
@@ -47,25 +51,20 @@ export function Wizard({
   const pick = (patch: Partial<Answers>, next?: number) => {
     const na = { ...a, ...patch };
     setA(na);
-    if (next === 3) onDone(na);
+    if (next === 4) {
+      if (na.crop && na.status && na.availability && (na.status !== "en_campo" || na.harvest)) onDone(na);
+      else setStep(!na.crop ? 0 : !na.status || (na.status === "en_campo" && !na.harvest) ? 1 : 2);
+    }
     else if (next !== undefined) setStep(next);
   };
 
   return (
     <section aria-labelledby="wq">
-      <div className={s.progress} aria-hidden="true">{[0, 1, 2].map((i) => <i key={i} data-on={i <= step} />)}</div>
-      <p className={s.stepKicker}>Pregunta {step + 1} de 3</p>
+      <div className={s.progress} aria-hidden="true">{[0, 1, 2, 3].map((i) => <i key={i} data-on={i <= step} />)}</div>
+      <p className={s.stepKicker}>Pregunta {step + 1} de 4 · {zone.name}</p>
 
       {step === 0 && (
         <>
-          {zones.length > 1 && (
-            <div className={s.zoneRow} role="group" aria-label="Tu zona">
-              <span>Tu zona:</span>
-              {zones.map((z) => (
-                <button key={z.id} className={s.zoneBtn} aria-pressed={z.id === zone.id} onClick={() => { if (z.id !== zone.id) { setA({ ...a, crop: null }); onZone(z.id); } }}>{z.name}</button>
-              ))}
-            </div>
-          )}
           <h1 id="wq" className={`${s.q} ${s.display}`}>¿Qué sembraste último?</h1>
           <p className={s.qHint}>Lo que tienes ahora en tu chacra o lo último que cosechaste.</p>
           <div className={s.choices}>
@@ -110,11 +109,11 @@ export function Wizard({
 
       {step === 2 && (
         <>
-          <h1 id="wq" className={`${s.q} ${s.display}`}>¿Qué te importa más?</h1>
-          <p className={s.qHint}>Ordenamos tus opciones según esto. Siempre verás todas.</p>
+          <h1 id="wq" className={`${s.q} ${s.display}`}>¿Cuánta agua tienes para regar?</h1>
+          <p className={s.qHint}>Elige cómo te alcanza. No necesitas saber los metros cúbicos.</p>
           <div className={s.choices}>
-            {PRIORITIES.map((p) => (
-              <button key={p.id} className={s.choice} aria-pressed={a.priority === p.id} onClick={() => pick({ priority: p.id }, 3)}>
+            {WATER.map((p) => (
+              <button key={p.id} className={s.choice} aria-pressed={a.availability === p.id} onClick={() => pick({ availability: p.id }, 3)}>
                 <strong>{p.name}</strong>
                 <span>{p.hint}</span>
               </button>
@@ -123,15 +122,26 @@ export function Wizard({
         </>
       )}
 
+      {step === 3 && (
+        <>
+          <h1 id="wq" className={`${s.q} ${s.display}`}>¿Cuántas campañas seguidas sembraste este cultivo?</h1>
+          <p className={s.qHint}>La repetición y el suelo limitan las opciones, aunque dejen más dinero. Si no recuerdas, calculamos con cautela.</p>
+          <div className={s.choices}>
+            <button className={s.choice} aria-pressed={a.streak === 1} onClick={() => pick({ streak: 1 }, 4)}><strong>1 campaña</strong></button>
+            <button className={s.choice} aria-pressed={a.streak === 2} onClick={() => pick({ streak: 2 }, 4)}><strong>2 o más campañas</strong></button>
+            <button className={s.choice} aria-pressed={a.streak === null} onClick={() => pick({ streak: null }, 4)}><strong>No sé</strong></button>
+          </div>
+        </>
+      )}
+
       <div className={s.wizardNav}>
         {step > 0 ? <button className={s.linkBtn} onClick={() => setStep(step - 1)}>← Atrás</button> : <span />}
       </div>
       <p className={s.wizardNote}>
-        Sin estudios de suelo ni formularios: lo que no sepas lo suponemos con valores típicos de {zone.name} y te lo decimos. Calculamos para un lote de {zone.default_area_ha?.value ?? 1} ha; puedes cambiarlo después.
+        Buscamos margen económico respetando el agua, el suelo y la repetición. Los datos desconocidos se muestran como supuestos de {zone.name}.
       </p>
     </section>
   );
 }
 
 export const cropName = (zone: Zone | null, id: string | null) => (zone?.crops.find((c) => c.id === id)?.name ?? "").toLowerCase();
-export const PRIORITY_NAME: Record<string, string> = Object.fromEntries(PRIORITIES.map((p) => [p.id, p.name]));

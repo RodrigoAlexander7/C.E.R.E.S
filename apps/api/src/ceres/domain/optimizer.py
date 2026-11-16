@@ -8,14 +8,15 @@ Problema. Para una chacra de área A y un horizonte de 24 meses se elige una sec
 
 sujeto a: ventana de siembra; ciclo completo dentro del horizonte; preparación entre ciclos;
 agua del mes más exigente ≤ dotación en ≥ 9 de 11 años NASA POWER (restricción de oportunidad);
+máximo 2 siembras consecutivas del mismo producto, contando el cultivo actual;
 repetir familia botánica en ciclos seguidos rinde 10 % menos (supuesto); sal (FAO-29); riesgo de
 frío/calor < 3 de 10 años.
 
 Método.
 1. Precálculo por (cultivo, día de siembra) del riego neto mensual con NASA POWER + FAO-56 y de la
    razón entre años (caché por instantánea NASA: la climatología no depende del año calendario).
-2. Programación dinámica sobre un DAG temporal (estado = fecha libre, familia anterior, ¿hubo
-   leguminosa?) que conserva los K mejores caminos por margen esperado (k caminos más largos).
+2. Programación dinámica sobre un DAG temporal (estado = fecha libre, familia y producto anteriores,
+   racha del producto, ¿hubo leguminosa?) que conserva los K mejores caminos por margen esperado.
 3. Monte Carlo con números aleatorios comunes (semilla fija → resultado reproducible): año climático
    NASA por ciclo, precio log-normal (σ por cultivo, supuesto) y factor de rendimiento del catálogo.
    Da E[M], CVaR₂₀, P(M < 0) y percentiles; ordena los K candidatos por Score.
@@ -36,6 +37,7 @@ from functools import lru_cache
 
 from ceres.domain.catalog import Catalog, CropProfile
 from ceres.domain.climate import effective_rain_monthly, historical_windows, thermal_exposure
+from ceres.domain.engine import MAX_CONSECUTIVE_SOWINGS
 from ceres.domain.model import ParcelInput
 
 MM_HA_TO_M3 = 10.0
@@ -45,7 +47,7 @@ SEED = 20261115
 BETA_PRUDENT = 0.5
 CVAR_ALPHA = 0.2
 THERMAL_MAX_SHARE = 0.3
-# Repetir la familia botánica del ciclo anterior (monocultivo): −10 % de rendimiento por más plagas y
+# Repetir la familia botánica del ciclo anterior: −10 % de rendimiento por más plagas y
 # enfermedades. Supuesto de demostración sin cuantificación local (verificar con el asesor).
 REPEAT_YIELD = 0.9
 WATER_YEARS_OK = 9 / 11
@@ -218,7 +220,7 @@ class Arc:
     plant: date
     harvest: date
     value_ha: float
-    value_repeat_ha: float  # si repite la familia del ciclo anterior (monocultivo: rinde menos)
+    value_repeat_ha: float  # si repite la familia del ciclo anterior (supuesto de rendimiento)
 
 
 def _arcs(p: ParcelInput, catalog: Catalog, climate, crops: list[str], start: date, end: date, alloc_hi: float | None) -> list[Arc]:
@@ -253,13 +255,19 @@ def _arcs(p: ParcelInput, catalog: Catalog, climate, crops: list[str], start: da
     return arcs
 
 
-def best_paths(arcs: list[Arc], start: date, prep_days: int, first_family: str | None, require_legume: bool, k: int = K_BEST) -> list[tuple[float, tuple[Arc, ...]]]:
-    """K mejores secuencias por margen esperado/ha. Estado = (fecha libre, familia anterior, ¿leguminosa?)."""
-    plants = [a.plant for a in arcs]
-    memo: dict[tuple[date, str | None, bool], list[tuple[float, tuple[Arc, ...]]]] = {}
+def best_paths(
+    arcs: list[Arc], start: date, prep_days: int, first_family: str | None, require_legume: bool,
+    k: int = K_BEST, *, first_crop: str | None = None, current_crop_streak: int = 1,
+) -> list[tuple[float, tuple[Arc, ...]]]:
+    """K mejores secuencias; excluye el tercer consecutivo antes de valorar el arco.
 
-    def solve(avail: date, fam: str | None, leg: bool) -> list[tuple[float, tuple[Arc, ...]]]:
-        key = (avail, fam, leg)
+    La racha es por producto, no por familia, y sigue vigente aunque haya meses sin sembrar.
+    """
+    plants = [a.plant for a in arcs]
+    memo: dict[tuple[date, str | None, bool, str | None, int], list[tuple[float, tuple[Arc, ...]]]] = {}
+
+    def solve(avail: date, fam: str | None, leg: bool, previous: str | None, streak: int) -> list[tuple[float, tuple[Arc, ...]]]:
+        key = (avail, fam, leg, previous, streak)
         if key in memo:
             return memo[key]
         cands: list[tuple[float, tuple[Arc, ...]]] = []
@@ -267,9 +275,12 @@ def best_paths(arcs: list[Arc], start: date, prep_days: int, first_family: str |
             cands.append((0.0, ()))
         earliest = avail + timedelta(days=prep_days)
         for a in arcs[bisect.bisect_left(plants, earliest):]:
-            # Rotación: repetir familia se permite, pero rinde menos (supuesto); así no se deja la chacra vacía.
+            next_streak = streak + 1 if a.crop == previous else 1
+            if next_streak > MAX_CONSECUTIVE_SOWINGS:
+                continue
+            # El supuesto de familia se aplica solo después de cumplir el límite duro por producto.
             own = a.value_repeat_ha if a.family == fam else a.value_ha
-            for v, path in solve(a.harvest + timedelta(days=1), a.family, leg or a.legume):
+            for v, path in solve(a.harvest + timedelta(days=1), a.family, leg or a.legume, a.crop, next_streak):
                 cands.append((own + v, (a, *path)))
         cands.sort(key=lambda x: (-x[0], len(x[1]), tuple((c.plant, c.crop) for c in x[1])))
         out, seen = [], set()
@@ -285,7 +296,7 @@ def best_paths(arcs: list[Arc], start: date, prep_days: int, first_family: str |
         return out
 
     # Igual que build_cycles: la primera siembra cabe desde la liberación del terreno + preparación.
-    return [r for r in solve(start, first_family, False) if r[1]]
+    return [r for r in solve(start, first_family, False, first_crop, current_crop_streak) if r[1]]
 
 
 # ---------------------------------------------------------------- Monte Carlo (riesgo)
@@ -317,7 +328,12 @@ def simulate(cycles: list[tuple[str, date]], p: ParcelInput, catalog: Catalog, c
     ly, hy = catalog.scenario_low[0], catalog.scenario_high[0]
     info = []
     prev_family = _family_of(p.current_crop_id, catalog)
+    previous, streak = p.current_crop_id, getattr(p, "current_crop_streak", 1)
     for cid, plant in cycles:
+        streak = streak + 1 if cid == previous else 1
+        if streak > MAX_CONSECUTIVE_SOWINGS:
+            return None  # tampoco asigna riesgo ni margen a un plan externo que viole el límite
+        previous = cid
         crop = catalog.crop(cid)
         ec = crop_econ(crop, p) if crop else None
         if ec is None:
@@ -445,7 +461,10 @@ def _family_of(crop_id: str | None, catalog: Catalog) -> str | None:
 def _plans_for(p, catalog, climate, crops, start, end, draws, beta, require_legume) -> list[Plan]:
     alloc = _alloc_hi(p)
     arcs = _arcs(p, catalog, climate, crops, start, end, alloc)
-    paths = best_paths(arcs, start, catalog.prep_days, _family_of(p.current_crop_id, catalog), require_legume)
+    paths = best_paths(
+        arcs, start, catalog.prep_days, _family_of(p.current_crop_id, catalog), require_legume,
+        first_crop=p.current_crop_id, current_crop_streak=getattr(p, "current_crop_streak", 1),
+    )
     plans = []
     for v, path in paths:
         cycles = tuple((a.crop, a.plant) for a in path)
@@ -497,7 +516,8 @@ def optimize(p: ParcelInput, catalog: Catalog, climate, start: date, end: date) 
     portfolio = _portfolio(plans, p, catalog, climate, draws, beta) if best else None
     note = (
         f"Comparó {len(plans)} plan(es) con cultivos validados y {len(all_plans)} incluyendo cultivos por explorar; "
-        f"{SAMPLES} escenarios (año NASA POWER, precio y rendimiento) con semilla fija."
+        f"{SAMPLES} escenarios (año NASA POWER, precio y rendimiento) con semilla fija. "
+        "Excluye un tercer consecutivo del mismo producto, contando el cultivo actual; descansar no reinicia la racha."
     )
     return OptimizerResult(best, explore, plans, portfolio, note, beta)
 
@@ -583,10 +603,15 @@ def attach(strategies: list, p: ParcelInput, catalog: Catalog, climate, start: d
         "portfolio": res.portfolio,
         "switch": switch,
         "note": res.note,
+        "constraints": [{
+            "rule_id": "ANT-02", "type": "hard", "max_consecutive_sowings": MAX_CONSECUTIVE_SOWINGS,
+            "current_crop_id": p.current_crop_id, "current_crop_streak": getattr(p, "current_crop_streak", 1),
+            "includes_current_crop": True, "rest_resets_streak": False,
+        }],
         "assumptions": [
             "Precio log-normal con σ por cultivo (supuesto de demostración); precio de hoy, no el de la cosecha.",
             "Si en un año NASA el mes más exigente supera tu agua, el rendimiento baja en proporción (Ky ≈ 1, supuesto).",
-            "Repetir familia de cultivo en ciclos seguidos rinde 10 % menos (monocultivo; supuesto por verificar).",
+            "Repetir familia de cultivo en ciclos seguidos rinde 10 % menos (supuesto por verificar; no sustituye el límite de 2 por producto).",
         ],
     }
 

@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import logging
+import hashlib
+import json
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -80,6 +82,18 @@ def _located(c: Container, d: dict | None) -> dict:
     return {"in_pilot_zone": z is not None, "zone_id": z.id if z else None, "zone_name": z.name if z else None}
 
 
+def _field_context(geometry: dict | None, area: float, district: dict | None, located: dict) -> dict:
+    return {
+        "verified": geometry is not None,
+        "area_ha": area,
+        "area_origin": "geodesica" if geometry else "declarada",
+        "geometry_sha256": hashlib.sha256(json.dumps(geometry, sort_keys=True, separators=(",", ":")).encode()).hexdigest() if geometry else None,
+        "centroid": centroid(geometry) if geometry else None,
+        "district": district,
+        **located,
+    }
+
+
 def _check_crops(z: ZoneRuntime, profile: dict) -> None:
     for key in ("current_crop_id", "planned_next_crop_id"):
         v = profile.get(key)
@@ -153,6 +167,7 @@ def geometry_area(body: AreaRequest, c: Container = Depends(container)):
     d = c.regions.locate_point(ctr["lat"], ctr["lon"])
     return {
         "area_ha": round(area, 4),
+        "geometry_sha256": _field_context(body.geometry, area, d, _located(c, d))["geometry_sha256"],
         "method": "Área geodésica WGS84 (pyproj.Geod) del polígono dibujado",
         "centroid": ctr,
         "district": d,
@@ -162,7 +177,7 @@ def geometry_area(body: AreaRequest, c: Container = Depends(container)):
 
 @public.get("/public/zones")
 def public_zones(c: Container = Depends(container)):
-    return {"default": c.zones.default_id, "version": c.zones.version, "items": [z.public() for z in c.zones.zones.values()]}
+    return {"default": c.zones.default_id, "version": c.zones.version, "engine_version": ENGINE_VERSION, "items": [z.public() for z in c.zones.zones.values()]}
 
 
 NEARBY_MARKETS = ("Moquegua", "Tacna", "Lima")
@@ -345,10 +360,25 @@ def quick_compare(body: QuickCompare, request: Request, c: Container = Depends(c
     """Comparación del modo sencillo SIN cuenta: no guarda nada (R15). En la zona piloto elegida."""
     if c.quick_limiter and not c.quick_limiter.hit(request.client.host if request.client else "?"):
         raise ApiError(429, "demasiadas_consultas", "Demasiadas consultas seguidas; espera un momento")
-    z = _zone(c, body.zone_id)
+    try:
+        area = geodesic_area_ha(body.geometry)
+    except (GeometryError, TypeError, ValueError) as exc:
+        raise ApiError(422, "geometria_invalida", str(exc))
+    if area > 10_000:
+        raise ApiError(422, "area_fuera_rango", "El campo debe tener como máximo 10 000 hectáreas")
+    ctr = centroid(body.geometry)
+    district = c.regions.locate_point(ctr["lat"], ctr["lon"])
+    located = _located(c, district)
+    if body.zone_id and body.zone_id != located["zone_id"]:
+        raise ApiError(422, "zona_no_coincide", "La zona indicada no coincide con la ubicación del campo")
+    if body.area_ha is not None and abs(body.area_ha - area) / area > 0.01:
+        raise ApiError(422, "area_no_coincide", "El área indicada no coincide con el contorno; confirma el cálculo de la parcela")
+    z = c.zone(located["zone_id"]) if located["zone_id"] else None
     profile = body.profile.model_dump(mode="json")
-    _check_crops(z, profile)
-    inputs = frozen_inputs(profile, body.area_ha, True, _today(c), z)
+    if z:
+        _check_crops(z, profile)
+    inputs = frozen_inputs(profile, area, located["in_pilot_zone"], _today(c), z,
+                           field_context=_field_context(body.geometry, area, district, located))
     try:
         result = evaluate_frozen(inputs, z)
     except InvalidInput as exc:
@@ -564,7 +594,11 @@ def add_event(parcel_id: str, body: CropEventCreate, repo: ParcelRepo = Depends(
             prof.update(current_status="cosechado", expected_harvest=None)
             new_rev = repo.add_revision(p, prof, f"Cosecha registrada el {body.actual_harvest.isoformat()}")
         elif body.status == "en_campo":
-            prof.update(current_crop_id=body.crop_id, current_status="en_campo", expected_harvest=body.expected_harvest.isoformat() if body.expected_harvest else None, planned_next_crop_id=None)
+            streak = min(2, (prof.get("current_crop_streak") or 2) + 1) if body.crop_id == prof.get("current_crop_id") else 1
+            # Una corrección reemplaza el evento; no es otra siembra.
+            if body.supersedes_id:
+                streak = prof.get("current_crop_streak")
+            prof.update(current_crop_id=body.crop_id, current_crop_streak=streak, current_status="en_campo", expected_harvest=body.expected_harvest.isoformat() if body.expected_harvest else None, planned_next_crop_id=None)
             new_rev = repo.add_revision(p, prof, "Nuevo cultivo en campo")
     return {"event": ser.crop_event(ev), "new_revision": ser.revision(new_rev) if new_rev else None}
 
@@ -627,8 +661,20 @@ def create_run(c: Container, repo: ParcelRepo, p: m.Parcel, scenario: dict | Non
     if rev is None:
         raise ApiError(409, "perfil_incompleto", "Completa el perfil de la parcela antes de comparar")
     profile, label = apply_scenario(rev.data, scenario)
+    # Las campañas confirmadas también limitan las repeticiones; el chat no puede
+    # eludir la regla usando una revisión de perfil con una racha menor.
+    from ceres.infrastructure.db.notebook import records
+    from ceres.domain.notebook import consecutive_crop_history
+    history = consecutive_crop_history(records(repo.db, repo.owner_id, p.id), profile["current_crop_id"], _today(c))
     zone = c.zone(p.zone_id) if p.zone_id else None
-    inputs = frozen_inputs(profile, p.area_ha, p.in_pilot_zone, _today(c), zone, own_economics(repo, p, zone) if zone else [])
+    inputs = frozen_inputs(profile, p.area_ha, p.in_pilot_zone, _today(c), zone, own_economics(repo, p, zone) if zone else [],
+                           field_context=_field_context(p.geometry, p.area_ha, p.region_codes,
+                               {"zone_id": p.zone_id, "zone_name": zone.name if zone else None, "in_pilot_zone": p.in_pilot_zone}))
+    inputs["crop_history"] = history
+    if history["streak"]:
+        inputs["effective_profile"] = {**inputs["effective_profile"], "current_crop_streak": max(profile.get("current_crop_streak") or 2, history["streak"])}
+        if history["streak"] == 2:
+            inputs["assumed"] = [x for x in inputs["assumed"] if x != "current_crop_streak"]
     try:
         result = evaluate_frozen(inputs, zone)
     except InvalidInput as exc:
@@ -677,7 +723,8 @@ def reproduce_run(run_id: str, repo: ParcelRepo = Depends(parcel_repo), c: Conta
     if r is None:
         raise not_found()
     zone = c.zone(r.inputs["zone_id"]) if r.inputs.get("zone_id") else None
-    same_versions = (r.catalog_version == zone.catalog.version and r.dataset_snapshot_id == zone.climate.snapshot_id if zone else r.catalog_version == "sin_catalogo_local" and r.dataset_snapshot_id is None) and r.engine_version == ENGINE_VERSION
+    has_local_comparison = zone is not None and r.inputs.get("field_verified", False) and r.inputs.get("in_pilot_zone", False)
+    same_versions = (r.catalog_version == zone.catalog.version and r.dataset_snapshot_id == zone.climate.snapshot_id if has_local_comparison else r.catalog_version == "sin_catalogo_local" and r.dataset_snapshot_id is None) and r.engine_version == ENGINE_VERSION
     again = evaluate_frozen(r.inputs, zone).to_dict()
     return {"same_versions": same_versions, "identical": again == r.result}
 
@@ -799,4 +846,6 @@ def create_app(c: Container | None = None) -> FastAPI:
     app.include_router(proposals_router)
     from ceres.presentation.ceres import router as ceres_router
     app.include_router(ceres_router)
+    from ceres.presentation.soil_photos import router as soil_photos_router
+    app.include_router(soil_photos_router)
     return app

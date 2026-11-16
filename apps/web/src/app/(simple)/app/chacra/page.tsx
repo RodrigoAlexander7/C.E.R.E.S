@@ -95,7 +95,7 @@ export default function Chacra() {
       <div className={s.moduleHead}>
         <p className={s.stepKicker}>Mi chacra</p>
         <h1 id="chacra-t" className={`${s.q} ${s.display}`}>{active ? active.name || "Mi chacra" : "Tu terreno"}</h1>
-        <p>{user ? "Tus parcelas guardadas. Dibujarla en el mapa es opcional: sirve para medir el área y consultar su verdor desde el satélite." : "Cuéntanos cómo está tu tierra y comprueba cuánto mide. Para guardarlo, ingresa."}</p>
+        <p>{user ? "Tus parcelas guardadas. Confirma el contorno para calcular estimaciones y consultar su verdor desde el satélite." : "Delimita tu campo y cuéntanos cómo está tu tierra. Para guardarlo, ingresa."}</p>
       </div>
 
       <div className={s.chacraGrid}>
@@ -105,7 +105,7 @@ export default function Chacra() {
 
       {user && parcels && parcels.length === 0 && (
         <div className={s.panel}>
-          <p className={s.panelText}>Aún no guardaste una chacra. Responde las 3 preguntas y pulsa «Guardar».</p>
+          <p className={s.panelText}>Aún no guardaste una chacra. Delimita tu campo, indica tu cultivo y agua, y pulsa «Guardar».</p>
           <Link href="/app" className={`${s.btn} ${s.btnPrimary}`}>Ir a «Qué sembrar»</Link>
         </div>
       )}

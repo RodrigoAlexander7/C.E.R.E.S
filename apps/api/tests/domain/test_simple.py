@@ -14,6 +14,7 @@ TODAY = date(2026, 11, 15)
 BASE = {
     "current_crop_id": "maiz_grano",
     "current_status": "en_campo",
+    "current_crop_streak": 1,
     "expected_harvest": "2027-02-15",
     "water": {"mode": "no_se"},
     "soil": {},
@@ -57,6 +58,24 @@ def test_all_unknown_gives_useful_options_not_dead_ends(zone, catalog, climate):
     for s in r.strategies:
         assert s.decisive, s.strategy_id
         assert s.simple["headline"] and s.simple["facts"]["first_sowing"]
+
+
+@pytest.mark.parametrize("omitted", [True, False], ids=["omitted", "null"])
+def test_unknown_streak_conservatively_blocks_third_sowing(zone, omitted):
+    p = {**BASE, "current_crop_streak": None}
+    if omitted:
+        del p["current_crop_streak"]
+    inputs = frozen_inputs(p, 5, True, TODAY, zone)
+    assert "current_crop_streak" in inputs["assumed"]
+    assert p.get("current_crop_streak") is None
+    result = evaluate_frozen(inputs, zone)
+    a = next(s for s in result.strategies if s.strategy_id == "A")
+    assert a.status == "no_viable" and a.simple["level"] == "no_conviene"
+    assert a.sequence == [] and not any(b.kind == "cultivo" for b in a.timeline)
+    assert a.metrics == {} and a.simple["facts"]["water_m3"] is None
+    assert a.simple["facts"]["margin_soles"] is None
+    assert any(r.rule_id == "ANT-02" and r.state == "no_cumple" for r in a.reasons)
+    assert any("dos campañas" in note for note in result.notes)
 
 
 def test_zone_assumption_never_gives_buena(zone, catalog, climate):

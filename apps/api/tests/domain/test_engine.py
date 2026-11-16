@@ -1,11 +1,12 @@
 """Motor: calendarios, restricciones, unidades, margen y estados con la serie NASA real guardada."""
 
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from datetime import date, timedelta
 
 import pytest
 
-from ceres.domain.engine import ClimateInput, add_months, evaluate
+from ceres.domain.catalog import StrategyTemplate, Window
+from ceres.domain.engine import ClimateInput, _assess, add_months, build_cycles, evaluate
 from ceres.domain.model import EconomicOverride, InvalidInput, ParcelInput, SoilInput, WaterInput
 
 TODAY = date(2026, 11, 14)
@@ -87,6 +88,11 @@ def test_gross_margin_sums_all_cycles(catalog, climate):
     assert s.metrics["A.eco.margen"].value == pytest.approx(per_ha * 5 * len(cycles))
     assert s.metrics["A.eco.margen_bajo"].value < s.metrics["A.eco.margen"].value < s.metrics["A.eco.margen_alto"].value
     assert "No es ganancia neta" in s.metrics["A.eco.margen"].detail
+    costs = s.metrics["A.eco.costos_directos"]
+    expected_revenue = e.yield_t_ha * 1000 * e.price_soles_kg * 5 * len(cycles)
+    assert costs.value + s.metrics["A.eco.margen"].value == pytest.approx(expected_revenue)
+    assert costs.value >= s.metrics["A.eco.capital"].value
+    assert costs.kind == s.metrics["A.eco.margen"].kind
 
 
 def test_water_deficit_not_compensated_by_margin(catalog, climate):
@@ -216,3 +222,85 @@ def test_legume_gets_no_nitrogen_credit(catalog, climate):
     assert not any("kg N" in m.unit for m in s.metrics.values())
     assert "Sin crédito fijo" in s.soil["contributions"]["legume_note"]
     assert not any(c.is_legume for c in catalog.crops.values() if c.family == "Poaceae")
+
+
+@dataclass(frozen=True)
+class ParcelWithStreak(ParcelInput):
+    """Contrato de entrada que también sirve mientras el parent integra el campo en ParcelInput."""
+
+    current_crop_streak: int = 1
+
+
+@pytest.mark.parametrize("streak", [1, 2])
+@pytest.mark.parametrize("rule", ["declarada", "alternar", "explicita"])
+def test_templates_truncate_before_third_sowing_including_current_crop(catalog, streak, rule):
+    p = ParcelWithStreak(**(vars(base()) | {"current_crop_streak": streak}))
+    crop = replace(catalog.crops["maiz_grano"], stage_days=(5, 5, 5, 5), windows=(Window((1, 1), (12, 31)),))
+    cat = replace(catalog, crops={**catalog.crops, crop.id: crop})
+    start, end = date(2027, 1, 1), date(2028, 12, 31)
+    plants = tuple(date(2027, m, 15) for m in range(1, 7)) if rule == "explicita" else ()
+    template = StrategyTemplate("T", "Prueba", "Monocultivo", rule, None, "Plan declarado.", ("PARCELA",), (crop.id,) * 6, plants)
+    st = _assess(template, p, cat, ClimateInput(None, None), start, end)
+    accepted = [b for b in st.timeline if b.kind == "cultivo"]
+    assert len(accepted) == 2 - streak
+    assert st.sequence == [crop.id] * (2 - streak)
+    reason = next(r for r in st.reasons if r.rule_id == "ANT-02")
+    assert "límite de planificación" in reason.message
+    assert "PARCELA" in reason.source_ids
+    assert "descanso" in reason.message
+    assert reason.state == ("advertencia" if accepted else "no_cumple")
+    if not accepted:
+        assert st.status == "no_viable"
+        assert not st.metrics  # no ingresos ni agua de una tercera siembra excluida
+
+
+def test_templates_reset_streak_only_on_different_product_and_not_on_rest(catalog):
+    maize, bean = "maiz_grano", "frejol_grano"
+    crops = {cid: replace(catalog.crops[cid], stage_days=(5, 5, 5, 5), windows=(Window((1, 1), (12, 31)),)) for cid in (maize, bean)}
+    cat = replace(catalog, crops={**catalog.crops, **crops})
+    start, end = date(2027, 1, 1), date(2029, 12, 31)
+    seq = [bean, bean, maize, maize, maize, bean]
+    plants = (date(2027, 1, 15), date(2027, 3, 15), date(2027, 5, 15), date(2027, 7, 15), date(2029, 1, 15), date(2029, 3, 15))
+    cycles, reasons = build_cycles(seq, cat, start, end, plants, current_crop_id=maize, current_crop_streak=2)
+    assert [c.crop.id for c in cycles] == [bean, bean, maize, maize]
+    assert next(r for r in reasons if r.rule_id == "ANT-02").state == "advertencia"
+    assert cycles[-1].harvest < plants[4]  # incluso casi dos años de descanso no habilitan el tercero
+
+
+def test_all_strategies_respect_two_sowings_and_explain_strategy_type(catalog, climate):
+    p = ParcelWithStreak(**(vars(base()) | {"current_crop_streak": 2}))
+    r = evaluate(p, catalog, climate)
+    for st in r.strategies:
+        previous, streak = p.current_crop_id, p.current_crop_streak
+        for b in st.timeline:
+            if b.kind != "cultivo":
+                continue
+            streak = streak + 1 if b.crop_id == previous else 1
+            assert streak <= 2, st.strategy_id
+            previous = b.crop_id
+        assert st.simple["type"] in ("monocultivo", "rotacion")
+        assert st.simple["rationale"]
+        assert any(rr.rule_id == "EST-02" for rr in st.reasons)
+    a = by_id(r)["A"]
+    assert a.status == "no_viable" and a.simple["level"] == "no_conviene"
+    assert a.simple["facts"]["margin_soles"] is None
+    assert "tercera" in a.simple["headline"]
+    assert "A" not in r.ordering["ranked"]
+    assert (r.optimizer or {}).get("roles", {}).get("A") != "sugerido"
+
+
+def test_polyculture_is_explicit_exploratory_and_never_sums_components(catalog, climate):
+    r = evaluate(base(), catalog, climate)
+    assert r.associations
+    for profile, card in zip(catalog.associations, r.associations, strict=True):
+        assert card["type"] == "policultivo"
+        assert card["components"] == list(profile.components)
+        assert card["status"] == "exploratoria"
+        assert card["rationale"] and "no validan" in card["rationale"]
+        assert card["source_ids"] == list(profile.source_ids)
+        assert all(card[key] is None for key in ("water_m3", "margin_soles", "density_plants_ha", "advantage"))
+        assert any("Agua" in item for item in card["missing"])
+        assert any("Economía" in item for item in card["missing"])
+        assert any("Densidad" in item for item in card["missing"])
+        assert "No se suman" in card["warning"]
+        assert card["id"] not in r.ordering["ranked"]

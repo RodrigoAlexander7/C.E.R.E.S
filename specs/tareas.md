@@ -126,3 +126,13 @@ Estado real de la publicación: ver `despliegue.md`.
 
 - [x] Ceres con memoria autorizada, propuestas confirmadas, `consultar_cuaderno`, `simular_escenario` y voz de entrada/salida. **R18**. (101 pytest + 6 E2E; Gemini real: recuerdo de venta y nuevo run con 1000 m³/mes aceptados por validador.)
 - [x] E2E del recorrido R20, despliegue y guion de demo de 30 segundos. (101 pytest + 6 E2E en CI; revisión `06e6a6e`, workflow `43729718465` exitoso; health HTTPS y módulos comprobados; `DEMO.md`. Cuenta privada de dos lotes con 32 registros verificados; coordenadas y acceso fuera de Git.)
+
+## Incremento 16 — campo primero y decisiones comprensibles (R22/R23)
+
+- [x] Contorno obligatorio antes de cifras personales; área/zona calculadas en servidor, hash congelado, sin 5 ha predeterminadas ni centro de zona como campo. Rechazar discrepancias y bloquear runs sin geometría; conservar cuaderno/agenda. (`test_field_water.py`, `test_geometry.py`, E2E `sencillo.spec.ts`.)
+- [x] Agua cualitativa obligatoria en alta sencilla, cinco niveles y escenarios supuestos trazables por zona/área. Mantener desconocidos y excluir «Buena opción» si una restricción depende del supuesto. (`test_field_water.py`, `test_simple.py`, E2E `sencillo.spec.ts`.)
+- [x] Prohibir una tercera siembra consecutiva en plantillas y optimizador contando antecedente y campañas propias; no reiniciar por descanso ni alimentar con ejemplos simulados. (`test_engine.py`, `test_optimizer.py`, `test_field_water.py`, E2E `sencillo.spec.ts`.)
+- [x] Mostrar monocultivo, rotación y policultivos con razones/límites en ambas zonas. Dibujos y nombres/campañas; etiquetas claras de margen, costos directos, capital, demanda hídrica, fecha y riesgo. (`CropPlanVisual.tsx`, `results.tsx`, E2E `sencillo.spec.ts` y `soil-photos.spec.ts`.)
+- [x] Hasta cuatro fotos como alternativa a signos manuales; Gemini con esquema estricto, aplicación revisada, límites y metadatos retirados; sin almacenar imágenes ni fingir diagnóstico de laboratorio. (`test_soil_photos.py`, E2E `soil-photos.spec.ts` con LLM simulado; prueba con Gemini real pendiente de cuota del proyecto.)
+- [x] Contexto nutricional humano exclusivamente Arequipa con hojas/celdas, denominadores y hashes; aportes alimentarios explícitos INS/FAO separados de fertilidad y sin beneficios clínicos inferidos. Congelar contexto en runs. (`test_nutrition.py`, `test_field_water.py`, `test_assistant.py`, E2E `soil-photos.spec.ts`.)
+- [x] Pruebas API/PostgreSQL, build web, E2E móvil/guardado/fuentes/fotos/aislamiento y publicación por CI existente. Actualizar traspaso con revisión y límites comprobados. (305 pytest + `alembic check` + build web + 22 E2E Playwright; publicación en `despliegue.md` y `TRASPASO.md`.)

@@ -38,6 +38,14 @@ class WaterData(Strict):
     allocation_min_m3: float | None = Field(None, ge=0, le=10_000_000)
     allocation_max_m3: float | None = Field(None, ge=0, le=10_000_000)
     method: Literal["goteo", "aspersion", "gravedad"] | None = None
+    availability: Literal["muy_poca", "poca", "media", "alta", "no_es_problema"] | None = None
+
+
+class PhotoAssessment(Strict):
+    salinity_signs: Literal["con_signos", "sin_signos", "no_concluyente"]
+    description: str = Field(max_length=600)
+    limitations: str = Field(max_length=600)
+    source: Literal["gemini_visual"]
 
 
 class SoilData(Strict):
@@ -49,6 +57,7 @@ class SoilData(Strict):
     method: str | None = Field(None, max_length=120)
     kind: Literal["observado", "declarado", "supuesto_demo"] = "declarado"
     salinity_signs: Literal["sin_signos", "con_signos"] | None = None
+    photo_assessment: PhotoAssessment | None = None
 
 
 class EconomicOverrideData(Strict):
@@ -62,6 +71,7 @@ class ProfileData(Strict):
     data_origin: Literal["declarado", "supuesto_demo"] = "declarado"
     current_crop_id: str = Field(pattern=CROP_ID)
     current_status: Literal["en_campo", "cosechado"]
+    current_crop_streak: Literal[1, 2] | None = None
     expected_harvest: date | None = None
     planned_next_crop_id: str | None = Field(None, pattern=CROP_ID)
     water: WaterData = WaterData()
@@ -145,10 +155,11 @@ class RunCreate(Strict):
 
 
 class QuickCompare(Strict):
-    """Modo sencillo sin cuenta: perfil mínimo + área (por defecto, área de ejemplo de 5 ha)."""
+    """Modo sencillo sin cuenta: contorno obligatorio; área y zona se calculan en servidor."""
 
     profile: ProfileData
-    area_ha: float = Field(5, gt=0, le=10_000)
+    geometry: dict
+    area_ha: float | None = Field(None, gt=0, le=10_000)
     zone_id: str | None = Field(None, pattern=r"^[a-z][a-z_]{1,29}$")
 
 

@@ -2,7 +2,10 @@
 
 from datetime import date
 
+import pytest
+
 from ceres.application.recommendations import evaluate_frozen, frozen_inputs
+from ceres.infrastructure.geometry import geodesic_area_ha
 
 from ..conftest import MAJES_POLYGON, create_parcel, register
 
@@ -10,7 +13,7 @@ CHILINA_POLYGON = {
     "type": "Polygon",
     "coordinates": [[[-71.5300, -16.3655], [-71.5291, -16.3655], [-71.5291, -16.3646], [-71.5300, -16.3646], [-71.5300, -16.3655]]],
 }
-UNKNOWN = {"current_crop_id": "papa", "current_status": "cosechado", "water": {"mode": "no_se"}, "soil": {}, "priority": "equilibrada"}
+UNKNOWN = {"current_crop_id": "papa", "current_status": "cosechado", "current_crop_streak": 1, "water": {"mode": "no_se"}, "soil": {}, "priority": "equilibrada"}
 TODAY = date(2026, 11, 15)
 
 
@@ -53,12 +56,16 @@ def test_chilina_all_unknown_uses_its_own_evidence(zones):
 
 def test_quick_compare_per_zone_and_crop_validation(make_client):
     c = make_client()
-    r = c.post("/api/v1/public/quick-compare", json={"profile": UNKNOWN, "area_ha": 1, "zone_id": "chilina"})
+    body = {"profile": UNKNOWN, "geometry": CHILINA_POLYGON, "zone_id": "chilina"}
+    r = c.post("/api/v1/public/quick-compare", json=body)
     assert r.status_code == 200, r.text
     assert r.json()["inputs"]["zone_id"] == "chilina"
-    bad = c.post("/api/v1/public/quick-compare", json={"profile": {**UNKNOWN, "current_crop_id": "frejol_grano"}, "zone_id": "chilina"})
+    assert r.json()["inputs"]["area_ha"] == pytest.approx(geodesic_area_ha(CHILINA_POLYGON))
+    bad = c.post("/api/v1/public/quick-compare", json={**body, "profile": {**UNKNOWN, "current_crop_id": "frejol_grano"}})
     assert bad.status_code == 422 and bad.json()["error"]["code"] == "cultivo_de_otra_zona"
-    assert c.post("/api/v1/public/quick-compare", json={"profile": UNKNOWN, "zone_id": "lima"}).status_code == 404
+    # Con contorno, una zona declarada distinta de la ubicación es una incoherencia.
+    assert c.post("/api/v1/public/quick-compare", json={**body, "zone_id": "lima"}).status_code == 422
+    assert c.get("/api/v1/public/context", params={"zone": "lima"}).status_code == 404
     zs = c.get("/api/v1/public/zones").json()
     assert [z["id"] for z in zs["items"]] == ["majes", "chilina"]
     ctx = c.get("/api/v1/public/context", params={"zone": "chilina"}).json()
@@ -96,10 +103,19 @@ def test_draw_outline_keeps_zone_and_old_runs(make_client):
     assert r.status_code == 201 and r.json()["zone_id"] == "chilina"
     pid = r.json()["id"]
     run1 = c.post(f"/api/v1/parcels/{pid}/recommendations", json={}).json()
+    assert run1["inputs"]["field_verified"] is False
+    assert run1["result"]["blocking"] and run1["result"]["strategies"] == []
+    assert run1["dataset_snapshot_id"] is None and run1["dataset_sha256"] is None
     p = c.patch(f"/api/v1/parcels/{pid}", json={"geometry": CHILINA_POLYGON})
     assert p.status_code == 200, p.text
     assert p.json()["area_origin"] == "geodesica" and p.json()["area_ha"] != 1 and p.json()["name"] == "Por punto"
-    assert c.get(f"/api/v1/recommendations/{run1['id']}").json()["inputs"]["area_ha"] == 1  # el run anterior no cambia
+    old = c.get(f"/api/v1/recommendations/{run1['id']}").json()
+    assert old["inputs"] == run1["inputs"] and old["result"] == run1["result"]
+    run2 = c.post(f"/api/v1/parcels/{pid}/recommendations", json={})
+    assert run2.status_code == 201, run2.text
+    assert run2.json()["inputs"]["field_verified"] is True
+    assert run2.json()["result"]["blocking"] == [] and run2.json()["result"]["strategies"]
+    assert run2.json()["inputs"]["area_ha"] == pytest.approx(p.json()["area_ha"])
     bad = c.patch(f"/api/v1/parcels/{pid}", json={"geometry": MAJES_POLYGON})
     assert bad.status_code == 422 and bad.json()["error"]["code"] == "otra_zona"
 

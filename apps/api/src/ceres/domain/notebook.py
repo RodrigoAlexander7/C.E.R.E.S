@@ -90,6 +90,32 @@ class ProposalData(Strict):
 RECORD_TYPES = {"campana": Campaign, "venta": Sale, "costo": Cost, "ganancia": Profit, "agenda": Agenda}
 
 
+def consecutive_crop_history(records: list[dict], current_crop_id: str, today: date) -> dict:
+    """Racha mínima comprobable por fechas de siembra; sin sumar duplicados o simulaciones.
+
+    No se equiparan campañas sin fecha con cero ni se infiere que la última campaña
+    reemplaza al cultivo declarado. El perfil y el historial se congelan en el run.
+    """
+    campaigns = [r for r in records if r["data"].get("kind") == "campana"
+                 and r["data"].get("evidence", "declarado") != "simulado_demo"
+                 and r["data"].get("sowing_date") and r["data"]["sowing_date"] <= today.isoformat()]
+    by_date: dict[str, list[dict]] = {}
+    for record in campaigns:
+        by_date.setdefault(record["data"]["sowing_date"], []).append(record)
+    used: list[str] = []
+    streak = 0
+    for day in sorted(by_date, reverse=True):
+        group = by_date[day]
+        if {r["data"]["crop_id"] for r in group} != {current_crop_id}:
+            break
+        streak += 1
+        used.extend(r["id"] for r in group)
+        if streak == 2:
+            break
+    return {"streak": streak or None, "record_ids": used, "source_ids": ["CUADERNO"] if used else [],
+            "method": "Fechas de siembra distintas de campañas propias confirmadas; simulaciones y fechas futuras excluidas"}
+
+
 def extraction_schema() -> dict:
     """Contrato de transporte plano para evitar una gramática combinatoria en el LLM.
 

@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "region": "Arequipa",
+  "region_code": "04",
+  "geography_basis": "Región del establecimiento de salud, no residencia ni ubicación de la parcela",
+  "period": {"start": "2026-01-01", "end": "2026-08-31", "label": "ENERO A AGOSTO - 2026"},
+  "population": "Adolescentes de 12 a 17 años que accedieron a establecimientos de salud y fueron evaluados para cada indicador",
+  "kind": "contexto_vigilancia_humana",
+  "source_ids": ["INS-SIEN-HIS-ADOLESCENTES-AREQUIPA-2026-08"],
+  "source": {
+    "id": "INS-SIEN-HIS-ADOLESCENTES-AREQUIPA-2026-08",
+    "institution": "Instituto Nacional de Salud / Centro Nacional de Alimentación, Nutrición y Vida Saludable",
+    "title": "MINSA: indicadores nutricionales en adolescentes de 12 a 17 años. SIEN-HIS, enero a agosto de 2026",
+    "filename": "8780903-indicadores-estado-nutricional-adolescentes-agosto-2026-base-datos-his.xlsx",
+    "sha256": "72a8aab1f3b8dc7c25f8a474e73a53bb9ec02504aa9f8ef9a54320e9d8623b40",
+    "bytes": 702152,
+    "url": null,
+    "url_status": "Archivo proporcionado por el usuario; URL pública exacta no verificada",
+    "reviewed_on": "2026-11-15",
+    "cover_cells": {"INICIO!C6": "MINSA: INDICADORES NUTRICIONALES EN ADOLESCENTES DE 12 A 17 AÑOS", "INICIO!C8": "PERIODO: ENERO A AGOSTO - 2026"}
+  },
+  "sheets": [
+    {
+      "name": "EN 12-17a x REGION",
+      "region_cell": "B11",
+      "period_cell": "B3",
+      "period_raw": "PERIODO: ENERO A AGOSTO - 2026",
+      "headers": {"C5": "INDICADOR TALLA / EDAD1", "J5": "INDICADOR PESO / TALLA2", "C6": "N° DE EVALUADOS", "J6": "N° DE EVALUADOS", "D6": "NORMAL", "F6": "TALLA BAJA", "H6": "TALLA ALTA", "K6": "NORMAL", "M6": "DELGADEZ", "O6": "SOBREPESO", "Q6": "OBESIDAD", "D7": "N° DE CASOS", "E7": "%"},
+      "cells": {"B11": "AREQUIPA", "C11": "34328", "D11": "31424", "E11": "91.540433465392681", "F11": "2742", "G11": "7.9876485667676533", "H11": "162", "I11": "0.47191796783966439", "J11": "34328", "K11": "19672", "L11": "57.305989279888138", "M11": "334", "N11": "0.97296667443486362", "O11": "9530", "P11": "27.7615940340247", "Q11": "4792", "R11": "13.959450011652297"},
+      "notes": {"B35": "Fuente: Sistema de Información SIEN - HIS, 2026.", "B37": "1,2 Indicadores Nutricionales según OMS."}
+    },
+    {
+      "name": "Anemia 12-17a x REGION",
+      "region_cell": "B10",
+      "period_cell": "B3",
+      "period_raw": "PERIODO: ENERO A AGOSTO - 2026",
+      "headers": {"B5": "REGION", "C5": "N° DE EVALUADOS", "D5": "ANEMIA TOTAL", "F5": "SIN ANEMIA", "H5": "ANEMIA LEVE", "J5": "ANEMIA MODERADA", "L5": "ANEMIA SEVERA", "D6": "N° DE CASOS", "E6": "%"},
+      "cells": {"B10": "AREQUIPA", "C10": "23538", "D10": "5146", "E10": "21.862520180134251", "F10": "18392", "G10": "78.137479819865746", "H10": "3780", "I10": "16.059138414478717", "J10": "1326", "K10": "5.6334437930155499", "L10": "40", "M10": "0.16993797263998642"},
+      "notes": {"B34": "Fuente: Sistema de Información SIEN - HIS, 2026.", "B35": "Puntos de corte para anemia según: Organización Mundial de la Salud sobre los límites de hemoglobina para definir la anemia en individuos y poblaciones- 2024"}
+    }
+  ],
+  "indicators": [
+    {"id": "talla_edad_normal", "label": "Talla/edad: normal", "sheet": "EN 12-17a x REGION", "count": 31424, "count_cell": "D11", "denominator": 34328, "denominator_cell": "C11", "percent": 91.54043346539268, "percent_cell": "E11", "count_unit": "evaluados", "percent_unit": "% de evaluados para talla/edad"},
+    {"id": "talla_baja", "label": "Talla baja", "sheet": "EN 12-17a x REGION", "count": 2742, "count_cell": "F11", "denominator": 34328, "denominator_cell": "C11", "percent": 7.987648566767653, "percent_cell": "G11", "count_unit": "evaluados", "percent_unit": "% de evaluados para talla/edad"},
+    {"id": "talla_alta", "label": "Talla alta", "sheet": "EN 12-17a x REGION", "count": 162, "count_cell": "H11", "denominator": 34328, "denominator_cell": "C11", "percent": 0.4719179678396644, "percent_cell": "I11", "count_unit": "evaluados", "percent_unit": "% de evaluados para talla/edad"},
+    {"id": "peso_talla_normal", "label": "Peso/talla: normal (rótulo del libro)", "sheet": "EN 12-17a x REGION", "count": 19672, "count_cell": "K11", "denominator": 34328, "denominator_cell": "J11", "percent": 57.30598927988814, "percent_cell": "L11", "count_unit": "evaluados", "percent_unit": "% de evaluados para peso/talla según rótulo del libro"},
+    {"id": "delgadez", "label": "Delgadez", "sheet": "EN 12-17a x REGION", "count": 334, "count_cell": "M11", "denominator": 34328, "denominator_cell": "J11", "percent": 0.9729666744348636, "percent_cell": "N11", "count_unit": "evaluados", "percent_unit": "% de evaluados para peso/talla según rótulo del libro"},
+    {"id": "sobrepeso", "label": "Sobrepeso", "sheet": "EN 12-17a x REGION", "count": 9530, "count_cell": "O11", "denominator": 34328, "denominator_cell": "J11", "percent": 27.7615940340247, "percent_cell": "P11", "count_unit": "evaluados", "percent_unit": "% de evaluados para peso/talla según rótulo del libro"},
+    {"id": "obesidad", "label": "Obesidad", "sheet": "EN 12-17a x REGION", "count": 4792, "count_cell": "Q11", "denominator": 34328, "denominator_cell": "J11", "percent": 13.959450011652297, "percent_cell": "R11", "count_unit": "evaluados", "percent_unit": "% de evaluados para peso/talla según rótulo del libro"},
+    {"id": "anemia_total", "label": "Anemia total", "sheet": "Anemia 12-17a x REGION", "count": 5146, "count_cell": "D10", "denominator": 23538, "denominator_cell": "C10", "percent": 21.86252018013425, "percent_cell": "E10", "count_unit": "evaluados", "percent_unit": "% de evaluados para anemia"},
+    {"id": "sin_anemia", "label": "Sin anemia", "sheet": "Anemia 12-17a x REGION", "count": 18392, "count_cell": "F10", "denominator": 23538, "denominator_cell": "C10", "percent": 78.13747981986575, "percent_cell": "G10", "count_unit": "evaluados", "percent_unit": "% de evaluados para anemia"},
+    {"id": "anemia_leve", "label": "Anemia leve", "sheet": "Anemia 12-17a x REGION", "count": 3780, "count_cell": "H10", "denominator": 23538, "denominator_cell": "C10", "percent": 16.059138414478717, "percent_cell": "I10", "count_unit": "evaluados", "percent_unit": "% de evaluados para anemia"},
+    {"id": "anemia_moderada", "label": "Anemia moderada", "sheet": "Anemia 12-17a x REGION", "count": 1326, "count_cell": "J10", "denominator": 23538, "denominator_cell": "C10", "percent": 5.63344379301555, "percent_cell": "K10", "count_unit": "evaluados", "percent_unit": "% de evaluados para anemia"},
+    {"id": "anemia_severa", "label": "Anemia severa", "sheet": "Anemia 12-17a x REGION", "count": 40, "count_cell": "L10", "denominator": 23538, "denominator_cell": "C10", "percent": 0.16993797263998642, "percent_cell": "M10", "count_unit": "evaluados", "percent_unit": "% de evaluados para anemia"}
+  ],
+  "limitations": [
+    "Vigilancia SIEN-HIS en establecimientos de salud; no es una muestra representativa de toda la población de Arequipa ni una estimación para un lote o familia.",
+    "La geografía corresponde al establecimiento de salud. No se atribuye residencia a los evaluados.",
+    "El periodo es acumulado enero-agosto de 2026; no corresponde solo al mes de agosto.",
+    "Los denominadores son los evaluados para cada indicador. No se suman los 34328 de antropometría con los 23538 de anemia; pueden solaparse.",
+    "Las hojas DIRESA repiten las cifras de Arequipa de las hojas REGION; se excluyen para evitar duplicación. No se agregan las hojas DISTRITO, el total MINSA ni otras regiones.",
+    "Se conserva literalmente el encabezado PESO / TALLA del libro. El archivo no documenta aquí su algoritmo ni permite sustituirlo por IMC/edad sin verificación adicional.",
+    "Los porcentajes se expresan en escala 0-100, no como fracciones 0-1. Las celdas originales preservan su representación decimal; la interfaz puede redondear al mostrar.",
+    "El libro ofrece tablas agregadas, no registros individuales ni una auditoría de cobertura, deduplicación, datos faltantes o selección de quienes fueron evaluados.",
+    "La nota de anemia refiere puntos de corte OMS 2024. No se recalculan diagnósticos ni ajustes de hemoglobina con esta tabla.",
+    "No contiene composición alimentaria, consumo, rendimientos agrícolas, acceso a alimentos ni evidencia causal del efecto de sembrar sobre anemia, desnutrición o salud.",
+    "Los aportes alimentarios cualitativos usan referencias INS/FAO independientes del HIS; no representan fertilidad del suelo ni prescriben tratamiento.",
+    "Este contexto agregado no se utiliza como puntuación económica ni de salud individual. Solo se publican las celdas regionales y metadatos declarados, sin datos personales."
+  ]
+}

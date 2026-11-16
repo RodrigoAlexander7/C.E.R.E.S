@@ -117,6 +117,7 @@ def profile(**kw):
     base = {
         "current_crop_id": "maiz_grano",
         "current_status": "en_campo",
+        "current_crop_streak": 1,
         "expected_harvest": "2027-02-15",
         "water": {"mode": "conozco", "allocation_m3": 12000, "efficiency": 0.85, "delivery_point": "toma"},
         "soil": {"ece_ds_m": 0.9, "analysis_date": "2026-06-01", "depth_cm": "0-30", "method": "extracto", "kind": "observado"},

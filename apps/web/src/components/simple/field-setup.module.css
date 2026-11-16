@@ -1,0 +1,8 @@
+.setup { min-width: 0; }
+.controls { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.map { height: 360px; width: 100%; }
+.geojson { display: grid; gap: 10px; margin: 20px 0; min-width: 0; }
+.geojson label { font-weight: 700; }
+.geojson textarea { width: 100%; min-width: 0; box-sizing: border-box; padding: 12px; border: 1px solid #b9c7b7; border-radius: 12px; background: #fff; color: #13221a; font: inherit; overflow-wrap: anywhere; resize: vertical; }
+.geojson textarea:focus-visible { outline: 3px solid #2f6b3a; outline-offset: 2px; }
+@media (max-width: 600px) { .map { height: 300px; } .controls button { max-width: 100%; white-space: normal; } }

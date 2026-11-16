@@ -9,7 +9,7 @@ export interface Term {
 
 export const GLOSSARY: Record<string, Term> = {
   margen: {
-    title: "Ganancia estimada (margen bruto)",
+    title: "Margen bruto estimado",
     text: "Lo que quedaría de vender la cosecha menos los gastos de sembrarla, sumando todas las campañas de los próximos 24 meses. No descuenta alquiler, impuestos ni intereses, y no es una ganancia garantizada.",
   },
   agua_bruta: {
@@ -18,9 +18,9 @@ export const GLOSSARY: Record<string, Term> = {
     source: "NASA-POWER",
   },
   agua_tipica: {
-    title: "Agua típica de la zona",
-    text: "Si no sabes cuánta agua recibes, usamos un valor típico de tu zona repartido igual cada mes. En Majes I: 22 500 m³ por hectárea al año, el consumo que AUTODEMA reportó en 2023. En el Valle de Chilina: unos 23 000 m³ por hectárea al año, calculados con el volumen de la Comisión Pampas Nuevas de Chilina (ANA 2022) y las hectáreas de su canal (ANA 2025). Es un supuesto: confírmalo con tu junta o comisión de usuarios.",
-    source: "ZONA-MAJES",
+    title: "Referencia de agua y escenario supuesto",
+    text: "Tu respuesta (muy poca, poca, media, alta o no es problema) describe la disponibilidad para el tamaño de tu campo. CERES la explora mediante un intervalo supuesto respecto a la referencia de SU zona, repartida por mes. Los factores no están calibrados con mediciones de tu canal. No significan que recibirás ese volumen; confirma tus turnos antes de decidir. Sin referencia local, la cantidad sigue desconocida.",
+    source: "CERES-AGUA-CUALITATIVA",
   },
   eficiencia: {
     title: "Eficiencia del riego",
@@ -53,7 +53,7 @@ export const GLOSSARY: Record<string, Term> = {
   },
   plan_sugerido: {
     title: "Plan sugerido por CERES",
-    text: "Entre todas las combinaciones de cultivos y meses de siembra de los próximos 24 meses, la que más deja en promedio sin arriesgar de más (pesa igual el promedio y el 20 % de campañas malas). Solo usa cultivos validados en tu zona, respeta tu agua del mes más exigente en 9 de cada 10 años NASA, castiga repetir el mismo tipo de cultivo y descarta meses con frío o calor frecuente.",
+    text: "Entre las combinaciones evaluadas de cultivos y fechas de los próximos 24 meses, busca un mejor margen según escenarios con supuestos (pesa igual el promedio y el 20 % de escenarios peores). Revisa el agua del mes más exigente en al menos 9 de los 11 años NASA. Impide una tercera siembra seguida del mismo producto, contando el antecedente. Repetir familia tiene una penalización supuesta; no demuestra una mejora medida del suelo.",
     source: "NASA-POWER",
   },
   precio_mayorista: {

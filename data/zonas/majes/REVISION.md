@@ -55,3 +55,7 @@ La celda NASA POWER consultada tiene 835 m de elevación; la Pampa de Majes est�
 3. Umbrales térmicos por variedad (frejol canario, cebolla roja arequipeña).
 4. Precios en chacra, rendimientos comercializables y costos actuales.
 5. Ficha de asociación maíz + frejol (densidades, fechas, rendimientos relativos).
+
+## Candidatos de policultivo (catálogo .3)
+
+Se añade choclo + frejol + zapallo macre como candidato P002 de la base maestra aportada por el usuario (`CERES-BASE-MAESTRA-NUTRICION-2026`). No se ha validado su bibliografía agronómica ni hay ensayo local acreditado. Choclo es grano fresco, distinto del maíz amarillo duro seco evaluado por el motor; no se reutilizan sus rendimientos. La ficha permanece exploratoria, sin cifras de margen, agua, densidad ni ventaja conjunta. Las referencias alimentarias INS se muestran aparte y no acreditan compatibilidad en campo.

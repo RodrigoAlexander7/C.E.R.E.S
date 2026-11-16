@@ -141,7 +141,10 @@ def simplify(result: ComparisonResult, p: ParcelInput, catalog: Catalog) -> None
         cap = caps.get(st.strategy_id)
         if any(catalog.crop(c) and catalog.crop(c).exploratory for c in st.sequence):
             cap = "exploratoria"  # un cultivo sin validación local nunca sube de «Por explorar»
-        st.simple = {"level": level_of(st, cap)}
+        strategy_type = "rotacion" if len(set(st.sequence)) > 1 else "monocultivo"
+        rationale = next((r.message for r in st.reasons if r.rule_id == "EST-02"),
+                         "Monocultivo: un solo producto por ciclo; faltan datos para evaluarlo.")
+        st.simple = {"level": level_of(st, cap), "type": strategy_type, "rationale": rationale}
         st.decisive = decisive_for(st, p, catalog)
 
     usable = [s for s in sts if s.simple["level"] in ("buena", "posible")]
@@ -155,7 +158,7 @@ def simplify(result: ComparisonResult, p: ParcelInput, catalog: Catalog) -> None
     for st in sts:
         lvl = st.simple["level"]
         names = " → ".join(catalog.crop(c).short_name if catalog.crop(c) else catalog.crop_label(c).lower() for c in st.sequence)
-        tags: list[str] = []
+        tags: list[str] = ["Rotación" if st.simple["type"] == "rotacion" else "Monocultivo"]
         role = (st.risk or {}).get("role")
         if role == "sugerido":
             tags.append("Plan sugerido por CERES")
@@ -198,6 +201,9 @@ def simplify(result: ComparisonResult, p: ParcelInput, catalog: Catalog) -> None
             headline = (
                 "Lo que más te deja con tu agua, sin arriesgar de más."
             )
+        limited = next((r for r in st.reasons if r.rule_id == "ANT-02"), None)
+        if limited and limited.state != "no_cumple":
+            headline += " Plan truncado: antes de volver a sembrar debes cambiar de producto (máximo 2 consecutivas)."
 
         margin = _metric(st, "eco.margen")
         water = _metric(st, "agua.bruto_m3") or None
@@ -245,6 +251,8 @@ def simplify(result: ComparisonResult, p: ParcelInput, catalog: Catalog) -> None
 
 
 def _plain_failure(rule_id: str, st: StrategyAssessment) -> str:
+    if rule_id == "ANT-02":
+        return "Sería la tercera siembra consecutiva del mismo producto: cambia de cultivo."
     if rule_id == "AGU-04":
         peak = _peak(st)
         return f"Le faltaría agua en {MESES[peak['month'] - 1]}." if peak else "Le faltaría agua."

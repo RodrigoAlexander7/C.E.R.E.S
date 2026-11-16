@@ -3,6 +3,7 @@
 import pytest
 
 from tests.conftest import MAJES_POLYGON, create_parcel, profile, register
+from ceres.infrastructure.geometry import geodesic_area_ha
 
 pytestmark = pytest.mark.db
 
@@ -99,8 +100,12 @@ def test_profile_change_flags_old_runs(make_client):
     p = create_parcel(c)
     run = c.post(f"/api/v1/parcels/{p['id']}/recommendations", json={}).json()
     assert run["profile_changed"] is False
-    c.post(f"/api/v1/parcels/{p['id']}/profile-revisions", json={"profile": profile(priority="suelo"), "note": "cambio"})
-    assert c.get(f"/api/v1/recommendations/{run['id']}").json()["profile_changed"] is True
+    changed = c.post(f"/api/v1/parcels/{p['id']}/profile-revisions", json={"profile": profile(priority="suelo"), "note": "cambio"})
+    assert changed.status_code == 201, changed.text
+    old = c.get(f"/api/v1/recommendations/{run['id']}").json()
+    assert old["profile_changed"] is True
+    assert old["inputs"] == run["inputs"] and old["result"] == run["result"]
+    assert c.get(f"/api/v1/recommendations/{run['id']}/reproduce").json() == {"same_versions": True, "identical": True}
 
 
 def test_unknown_water_uses_zone_assumption_never_dead_end(make_client):
@@ -137,14 +142,16 @@ def test_quick_compare_without_account_saves_nothing(make_client):
     from ceres.infrastructure.db import models as m
 
     c = make_client()
-    body = {"profile": {"current_crop_id": "maiz_grano", "current_status": "cosechado", "priority": "dinero"}}
+    body = {"geometry": MAJES_POLYGON, "profile": {"current_crop_id": "maiz_grano", "current_status": "cosechado", "current_crop_streak": 1, "priority": "dinero"}}
     r = c.post("/api/v1/public/quick-compare", json=body)
     assert r.status_code == 200
     data = r.json()
     ids = [s["strategy_id"] for s in data["result"]["strategies"]]
     assert ids[:3] == ["A", "B", "C"] and set(ids) <= {"A", "B", "C", "D", "E"} and data["result"]["simple_order"]
     assert data["result"]["optimizer"]["samples"] == 1000
-    assert data["inputs"]["area_ha"] == 5
+    assert data["inputs"]["area_ha"] == pytest.approx(geodesic_area_ha(MAJES_POLYGON))
+    assert data["inputs"]["area_ha"] != 5
+    assert data["inputs"]["field_verified"] is True
     with c.container.sessions() as db:
         assert db.scalar(select(func.count()).select_from(m.RecommendationRun)) == 0
     # Responder una pregunta decisiva (parche) cambia el resultado de forma reproducible.
