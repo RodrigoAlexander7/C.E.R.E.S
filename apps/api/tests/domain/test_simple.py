@@ -97,6 +97,20 @@ def test_answering_decisive_question_changes_level(zone, catalog, climate):
     assert levels(run(p_no, zone, catalog, climate))["A"] == "no_conviene"  # declarado: ya no es supuesto
 
 
+@pytest.mark.parametrize("availability", ["muy_poca", "poca", "media", "alta", "no_es_problema"])
+def test_qualitative_water_answer_is_not_asked_again(zone, catalog, climate, availability):
+    """Categoría de agua + área del campo bastan: no se repite la pregunta ni se pide un volumen exacto."""
+    p = set_path(BASE, "water.availability", availability)
+    r = run(p, zone, catalog, climate)
+    for s in r.strategies:
+        assert not any(d["id"] == "agua" for d in s.decisive), s.strategy_id
+        assert s.simple["headline"]
+        assert "confirma tu agua" not in s.simple["headline"] and "confirma el dato" not in s.simple["headline"]
+    assert "buena" not in levels(r).values()  # sigue siendo un escenario, no una medición
+    # Sin respuesta de agua, la pregunta existe (comportamiento previo).
+    assert any(d["id"] == "agua" for d in run(BASE, zone, catalog, climate).strategies[0].decisive)
+
+
 def test_salt_signs_block_sensitive_crops(zone, catalog, climate):
     p = set_path(set_path(BASE, "soil.salinity_signs", "con_signos"), "water.allocation_min_m3", 10**6)
     lv = levels(run(p, zone, catalog, climate))

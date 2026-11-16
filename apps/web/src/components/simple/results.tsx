@@ -1,13 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { flushSync } from "react-dom";
 import { NasaBadge } from "@/components/NasaBadge";
 import { SourceChips } from "@/components/Sources";
 import { fmtDate, fmtNumber } from "@/lib/api";
 import type { ComparisonResult, Decisive, NutritionImpact, Profile, Strategy } from "@/lib/types";
 import { METHOD_LABEL, type Zone } from "@/lib/zones";
 import { Sheet, Term } from "./help";
-import { CropIllustration, CropPlanVisual } from "./CropPlanVisual";
+import { CampaignCalendar, CropIllustration, CropPlanVisual, CropSequence } from "./CropPlanVisual";
 import { SoilPhotoCapture, type SoilPhotoAssessment } from "./SoilPhotoCapture";
 import { Icon, MoreButton, Tip } from "./icons";
 import s from "./simple.module.css";
@@ -80,6 +81,16 @@ export function OptionCard({
   const role = st.risk?.role ?? null;
   const lvl = optionLevel(st);
   const unvalidated = lvl === "explorar" || lvl === "no_conviene";
+  // Solo el plan sugerido se abre completo; las demás son filas comparables que se expanden a pedido.
+  const [open, setOpen] = useState(false);
+  // «Guardar como PDF» debe incluir las cifras de todas las opciones.
+  useEffect(() => {
+    const expandAll = () => flushSync(() => setOpen(true));
+    window.addEventListener("beforeprint", expandAll);
+    return () => window.removeEventListener("beforeprint", expandAll);
+  }, []);
+  const lead = role === "sugerido";
+  const expanded = lead || open;
   const mine = st.strategy_id === "A";
   const realArea = hasArea(areaHa);
   const margin = metric(st, "eco.margen");
@@ -109,38 +120,52 @@ export function OptionCard({
         </div>
         <LevelBadge st={st} />
       </div>
-      <p className={s.headline}>{st.simple?.headline}</p>
-      <p className={s.planScope}>
-        {zoneName && <span>Zona: <b>{zoneName}</b>. </span>}
-        Periodo: {fmtDate(result.horizon_start)} a {fmtDate(result.horizon_end)}.
-        {realArea ? <> Totales para <b>{fmtNumber(areaHa, 3)} ha delimitadas</b>.</> : " Delimita tu terreno para calcular los totales de tu área real."}
-      </p>
-      <CropPlanVisual st={st} cropLabel={cropLabel} />
-      <dl className={s.planFacts}>
-        <div><dt><Icon name="money" /> Margen bruto estimado</dt>
-          <dd>{!realArea ? "Pendiente de delimitar el área" : finite(f?.margin_soles) ? soles(f.margin_soles) : "Sin datos suficientes"}</dd>
+      {!expanded && <>
+        <p className={s.headline}>{st.simple?.headline}</p>
+        <CropSequence st={st} cropLabel={cropLabel} firstSowing={firstSowing} />
+        <p className={s.rowSummary}>
+          {realArea && finite(f?.margin_soles) ? <><span>{f.margin_soles < 0 ? "Perderías" : "Ganarías"} <b>{soles(Math.abs(f.margin_soles))}</b></span>{finite(capital?.value) && <span>Invertirías <b>{soles(capital.value)}</b></span>}{riskKnown && <span>Riesgo <b>{fmtNumber(risk.p_loss * 100, 1)} %</b></span>}</> : realArea ? "Cifras pendientes de datos suficientes." : "Delimita tu terreno para ver las cifras."}
+        </p>
+      </>}
+      {expanded && <div className={s.cardBody}>
+        <div className={s.cardIntro}>
+          <p className={s.headline}>{st.simple?.headline}</p>
+          <CropSequence st={st} cropLabel={cropLabel} firstSowing={firstSowing} />
+          <NutritionSection nutrition={st.nutrition} cropLabel={cropLabel} compact />
         </div>
-        <div><dt><Icon name="money" /> Costos directos del periodo</dt>
-          <dd>{!realArea ? "Pendiente de delimitar el área" : finite(costs?.value) ? soles(costs.value) : "Pendientes de datos de costos"}</dd>
+        <div className={s.cardNumbers}>
+          <dl className={s.figures}>
+            <div>
+              <dt><Icon name="trendUp" size={16} /> {finite(f?.margin_soles) && f.margin_soles < 0 ? "Perderías aprox." : "Ganarías aprox."}</dt>
+              <dd className={realArea && finite(f?.margin_soles) ? undefined : s.pending}>{!realArea ? "Falta delimitar el área" : finite(f?.margin_soles) ? soles(f.margin_soles) : "Sin datos suficientes"}</dd>
+              <small>Margen bruto estimado</small>
+            </div>
+            <div>
+              <dt><Icon name="invest" size={16} /> Tendrías que invertir</dt>
+              <dd className={realArea && finite(capital?.value) ? undefined : s.pending}>{!realArea ? "Falta delimitar el área" : finite(capital?.value) ? soles(capital.value) : "Sin datos suficientes"}</dd>
+              <small>Capital de trabajo estimado</small>
+            </div>
+            <div>
+              <dt><Icon name="water" size={16} /> Agua que pide el riego</dt>
+              <dd className={realArea && finite(f?.water_m3) ? undefined : s.pending}>{!realArea ? "Falta delimitar el área" : finite(f?.water_m3) ? `${fmtNumber(f.water_m3)} m³` : "Falta confirmar agua o riego"}</dd>
+              <small>En todo el periodo <NasaBadge product="power" variant="micro" /></small>
+            </div>
+            <div>
+              <dt><Icon name="shield" size={16} /> Riesgo de perder dinero</dt>
+              <dd className={riskKnown ? undefined : s.pending}>{!realArea ? "Falta delimitar el área" : riskKnown ? `${fmtNumber(risk.p_loss * 100, 1)} %` : "Sin estimación validada"}</dd>
+              <small>Riesgo económico simulado</small>
+            </div>
+          </dl>
+          <p className={s.figuresNote}>
+            {realArea ? <>Cifras para <b>{fmtNumber(areaHa, 3)} ha delimitadas</b> en 24 meses.</> : "Delimita tu terreno para calcular las cifras de tu área real."}{demoEconomics && " Con cifras de ejemplo: confirma precios, rendimientos y costos."}
+          </p>
         </div>
-        <div><dt><Icon name="money" /> Capital de trabajo estimado</dt>
-          <dd>{!realArea ? "Pendiente de delimitar el área" : finite(capital?.value) ? soles(capital.value) : "Sin datos suficientes"}</dd>
-        </div>
-        <div><dt><Icon name="water" /> Agua de riego estimada del periodo</dt>
-          <dd>{!realArea ? "Pendiente de delimitar el área" : finite(f?.water_m3) ? `${fmtNumber(f.water_m3)} m³` : "Falta confirmar agua o método de riego"}</dd>
-          <NasaBadge product="power" variant="micro" />
-        </div>
-        <div><dt><Icon name="calendar" /> Primera fecha de siembra estimada</dt>
-          <dd>{firstSowing && Number.isFinite(Date.parse(firstSowing)) ? <time dateTime={firstSowing}>{fmtDate(firstSowing)}</time> : "Fecha pendiente"}</dd>
-        </div>
-        <div><dt><Icon name="shield" /> Riesgo económico simulado</dt>
-          <dd>{!realArea ? "Pendiente de delimitar el área" : riskKnown ? `${fmtNumber(risk.p_loss * 100, 1)} % de margen bruto negativo` : "Sin estimación validada"}</dd>
-        </div>
-      </dl>
-      <p className={s.evidenceNote}>Margen = ventas − costos directos; no es ganancia neta. {demoEconomics ? "Escenario con cifras de ejemplo: confirma precios, rendimientos y costos." : "Los datos y supuestos no garantizan tu resultado."}</p>
-      <p className={s.evidenceNote}>{st.simple?.type === "rotacion" ? "Cambia de producto entre campañas; la diversidad no demuestra una mejora medida del suelo." : "Un producto por campaña; exige cambiar antes de la tercera siembra seguida."}</p>
-      <details className={s.tech}>
-      <summary>Ver criterios, inversión y fuentes</summary>
+      </div>}
+      {expanded && <details className={s.tech}>
+      <summary>Ver calendario, costos, suelo y fuentes</summary>
+      <div className={s.planReason}><CampaignCalendar st={st} cropLabel={cropLabel} /></div>
+      <p className={s.evidenceNote}>{zoneName && <>Zona: <b>{zoneName}</b>. </>}Periodo: {fmtDate(result.horizon_start)} a {fmtDate(result.horizon_end)}. Costos directos del periodo: <b>{!realArea ? "pendiente del área" : finite(costs?.value) ? soles(costs.value) : "pendientes de datos de costos"}</b>.</p>
+      <p className={s.evidenceNote}>{st.simple?.type === "rotacion" ? "Cambia de producto entre campañas; la diversidad no demuestra una mejora medida del suelo." : "Un producto por campaña; el sistema no recomienda el mismo producto más de dos campañas seguidas."} Los datos y supuestos no garantizan tu resultado.</p>
       <p>Los costos directos suman insumos, labores y transiciones del periodo. El capital de trabajo es el máximo dinero necesario antes de recuperar ventas; no equivale al margen ni al total de gastos. El margen excluye alquiler, depreciación, impuestos y financiamiento.</p>
       <p>Agua: demanda calculada del plan, no volumen que recibirás. El riesgo usa precios, rendimientos y clima supuestos; los faltantes no significan riesgo cero.{unvalidated && " Esta opción no está validada para tu zona."}</p>
       {(margin?.source_ids.length || estimatedWater?.source_ids.length) ? <SourceChips ids={[...new Set([...(margin?.source_ids ?? []), ...(estimatedWater?.source_ids ?? [])])]} /> : null}
@@ -148,10 +173,11 @@ export function OptionCard({
         <p><b>Límites:</b> {st.missing.length ? st.missing.join("; ") : "El resultado depende de los supuestos de clima, agua, costos y precios."}</p>
       </div>
       <div className={s.soilBlock}><h3>Suelo y fertilización</h3><p>{st.soil.advice ?? "Confirma un análisis de suelo antes de definir la fertilización."}</p>{st.soil.needs && <p>{st.soil.needs}</p>}</div>
-      </details>
-      <NutritionSection nutrition={st.nutrition} cropLabel={cropLabel} compact />
+      <NutritionSection nutrition={st.nutrition} cropLabel={cropLabel} />
+      </details>}
       <div className={s.cardActions}>
-        {water && (
+        {!lead && <button type="button" className={s.expandBtn} aria-expanded={expanded} onClick={() => setOpen((v) => !v)}>{expanded ? "Mostrar menos ▴" : "Ver cifras y detalle ▾"}</button>}
+        {expanded && water && (
           <a href="#agua" className={s.waterLink} title={`Depende del agua que te llega en ${water.label.replace(/^tu agua de /, "")}`}>
             <Icon name="water" size={16} /> Confirma tu agua
           </a>
@@ -163,11 +189,16 @@ export function OptionCard({
 }
 
 export function NutritionSection({ nutrition, cropLabel, compact = false }: { nutrition?: NutritionImpact | null; cropLabel: (id: string) => string; compact?: boolean }) {
-  if (compact) return <div className={s.nutritionBlock}>
-    <h3>Aporte alimentario potencial</h3>
-    <p>{nutrition?.foods.length ? nutrition.foods.map((food) => `${cropLabel(food.crop_id)}: ${food.nutrients?.join(", ") || (food.status === "forraje" ? "forraje, sin aporte humano calculado" : "sin ficha verificada")}`).join(". ") : "Pendiente de referencias alimentarias."}.</p>
-    <details className={s.tech}><summary>Ver aportes, fuentes y contexto de Arequipa</summary><NutritionSection nutrition={nutrition} cropLabel={cropLabel} /></details>
-  </div>;
+  if (compact) {
+    // Una línea: qué nutrientes aporta lo que se siembra. El detalle completo vive en «Ver calendario, costos…».
+    const nutrients = [...new Set((nutrition?.foods ?? []).flatMap((food) => food.nutrients ?? []))].slice(0, 5);
+    const forage = !!nutrition?.foods.length && nutrition.foods.every((food) => food.status === "forraje");
+    const gist = nutrition?.explanation?.split(/(?<=\.)\s/)[0];
+    return <p className={s.nutritionLine}>
+      <Icon name="food" size={16} /> <b>Aporte alimentario:</b>{" "}
+      {nutrients.length ? nutrients.map((nutrient) => <span key={nutrient} className={s.nutriChip}>{nutrient}</span>) : forage ? "forraje, sin aporte humano calculado" : gist ?? "pendiente de ficha nutricional"}
+    </p>;
+  }
   const context = nutrition?.regional_context;
   const regional = context?.region === "Arequipa" ? context : null;
   return (
@@ -230,8 +261,8 @@ export function AssociationOptions({ associations, result: _result, cropLabel, a
   if (!associations.length) return null;
   return (
     <section className={s.associationOptions} aria-labelledby="asociaciones-titulo">
-      <h2 id="asociaciones-titulo" className={s.display}>Policultivo: cultivos juntos en el terreno</h2>
-      <p className={s.panelText}>En monocultivo se mantiene un cultivo; en rotación cambian entre campañas. En policultivo conviven varios cultivos durante parte de la misma campaña. Estas asociaciones son exploratorias{zoneName ? ` para ${zoneName}` : ""}.</p>
+      <h2 id="asociaciones-titulo" className={`${s.groupTitle} ${s.display}`}>Policultivo: cultivos juntos en el terreno</h2>
+      <p className={s.panelText}>Varios cultivos conviven durante parte de la misma campaña. Son ideas por explorar{zoneName ? ` para ${zoneName}` : ""}, aún sin validar localmente.</p>
       <div className={s.associationGrid}>
         {associations.map((association) => {
           const components = (association.components ?? []).map((component) => componentName(component, cropLabel)).filter((component) => component !== null);
@@ -242,13 +273,18 @@ export function AssociationOptions({ associations, result: _result, cropLabel, a
               <span className={`${s.ribbon} ${s.ribbonExplore}`}><Icon name="explore" size={14} /> Asociación exploratoria</span>
               <h3 id={`asociacion-${association.id}`} className={`${s.names} ${s.display}`}>{association.name}</h3>
               {association.structure && <p className={s.sub}>{association.structure}</p>}
-              <ul className={s.associationCrops} aria-label="Cultivos de la asociación">{components.map((component, index) => <li key={`${component.id}-${index}`}><CropIllustration id={component.id} /><strong>{component.name}</strong></li>)}</ul>
-              <div className={s.planReason}><h4>Por qué explorarla</h4>{association.rationale && <p>{association.rationale}</p>}{why.length ? <ul>{why.map((text, index) => <li key={index}>{text}</li>)}</ul> : !association.rationale && <p>Justificación local pendiente de revisar.</p>}</div>
-              <div className={s.planReason}><h4>Qué falta confirmar</h4>{unknowns.length ? <ul>{unknowns.map((text, index) => <li key={index}>{text}</li>)}</ul> : <p>Compatibilidad local, distribución en el terreno, manejo y calendario por validar.</p>}</div>
-              <p className={s.evidenceNote}>{association.warning || "No hay validación local suficiente para recomendar esta asociación."}</p>
-              <p className={s.sub}>{hasArea(areaHa) ? `Área delimitada: ${fmtNumber(areaHa, 3)} ha. ` : "Delimita tu terreno para estudiar la distribución. "}Margen bruto, costos directos, agua, riesgo y fechas de siembra de la asociación: pendientes. No se suman los resultados de cultivos individuales.</p>
-              <NutritionSection nutrition={association.nutrition} cropLabel={cropLabel ?? ((id) => id.replaceAll("_", " "))} />
-              {association.source_ids?.length ? <SourceChips ids={association.source_ids} /> : <p className={s.sub}>Fuente local: pendiente.</p>}
+              <ul className={s.associationCrops} aria-label="Cultivos de la asociación">{components.map((component, index) => <li key={`${component.id}-${index}`}><CropIllustration id={component.id} size={40} /><strong>{component.name}</strong></li>)}</ul>
+              <p className={s.headline}><b>Por qué explorarla: </b>{association.rationale ?? why[0] ?? "justificación local pendiente de revisar."}</p>
+              <NutritionSection nutrition={association.nutrition} cropLabel={cropLabel ?? ((id) => id.replaceAll("_", " "))} compact />
+              <p className={s.figuresNote}>{hasArea(areaHa) ? <>Área delimitada: <b>{fmtNumber(areaHa, 3)} ha</b>. </> : "Delimita tu terreno para estudiar la distribución. "}Margen, costos, agua, riesgo y fechas de la asociación: pendientes de validar en conjunto; no se suman los de cultivos sueltos.</p>
+              <details className={s.tech}>
+                <summary>Ver qué falta confirmar y fuentes</summary>
+                {(association.rationale ? why : why.slice(1)).length > 0 && <div className={s.planReason}><h4>Más razones</h4><ul>{(association.rationale ? why : why.slice(1)).map((text, index) => <li key={index}>{text}</li>)}</ul></div>}
+                <div className={s.planReason}><h4>Qué falta confirmar</h4>{unknowns.length ? <ul>{unknowns.map((text, index) => <li key={index}>{text}</li>)}</ul> : <p>Compatibilidad local, distribución en el terreno, manejo y calendario por validar.</p>}</div>
+                <p className={s.evidenceNote}>{association.warning || "No hay validación local suficiente para recomendar esta asociación."}</p>
+                <NutritionSection nutrition={association.nutrition} cropLabel={cropLabel ?? ((id) => id.replaceAll("_", " "))} />
+                {association.source_ids?.length ? <SourceChips ids={association.source_ids} /> : <p className={s.sub}>Fuente local: pendiente.</p>}
+              </details>
             </article>
           );
         })}
@@ -335,7 +371,7 @@ const WATER_SCENARIOS: Record<string, [number | null, number | null]> = {
 };
 
 /** Preguntas que sirven para todas las opciones (agua, riego, sal), sin repetir. */
-export function GlobalQuestions({ result, area, onAnswer, busy }: { result: ComparisonResult; area: number; onAnswer: (patch: ResultAnswerPatch) => void; busy: boolean }) {
+export function GlobalQuestions({ result, area, onAnswer, busy, waterDeclared = false }: { result: ComparisonResult; area: number; onAnswer: (patch: ResultAnswerPatch) => void; busy: boolean; waterDeclared?: boolean }) {
   const [salinityVersion, setSalinityVersion] = useState(0);
   const answer = (patch: ResultAnswerPatch) => {
     if ("soil.salinity_signs" in patch && !patch["soil.photo_assessment"]) setSalinityVersion((version) => version + 1);
@@ -343,7 +379,8 @@ export function GlobalQuestions({ result, area, onAnswer, busy }: { result: Comp
   };
   const seen = new Map<string, Decisive>();
   const ladder = waterLadder(result, area);
-  for (const st of result.strategies) for (const d of st.decisive ?? []) if (!seen.has(d.id)) seen.set(d.id, d);
+  // Si ya dijo cuánta agua tiene (muy poca … alta), no se vuelve a preguntar: cambiarla se hace desde el chip «Agua».
+  for (const st of result.strategies) for (const d of st.decisive ?? []) if (!seen.has(d.id) && !(waterDeclared && d.id === "agua")) seen.set(d.id, d);
   if (!seen.size) return null;
   return (
     <section className={s.panel} aria-labelledby="afinar" id="preguntas">
@@ -356,13 +393,16 @@ export function GlobalQuestions({ result, area, onAnswer, busy }: { result: Comp
               <b>{d.id === "agua" ? "¿Cómo es tu disponibilidad de agua para regar?" : d.question}</b>
               {d.id !== "agua" && <Tip tip={d.detail} className={s.qHelp}><Icon name="question" size={14} /></Tip>}
             </p>
-            {d.id === "agua" && <p className={s.panelText}>Piensa en la regularidad de tus turnos y cuánto te alcanza el riego. El modelo usa supuestos para traducir esta respuesta; confírmalos en el detalle.</p>}
+            {d.id === "agua" && <p className={s.panelText}>Piensa en tus turnos de riego y cuánto te alcanza.</p>}
             <div className={s.answerRow}>
               {d.id === "agua" ? WATER_LEVELS.map((level) => <button type="button" key={level.value} className={s.answer} disabled={busy} onClick={() => answer({ "water.availability": level.value, "water.allocation_m3": null, "water.allocation_min_m3": null, "water.allocation_max_m3": null })}>{level.label}</button>) : d.answers.map((a) => <button type="button" key={a.label} className={s.answer} disabled={busy} onClick={() => answer(d.id === "sal" ? { ...a.patch, "soil.photo_assessment": null } : a.patch)}>{a.label}</button>)}
               {d.id === "sal" && !d.answers.some((a) => a.patch["soil.salinity_signs"] === null) && <button type="button" className={s.answer} disabled={busy} onClick={() => answer({ "soil.salinity_signs": null, "soil.photo_assessment": null })}>No sé</button>}
             </div>
             {d.id === "agua" && ladder && <details className={s.tech}><summary>Opcional: conozco mi volumen mensual de agua</summary><p className={s.panelText}>{ladder.detail}</p><div className={s.answerRow}>{ladder.answers.map((answer) => <button type="button" key={answer.label} className={s.answer} disabled={busy} onClick={() => onAnswer({ ...answer.patch, "water.availability": null })}>{answer.label}</button>)}</div></details>}
-            {d.id === "sal" && <div className={s.soilCapture}><SoilPhotoCapture key={salinityVersion} disabled={busy} onApply={(assessment) => onAnswer({ "soil.salinity_signs": assessment.salinity_signs === "no_concluyente" ? null : assessment.salinity_signs, "soil.photo_assessment": assessment })} /></div>}
+            {d.id === "sal" && <details className={`${s.tech} ${s.soilCapture}`}>
+              <summary>O sube hasta 4 fotos de tu campo y la IA las observa</summary>
+              <SoilPhotoCapture key={salinityVersion} disabled={busy} onApply={(assessment) => onAnswer({ "soil.salinity_signs": assessment.salinity_signs === "no_concluyente" ? null : assessment.salinity_signs, "soil.photo_assessment": assessment })} />
+            </details>}
           </div>
         ))}
       </div>
@@ -370,8 +410,9 @@ export function GlobalQuestions({ result, area, onAnswer, busy }: { result: Comp
   );
 }
 
-export function countQuestions(result: ComparisonResult): number {
+export function countQuestions(result: ComparisonResult, waterDeclared = false): number {
   const ids = new Set(result.strategies.flatMap((x) => x.decisive ?? []).map((d) => d.id));
+  if (waterDeclared) ids.delete("agua");
   return ids.size;
 }
 

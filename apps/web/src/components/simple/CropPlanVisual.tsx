@@ -3,13 +3,13 @@ import type { Strategy } from "@/lib/types";
 import s from "./simple.module.css";
 
 /** Dibujos orientativos: identifican el cultivo, nunca representan el terreno del usuario. */
-export function CropIllustration({ id }: { id: string }) {
+export function CropIllustration({ id, size = 52 }: { id: string; size?: number }) {
   const cereal = /maiz|trigo|cebada|avena|quinua/.test(id);
   const bulb = /cebolla|ajo/.test(id);
   const legume = /frejol|haba|arveja|frijol/.test(id);
   const root = /papa|zanahoria|camote/.test(id);
   return (
-    <svg className={s.cropIllustration} viewBox="0 0 64 64" width="52" height="52" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+    <svg className={s.cropIllustration} viewBox="0 0 64 64" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
       {cereal ? <>
         <path d="M32 55V12M32 42C19 41 14 34 13 26c12 1 19 7 19 16Zm0-8c12-1 17-8 18-16-11 2-18 8-18 16Z" />
         <path d="m32 26-7-6 7-6 7 6-7 6Zm0-12-4-5 4-5 4 5-4 5Z" fill="#e9c96d" />
@@ -31,9 +31,70 @@ export function CropIllustration({ id }: { id: string }) {
   );
 }
 
+const blocksOf = (st: Strategy, cropLabel: (id: string) => string) =>
+  st.timeline.length ? st.timeline : st.sequence.map((crop_id) => ({ kind: "cultivo", crop_id, start: "", end: "", label: cropLabel(crop_id) }));
+
+/** Qué se siembra y en qué orden: un dibujo por campaña, de izquierda a derecha («Campaña 1 → 2 → …»). */
+export function CropSequence({ st, cropLabel, firstSowing }: { st: Strategy; cropLabel: (id: string) => string; firstSowing?: string | null }) {
+  const growing = blocksOf(st, cropLabel).filter((block) => block.kind === "cultivo");
+  const first = firstSowing && Number.isFinite(Date.parse(firstSowing)) ? firstSowing : null;
+  return (
+    <div className={s.cropPlan}>
+      <ol className={s.sequence} aria-label="Cultivos en orden de campaña">
+        {growing.map((block, index) => (
+          <li key={`${block.crop_id}-${index}`}>
+            <CropIllustration id={block.crop_id ?? ""} size={34} />
+            <span>
+              <strong>{block.crop_id ? cropLabel(block.crop_id).replace(/\s*\(.*\)$/, "") : block.label}</strong>
+              <small>Campaña {index + 1}</small>
+            </span>
+          </li>
+        ))}
+      </ol>
+      <p className={s.planCaption}>
+        {growing.length} {growing.length === 1 ? "campaña" : "campañas"} en 24 meses{first && <> · primera siembra <time dateTime={first}>{fmtDate(first)}</time></>}
+      </p>
+    </div>
+  );
+}
+
+/** Preparación, siembra y fin de cada ciclo; va dentro del detalle de la tarjeta. */
+export function CampaignCalendar({ st, cropLabel }: { st: Strategy; cropLabel: (id: string) => string }) {
+  let campaign = 0;
+  const blocks = blocksOf(st, cropLabel);
+  return (
+    <div>
+      <h3>Calendario de campañas</h3>
+      <p className={s.planCaption}>Preparación, siembra y fin de cada ciclo · dibujos orientativos</p>
+      <ol className={s.campaigns} aria-label="Campañas y fechas del plan">
+        {blocks.map((block, index) => {
+          const growing = block.kind === "cultivo";
+          if (growing) campaign += 1;
+          const start = block.start && Number.isFinite(Date.parse(block.start)) ? block.start : null;
+          const end = block.end && Number.isFinite(Date.parse(block.end)) ? block.end : null;
+          return (
+            <li key={`${block.kind}-${block.start}-${index}`} className={growing ? s.campaign : s.campaignPause}>
+              {growing && <CropIllustration id={block.crop_id ?? ""} size={36} />}
+              <div>
+                <span className={s.campaignLabel}>{growing ? `Campaña ${campaign}` : block.kind === "preparacion" ? "Preparación del terreno" : block.kind === "descanso" ? "Descanso del terreno" : "Espera entre campañas"}</span>
+                <strong>{growing && block.crop_id ? cropLabel(block.crop_id) : block.label}</strong>
+                <span className={s.campaignDates}>
+                  {start ? <><span>{growing ? "Siembra" : "Inicio"}: <time dateTime={start}>{fmtDate(start)}</time></span>{end && <span>{growing ? "Fin del ciclo" : "Fin"}: <time dateTime={end}>{fmtDate(end)}</time></span>}</> : "Fechas pendientes de confirmar"}
+                </span>
+              </div>
+            </li>
+          );
+        })}
+      </ol>
+      {!blocks.length && <p className={s.sub}>Calendario pendiente: aún no hay campañas calculadas.</p>}
+    </div>
+  );
+}
+
+/** Versión completa (secuencia + calendario plegable), usada en la hoja «¿Por qué?». */
 export function CropPlanVisual({ st, cropLabel }: { st: Strategy; cropLabel: (id: string) => string }) {
   let campaign = 0;
-  const blocks = st.timeline.length ? st.timeline : st.sequence.map((crop_id) => ({ kind: "cultivo", crop_id, start: "", end: "", label: cropLabel(crop_id) }));
+  const blocks = blocksOf(st, cropLabel);
   const growing = blocks.filter((block) => block.kind === "cultivo");
   const products = [...new Set(growing.map((block) => block.crop_id).filter((id): id is string => !!id))];
   return (

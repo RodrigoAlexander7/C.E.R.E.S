@@ -84,17 +84,21 @@ test("modo sencillo en móvil: campo → agua y repetición → opciones → gua
   await expect(cards.first().getByText(/Rango probable/)).toHaveCount(0); // el detalle va bajo demanda
   await expect(page.getByText("Precios de esta semana")).toBeVisible();
   await expect(page.getByRole("note", { name: /NASA POWER/ }).first()).toBeAttached(); // sello NASA (ícono con tooltip)
-  // Una sola pregunta de agua para toda la chacra (no una por tarjeta).
-  await expect(page.getByText("¿Cómo es tu disponibilidad de agua para regar?")).toHaveCount(1);
+  // Ya dijo «Media» en el asistente: categoría + área bastan, no se vuelve a preguntar el agua.
+  await expect(page.getByText("¿Cómo es tu disponibilidad de agua para regar?")).toHaveCount(0);
+  await expect(page.getByText(/confirma tu agua/i)).toHaveCount(0);
+  await expect(page.locator("#agua")).toHaveCount(0);
+  // Las opciones que no son el plan sugerido son filas compactas que se expanden a pedido.
+  const secondary = cards.nth(1);
+  await expect(secondary.getByText("Margen bruto estimado")).toHaveCount(0);
+  await secondary.getByRole("button", { name: /Ver cifras y detalle/ }).click();
+  await expect(secondary.getByText("Margen bruto estimado")).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0);
 
   // Pregunta decisiva observable → recalcula.
   const recalculated = page.waitForResponse((r) => r.url().includes("/api/v1/public/quick-compare") && r.ok());
   await page.getByRole("button", { name: "Goteo", exact: true }).click();
   await recalculated;
-  const again = page.waitForResponse((r) => r.url().includes("/api/v1/public/quick-compare") && r.ok());
-  await page.locator("#agua").getByRole("button", { name: "Alta", exact: true }).click();
-  await again;
   await expect(cards.first().getByText(/ha delimitadas/)).toBeVisible();
 
   // «Ver más» (?) abre el detalle en capas, con el riesgo y lo usado etiquetado.

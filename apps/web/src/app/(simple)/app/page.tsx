@@ -327,6 +327,7 @@ export default function SimpleApp() {
   };
 
   const result = view?.result;
+  const waterDeclared = !!view?.profile.water.availability;
   const ordered = result ? (result.simple_order ?? result.strategies.map((x) => x.strategy_id)).map((id) => result.strategies.find((x) => x.strategy_id === id)!).filter(Boolean) : [];
   const harvestLabel = answers.status === "en_campo" && answers.harvest ? `Cosecho en ${fmtDate(answers.harvest).replace(/^\d+ /, "")}` : "Ya coseché";
 
@@ -386,16 +387,18 @@ export default function SimpleApp() {
             </section>
           ) : (
             <>
-              {countQuestions(result) > 0 && (
-                <a href="#preguntas" className={s.nudge}><Icon name="question" size={16} /> Responde {countQuestions(result) === 1 ? "1 pregunta" : `${countQuestions(result)} preguntas`} y afinamos ↓</a>
+              {countQuestions(result, waterDeclared) > 0 && (
+                <a href="#preguntas" className={s.nudge}><Icon name="question" size={16} /> Responde {countQuestions(result, waterDeclared) === 1 ? "1 pregunta" : `${countQuestions(result, waterDeclared)} preguntas`} y afinamos ↓</a>
               )}
+              <h2 className={`${s.groupTitle} ${s.display}`}>Un cultivo por campaña</h2>
+              <p className={s.groupHint}>Monocultivo: repites el mismo cultivo (máximo 2 campañas seguidas). Rotación: cambias de cultivo entre campañas. Margen bruto = ventas − costos directos; no es ganancia neta.</p>
               <div className={s.cards}>
                 {ordered.map((st) => (
                   <OptionCard key={st.strategy_id} st={st} result={result} onWhy={() => setWhy(st)} busy={busy} cropLabel={cropLabel} areaHa={areaHa} zoneName={field?.zone_name ?? undefined} />
                 ))}
               </div>
               <AssociationOptions associations={result.associations} result={result} cropLabel={cropLabel} areaHa={areaHa} zoneName={field?.zone_name ?? undefined} />
-              <GlobalQuestions result={result} area={areaHa} onAnswer={onAnswer} busy={busy} />
+              <GlobalQuestions result={result} area={areaHa} onAnswer={onAnswer} busy={busy} waterDeclared={waterDeclared} />
               {zone && (
                 <MarketPanel
                   zone={zone.id}

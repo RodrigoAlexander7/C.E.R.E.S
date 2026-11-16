@@ -26,6 +26,8 @@ const P: Record<string, string> = {
   sprout: "M12 21V10m0 3c-3.5 0-5.5-2.2-5.5-5.5C10 7.5 12 9.7 12 13Zm0-1c3.5 0 5.5-2.2 5.5-5.5-3.5 0-5.5 2.2-5.5 5.5Z",
   thermo: "M10 14.5V5a2 2 0 1 1 4 0v9.5a4 4 0 1 1-4 0Z",
   salt: "M5 19h14M7 19l2-8h6l2 8M10 7h4M12 3v4",
+  invest: "M4 9h16v10H4V9Zm0 0 2-4h12l2 4M15 14h3",
+  food: "M12 21c-5 0-8-4-8-8 0-3 2-5 4-5 1.5 0 2.7.8 4 .8s2.5-.8 4-.8c2 0 4 2 4 5 0 4-3 8-8 8ZM12 8c0-2.5 1-4.5 3-5",
 };
 
 export function Icon({ name, size = 18, className }: { name: keyof typeof P | string; size?: number; className?: string }) {

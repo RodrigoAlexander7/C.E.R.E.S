@@ -202,6 +202,9 @@ async function patches(page: Page) {
 test("preguntas aplica incertidumbre como null y una respuesta manual borra la evaluación", async ({ page }) => {
   await page.route("**/api/v1/public/soil-photos", route => route.fulfill({ json: assessment }));
   await render(page, "GlobalQuestions", { result, area: 0, busy: false });
+  // Las fotos son una alternativa plegada: no sobrecargan «Afina tu resultado».
+  await expect(page.getByLabel("Elegir fotos", { exact: true })).toBeHidden();
+  await page.getByText("O sube hasta 4 fotos de tu campo y la IA las observa").click();
   await page.getByLabel("Elegir fotos", { exact: true }).setInputFiles(photo());
   await expect(page.getByRole("status")).toHaveText("1 de 4 fotos listas.");
   await page.getByRole("button", { name: "Observar fotos con IA" }).click();
@@ -239,12 +242,18 @@ test("tarjeta respeta posible R16, cultivos y calendario; oculta totales sin ár
   await expect(page.getByText("Posible, confirma", { exact: true })).toBeVisible();
   await expect(page.getByText("Rotación · cultivos en campañas sucesivas")).toBeVisible();
   await expect(page.locator("time").first()).toHaveAttribute("datetime", "2027-01-01");
-  await expect(page.locator("dd").filter({ hasText: "Pendiente de delimitar el área" })).toHaveCount(5);
+  await expect(page.getByText("Delimita tu terreno para ver las cifras.")).toBeVisible(); // fila compacta
+  await page.getByRole("button", { name: /Ver cifras y detalle/ }).click();
+  await expect(page.locator("dd").filter({ hasText: "Falta delimitar el área" })).toHaveCount(4);
   expect(await page.locator("article").innerText()).not.toMatch(/82,139|91,357|71,293/);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await render(page, "OptionCard", { st: strategy, result, areaHa: 2, zoneName: "Zona del fixture", busy: false });
-  await expect(page.locator("dd").filter({ hasText: "S/ 91,357" })).toHaveCount(1);
-  await expect(page.getByText("Escenario con cifras de ejemplo", { exact: false })).toBeVisible();
+  // Costos directos viven en el único «Ver calendario, costos, suelo y fuentes» de la fila expandida.
+  const expand = page.getByRole("button", { name: /Ver cifras y detalle/ });
+  if (await expand.count()) await expand.click();
+  await page.getByText("Ver calendario, costos, suelo y fuentes").click();
+  await expect(page.locator("b").filter({ hasText: "S/ 91,357" })).toHaveCount(1);
+  await expect(page.getByText("Con cifras de ejemplo", { exact: false })).toBeVisible();
 });
 
 test("nutrición renderiza el objeto real Arequipa y sus porcentajes sin multiplicar", async ({ page }) => {

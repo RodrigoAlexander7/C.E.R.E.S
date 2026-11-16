@@ -23,6 +23,9 @@ LEVEL_ORDER = {"buena": 0, "posible": 1, "explorar": 2, "sin_datos": 3, "no_conv
 MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
 
 
+WATER_WORDS = {"muy_poca": "muy poca", "poca": "poca", "media": "media", "alta": "alta", "no_es_problema": "no es problema"}
+
+
 def _fmt(v: float) -> str:
     return f"{v:,.0f}"
 
@@ -66,7 +69,8 @@ def decisive_for(st: StrategyAssessment, p: ParcelInput, catalog: Catalog) -> li
     lo, hi = p.water.bounds()
     peak = _peak(st)
     water_exact = p.water.mode == "conozco" and p.water.allocation_m3 is not None and "water.allocation" not in p.assumed
-    if peak and not water_exact:
+    # Con una respuesta cualitativa (muy poca … alta) y el área del campo basta: no se insiste en un volumen exacto.
+    if peak and not water_exact and not p.water.availability:
         need = peak["gross_m3"]
         settled = (lo is not None and need <= lo and "water.allocation" not in p.assumed) or (
             hi is not None and need > hi and "water.allocation" not in p.assumed
@@ -188,10 +192,15 @@ def simplify(result: ComparisonResult, p: ParcelInput, catalog: Catalog) -> None
             headline = f"Aún sin probar en {zone}."
         elif lvl == "posible" and failing and st.decisive:
             # Falla solo por un supuesto de zona: decirlo así, sin presentarlo como un «no» definitivo.
-            cause = "con el agua típica de la zona" if "water.allocation" in failing.assumed_inputs else "con el riego típico de la zona"
+            if "water.allocation" in failing.assumed_inputs:
+                cause = f"con el agua que indicaste ({WATER_WORDS[p.water.availability]})" if p.water.availability in WATER_WORDS else "con el agua típica de la zona"
+            else:
+                cause = "con el riego típico de la zona"
             headline = f"{_plain_failure(failing.rule_id, st).rstrip('.')} {cause}."
         elif lvl == "posible" and st.decisive:
             headline = f"Puede funcionar; confirma {st.decisive[0]['label']}."
+        elif lvl == "posible" and p.water.availability in WATER_WORDS and "water.allocation" in p.assumed:
+            headline = f"Cumple con el agua que indicaste ({WATER_WORDS[p.water.availability]}); es un escenario según tu respuesta, no una medición."
         elif lvl == "posible":
             missing = next((r for r in st.reasons if r.state == "falta_dato"), None)
             headline = f"Falta un dato: {missing.missing[0] if missing and missing.missing else 'confírmalo con tu asesor'}."
