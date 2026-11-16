@@ -23,6 +23,16 @@ Validación 2 del plan (`specs/tareas.md`). Revisión documental hecha por el ag
 - **Rendimientos, precios en chacra y costos**: `supuesto_demo`; no provienen de SIEA ni de productores.
 - **Ajuste climático del Kc medio** (FAO-56 ec. 62) no aplicado: en el clima árido de Majes tendería a subirlo; se declara como supuesto.
 
+## Alfalfa, haba, tomate y trigo (15-nov-2026)
+
+Cuatro fichas nuevas, todas `exploratory: true` (nunca pasan de «Por explorar»). Kc, etapas y sales vienen de FAO-56 (tablas 11 y 12) y FAO 29 (tabla 4), consultadas el 15-nov-2026; ventanas, rendimientos, precios y costos son `supuesto_demo`.
+
+- **Alfalfa (forraje)**: Kc «averaged cutting effects» 0,40/0,95/0,90; FAO-29: 2,0 y 8,8 dS/m. **La Tabla 11 solo fija 10 y 30 días para las dos primeras etapas; el resto es variable.** Se modela UN año de campaña (10/30/270/55 = 365 d) como supuesto de CERES, `supuesto_demo`: no representa un alfalfar de varios años ni calendario de cortes. «Seguir con la alfalfa ya instalada» sigue sin compararse (`PERENNIAL_CROP_ID` en el motor); solo se compara sembrarla como cultivo nuevo. SISAP no publica alfalfa: precio fijo supuesto (S/ 0,22/kg de forraje verde, 80 t/ha).
+- **Haba verde**: Tabla 11 «Faba bean, broad bean» Mediterráneo 20/30/35/15 (100 d); Kc de «fresh» 0,50/1,15/1,10; FAO-29: 1,5 y 6,8 dS/m. Precio = SISAP «Haba verde serrana» (Arequipa) × 0,5 (supuesto).
+- **Tomate**: Tabla 11 «Arid Region» enero 30/40/40/25 (135 d); Kc medio 1,15 y final 0,70–0,90 (se usa 0,80); FAO-29: 2,5 y 7,6 dS/m. **El Kc inicial 0,60 no pudo comprobarse** (la columna es una imagen en la página FAO): `sin_verificar`. Precio = SISAP «Tomate» × 0,5 (supuesto).
+- **Trigo (grano)**: Tabla 11 «Barley/Oats/Wheat» Calif. Desert 20/50/60/30 (160 d); Kc medio 1,15 y final 0,25–0,40 (se usa 0,30); FAO-29: 6,0 y 13 dS/m. **El Kc inicial 0,30 no pudo comprobarse** (misma causa). SISAP no publica trigo en grano para Arequipa: precio supuesto (S/ 1,60/kg, 4 t/ha).
+- Se sacó la alfalfa de `non_catalog_crops`. Con estas fichas el optimizador sigue sugiriendo frejol (plan D) y papa/frejol (plan E): ninguno de los cuatro nuevos domina.
+
 ## Precios MIDAGRI-SISAP y cultivos agregados (15-nov-2026, catálogo .2)
 
 - **Precio en chacra = mayorista MIDAGRI-SISAP de Arequipa (mediana diaria 2–13 nov 2026) × factor chacra/mayorista.** El factor es `supuesto_demo`: para frejol (0,712) y cebolla (0,378) se eligió para conservar los precios previos de la demo (S/ 5,50 y 0,70/kg); para los cultivos nuevos es un genérico de 0,5 (verificar con acopiadores de Majes). Maíz amarillo duro no figura en SISAP en esas dos semanas: su precio sigue siendo supuesto.

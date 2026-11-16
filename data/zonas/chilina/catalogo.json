@@ -10,10 +10,9 @@
   "scenario_high": {"yield_factor": 1.1, "price_factor": 1.2},
   "non_catalog_crops": {
     "ajo": "Ajo",
-    "alfalfa": "Alfalfa",
     "otro": "Otro cultivo"
   },
-  "non_catalog_hints": {"ajo": "Sin ficha FAO todavía", "alfalfa": "Instalada"},
+  "non_catalog_hints": {"ajo": "Sin ficha FAO todavía"},
   "crops": [
     {
       "id": "cebolla",
@@ -143,6 +142,170 @@
       },
       "residue_note": "Rastrojo abundante: incorporarlo aporta materia orgánica; retirarlo para forraje se lleva nutrientes.",
       "nutrition_note": "Cultivo exigente en nitrógeno; la dosis requiere análisis de suelo."
+    },
+    {
+      "id": "alfalfa",
+      "name": "Alfalfa (forraje)",
+      "short": "alfalfa",
+      "hint": "Forraje, un año de campaña",
+      "family": "Fabaceae",
+      "is_legume": true,
+      "exploratory": true,
+      "destination": "Forraje",
+      "stage_days": [10, 30, 270, 55],
+      "stage_status": "supuesto_demo",
+      "stage_source_ids": ["FAO56-T11"],
+      "kc": {"ini": 0.40, "mid": 0.95, "end": 0.90},
+      "kc_source_ids": ["FAO56-KC"],
+      "kc_note": "Kc de «Alfalfa Hay, averaged cutting effects» (FAO-56 Tabla 12: 0,40 / 0,95 / 0,90). La Tabla 11 solo da 10 y 30 días para las etapas inicial y de desarrollo; el resto es variable. Aquí se modela UN año de campaña (365 días: 10/30/270/55) como supuesto: no representa un alfalfar de varios años, edad del cultivo ni calendario de cortes.",
+      "windows": [{"start": "01-01", "end": "12-31"}],
+      "window_status": "sin_calendario",
+      "window_source_ids": [],
+      "salinity": {"ece_threshold": 2.0, "ece_50": 8.8, "source_ids": ["FAO29-SAL"]},
+      "thermal_rules": [],
+      "economics": {
+        "yield_t_ha": null,
+        "price_soles_kg": null,
+        "variable_cost_soles_ha": null,
+        "status": "sin_dato",
+        "price_label": "Sin precio local verificado",
+        "note": "Sin rendimientos, precios ni costos locales verificados: regístralos en tu cuaderno de campo.",
+        "source_ids": []
+      },
+      "residue_note": "Se cosecha casi toda la biomasa aérea; la raíz y la corona dejan materia orgánica y nitrógeno al levantarla.",
+      "nutrition_note": "Leguminosa: fija nitrógeno con rizobios adecuados; no implica crédito fijo de N para el siguiente cultivo. Exige fósforo y potasio; la dosis requiere análisis de suelo."
+    },
+    {
+      "id": "haba_verde",
+      "name": "Haba verde (vaina fresca)",
+      "short": "haba",
+      "hint": "Vaina verde para mercado fresco",
+      "family": "Fabaceae",
+      "is_legume": true,
+      "exploratory": true,
+      "destination": "Vaina verde para mercado",
+      "stage_days": [20, 30, 35, 15],
+      "stage_status": "referencia_bibliografica",
+      "stage_source_ids": ["FAO56-T11"],
+      "kc": {"ini": 0.50, "mid": 1.15, "end": 1.10},
+      "kc_source_ids": ["FAO56-KC"],
+      "kc_note": "Fila «Faba bean, broad bean» Mediterráneo de FAO-56 Tabla 11 (100 días, siembra mar/abr); Kc de «Faba bean, fresh» (Tabla 12). Variedad y ciclo locales pendientes.",
+      "windows": [{"start": "01-01", "end": "12-31"}],
+      "window_status": "sin_calendario",
+      "window_source_ids": [],
+      "salinity": {"ece_threshold": 1.5, "ece_50": 6.8, "source_ids": ["FAO29-SAL"]},
+      "thermal_rules": [
+        {
+          "id": "helada",
+          "label": "Helada (mínima bajo 0 °C)",
+          "stages": ["todas"],
+          "variable": "t_min",
+          "comparator": "<",
+          "threshold_c": 0,
+          "status": "sin_verificar",
+          "source_ids": ["UMBRAL-HELADA-CHILINA"],
+          "note": "0 °C del aire como señal general de helada, sin umbral de daño verificado para el haba. La celda NASA está ~900 m más alta que el valle, así que exagera las heladas."
+        }
+      ],
+      "economics": {
+        "yield_t_ha": null,
+        "price_soles_kg": null,
+        "variable_cost_soles_ha": null,
+        "status": "sin_dato",
+        "price_label": "Sin precio local verificado",
+        "note": "Sin rendimientos, precios ni costos locales verificados: regístralos en tu cuaderno de campo.",
+        "source_ids": []
+      },
+      "residue_note": "Residuos de leguminosa se descomponen rápido; incorporarlos aporta materia orgánica.",
+      "nutrition_note": "Leguminosa: fijación biológica con rizobios adecuados; no implica crédito fijo de N para el siguiente cultivo."
+    },
+    {
+      "id": "tomate",
+      "name": "Tomate (fruto fresco)",
+      "short": "tomate",
+      "hint": "Fruto para mercado fresco",
+      "family": "Solanaceae",
+      "is_legume": false,
+      "exploratory": true,
+      "destination": "Fruto para mercado",
+      "stage_days": [30, 40, 40, 25],
+      "stage_status": "referencia_bibliografica",
+      "stage_source_ids": ["FAO56-T11"],
+      "kc": {"ini": 0.60, "mid": 1.15, "end": 0.80},
+      "kc_source_ids": ["FAO56-KC"],
+      "kc_note": "Fila «Arid Region» (enero) de FAO-56 Tabla 11 (135 días). Kc medio 1,15 y final 0,70–0,90 (se usa 0,80) de la Tabla 12; el Kc inicial 0,60 no pudo comprobarse el 15-nov-2026 (la columna es una imagen en la página): queda sin verificar.",
+      "windows": [{"start": "01-01", "end": "12-31"}],
+      "window_status": "sin_calendario",
+      "window_source_ids": [],
+      "salinity": {"ece_threshold": 2.5, "ece_50": 7.6, "source_ids": ["FAO29-SAL"]},
+      "thermal_rules": [
+        {
+          "id": "helada",
+          "label": "Helada (mínima bajo 0 °C)",
+          "stages": ["todas"],
+          "variable": "t_min",
+          "comparator": "<",
+          "threshold_c": 0,
+          "status": "sin_verificar",
+          "source_ids": ["UMBRAL-HELADA-CHILINA"],
+          "note": "0 °C del aire como señal general de helada, sin umbral de daño verificado para el tomate (cultivo muy sensible al frío). La celda NASA está ~900 m más alta que el valle, así que exagera las heladas."
+        }
+      ],
+      "economics": {
+        "yield_t_ha": null,
+        "price_soles_kg": null,
+        "variable_cost_soles_ha": null,
+        "status": "sin_dato",
+        "price_label": "Sin precio local verificado",
+        "note": "Sin rendimientos, precios ni costos locales verificados: regístralos en tu cuaderno de campo.",
+        "source_ids": []
+      },
+      "residue_note": "Quedan restos de plantas con enfermedades foliares; retirarlos o incorporarlos con criterio para no llevar plagas a la siguiente campaña.",
+      "nutrition_note": "Exigente en nitrógeno, potasio y calcio; el plan de fertilización requiere análisis de suelo."
+    },
+    {
+      "id": "trigo",
+      "name": "Trigo (grano)",
+      "short": "trigo",
+      "hint": "Para grano",
+      "family": "Poaceae",
+      "is_legume": false,
+      "exploratory": true,
+      "destination": "Grano",
+      "stage_days": [20, 50, 60, 30],
+      "stage_status": "referencia_bibliografica",
+      "stage_source_ids": ["FAO56-T11"],
+      "kc": {"ini": 0.30, "mid": 1.15, "end": 0.30},
+      "kc_source_ids": ["FAO56-KC"],
+      "kc_note": "Fila «Barley/Oats/Wheat» Calif. Desert (diciembre) de FAO-56 Tabla 11 (160 días). Kc medio 1,15 y final 0,25–0,40 (se usa 0,30) de la Tabla 12 para trigo de primavera; el Kc inicial 0,30 no pudo comprobarse el 15-nov-2026 (la columna es una imagen en la página): queda sin verificar.",
+      "windows": [{"start": "01-01", "end": "12-31"}],
+      "window_status": "sin_calendario",
+      "window_source_ids": [],
+      "salinity": {"ece_threshold": 6.0, "ece_50": 13.0, "source_ids": ["FAO29-SAL"]},
+      "thermal_rules": [
+        {
+          "id": "helada",
+          "label": "Helada (mínima bajo 0 °C)",
+          "stages": ["todas"],
+          "variable": "t_min",
+          "comparator": "<",
+          "threshold_c": 0,
+          "status": "sin_verificar",
+          "source_ids": ["UMBRAL-HELADA-CHILINA"],
+          "note": "0 °C del aire como señal general de helada, sin umbral de daño verificado para el trigo. La celda NASA está ~900 m más alta que el valle, así que exagera las heladas."
+        }
+      ],
+      "economics": {
+        "yield_t_ha": null,
+        "price_soles_kg": null,
+        "variable_cost_soles_ha": null,
+        "status": "sin_dato",
+        "price_label": "Sin precio local verificado",
+        "note": "Sin rendimientos, precios ni costos locales verificados: regístralos en tu cuaderno de campo.",
+        "source_ids": []
+      },
+      "residue_note": "Paja abundante: incorporarla aporta materia orgánica; retirarla para forraje o cama se lleva nutrientes.",
+      "nutrition_note": "Cereal exigente en nitrógeno; no fija nitrógeno. La dosis requiere análisis de suelo."
     }
   ],
   "associations": [],

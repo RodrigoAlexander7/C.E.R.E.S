@@ -58,6 +58,7 @@ const CROP: Record<string, { c: string; l: string }> = {
   maiz_grano: { c: "#d9a53a", l: "M" }, frejol_grano: { c: "#5b9a45", l: "F" }, cebolla_roja: { c: "#a2456f", l: "C" }, cebolla: { c: "#a2456f", l: "C" },
   papa: { c: "#8a6a3f", l: "P" }, ajo: { c: "#7d6aa8", l: "A" }, arveja_verde: { c: "#3f8f6a", l: "Ar" }, zanahoria: { c: "#d9772f", l: "Z" },
   alfalfa: { c: "#6b9a3a", l: "Al" }, maiz_chala: { c: "#b8932f", l: "Mc" },
+  haba_verde: { c: "#7fae52", l: "H" }, tomate: { c: "#c9473a", l: "T" }, trigo: { c: "#c9a45a", l: "Tr" },
 };
 
 export function cropColor(id: string): string {

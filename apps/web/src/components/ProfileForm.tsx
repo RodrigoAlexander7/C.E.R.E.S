@@ -132,7 +132,7 @@ export function ProfileForm({ value, onChange, compact = false, zone = null }: {
             <label htmlFor="next">¿Qué piensas sembrar después? <span className="hint">Si lo dejas vacío se supone que repites el cultivo</span></label>
             <select id="next" value={p.planned_next_crop_id ?? ""} onChange={(e) => set({ planned_next_crop_id: e.target.value || null })}>
               <option value="">— No lo sé —</option>
-              {Object.entries(CROP_LABELS).filter(([k]) => k !== "alfalfa").map(([k, v]) => (
+              {Object.entries(CROP_LABELS).map(([k, v]) => (
                 <option key={k} value={k}>{v}</option>
               ))}
             </select>

@@ -12,4 +12,6 @@ Estado al 15-nov-2026. Resume las fuentes y decisiones registradas por la sesió
 - Helada: mínima menor de 0 °C como señal general, `sin_verificar`; no es un umbral de daño calibrado para cada cultivo.
 - Ajo: se acepta como antecedente sin ficha de evaluación. Economía local: desconocida; rendimiento, precio y costos permanecen nulos, sin margen fabricado.
 
+- Alfalfa, haba verde, tomate y trigo (15-nov-2026): fichas `exploratory: true` con Kc, etapas y sales de FAO-56/FAO 29 (mismas filas que en Majes; ver `data/zonas/majes/REVISION.md`), sin calendario (`sin_calendario`) y **sin economía** (`sin_dato`): no se copió nada de Majes. La alfalfa modela un año de campaña como supuesto (la Tabla 11 no fija la duración de las etapas media y final) y mantener un alfalfar instalado sigue sin compararse. Los Kc iniciales de tomate (0,60) y trigo (0,30) no pudieron comprobarse en la página FAO (columna en imagen): `sin_verificar`. Se aplica la helada general (`sin_verificar`) a haba, tomate y trigo.
+
 Fuentes con institución, URL y ámbito en `data/sources/sources.json`. Antes del uso en campo faltan revisión local de ciclos/calendario, contraste meteorológico, dotación por turno y datos propios económicos.

@@ -31,6 +31,7 @@ from ceres.domain.model import (
 )
 
 ENGINE_VERSION = "ceres-engine-0.4.0"
+PERENNIAL_CROP_ID = "alfalfa"
 MM_HA_TO_M3 = 10.0  # 1 mm sobre 1 ha = 10 m³
 _METHOD_LABEL = {"goteo": "goteo", "aspersion": "aspersión", "gravedad": "gravedad"}
 MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"]
@@ -105,6 +106,10 @@ def sequence_for(template: StrategyTemplate, p: ParcelInput, catalog: Catalog) -
     if template.sequence_rule == "declarada":
         nxt = p.planned_next_crop_id or current
         missing = [] if catalog.crop(nxt) else [f"Ficha agronómica para «{catalog.non_catalog_crops.get(nxt, nxt)}»"]
+        if nxt == current == PERENNIAL_CROP_ID:
+            # La ficha de alfalfa modela un año de campaña para compararla como siembra nueva; mantener un alfalfar
+            # ya instalado (edad, cortes, compromisos forrajeros) sigue sin compararse.
+            missing = ["Mantener la alfalfa ya instalada (perenne: edad, cortes y compromisos forrajeros)"]
         return [nxt], missing
     if template.sequence_rule == "explicita":
         return list(template.crops), []

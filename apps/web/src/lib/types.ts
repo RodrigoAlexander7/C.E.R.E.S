@@ -326,7 +326,10 @@ export const CROP_LABELS: Record<string, string> = {
   cebolla: "Cebolla (bulbo seco)",
   ajo: "Ajo",
   papa: "Papa",
-  alfalfa: "Alfalfa",
+  alfalfa: "Alfalfa (forraje)",
+  haba_verde: "Haba verde (vaina fresca)",
+  tomate: "Tomate (fruto fresco)",
+  trigo: "Trigo (grano)",
   maiz_chala: "Maíz chala (forraje)",
   otro: "Otro cultivo",
 };

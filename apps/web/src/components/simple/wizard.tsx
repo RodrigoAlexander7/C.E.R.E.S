@@ -18,6 +18,7 @@ export interface Answers {
 const COLOR: Record<string, string> = {
   maiz_grano: "#f3e3b5", frejol_grano: "#dcebd0", cebolla_roja: "#efd6e1", cebolla: "#efd6e1", maiz_chala: "#ecdfc3",
   papa: "#eadfd2", alfalfa: "#d9e8d0", ajo: "#ece6f3",
+  haba_verde: "#e1eed3", tomate: "#f3d9d4", trigo: "#f1e6c8",
 };
 
 const PRIORITIES: { id: Profile["priority"]; name: string; hint: string }[] = [
