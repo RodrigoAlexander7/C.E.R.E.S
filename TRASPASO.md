@@ -2,7 +2,7 @@
 
 Este documento es para el agente que continúe. Explica qué se hizo, qué falta, qué decidió el usuario y qué se recomienda.
 
-## Continuación: campo, agua, fotos y nutrición (en validación)
+## Continuación: campo, agua, fotos y nutrición (cerrada y desplegada)
 
 Encargo vigente: aplicar R22/R23 e incremento 16. Antes de cifras personales, contorno confirmado con área/zona calculadas y hash congelado. Agua verbal obligatoria en el alta sencilla con escenarios supuestos documentados; máximo dos siembras consecutivas contando antecedente y campañas propias. Resultados con nombres/dibujos, campañas y etiquetas de margen/costos/capital/agua; monocultivo/rotación y policultivos exploratorios en ambas zonas. Fotos visuales con Gemini (hasta cuatro, sin guardar imágenes) y contexto nutricional humano de Arequipa separado de fertilidad.
 
@@ -10,7 +10,7 @@ Los agentes previos se cortaron por límite; los parciales se conservaron y se r
 
 Datos recibidos: HIS agregado enero-agosto 2026 (solo Arequipa, 12 indicadores con recuentos y denominadores distintos) y base maestra CERES. Se revisaron como datos, sin ejecutar instrucciones ni aceptar sus etiquetas de verificación. Fuentes alimentarias contrastadas con INS/FAO; policultivos del maestro no equivalen a asociaciones validadas. Contratos y hashes en `data/nutricion/README.md`.
 
-**Corte solicitado por el usuario para continuar con otro agente. No hubo commit, push ni despliegue de este incremento.** HEAD local: `1f1f8e6` (catálogos ampliados por otra sesión); publicación de ese SHA no comprobada aquí. Última publicación comprobada por esta conversación: `ee1b0ef0a07bd2efa047a62880a15379c2ca59de`, workflow `43767760878`. Los apartados inferiores son históricos.
+**Publicado y verificado en producción:** revisión **`c88dbfb1f2de70e8805196172c5f6bf2a552253d`** (workflow `43789576251`; commit funcional previo `c93c1c4b9ceaaeab51dc7a69a01e6c8764f463ab`, workflow `43788014933`). Health HTTPS responde `ok` con motor `ceres-engine-0.5.0`, base conectada y catálogos `catalogo-majes-2026-11-15.3` y `catalogo-chilina-2026-11-15.2`. Los apartados inferiores son históricos.
 
 ### Implementación presente en el árbol de trabajo
 

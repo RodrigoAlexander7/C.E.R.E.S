@@ -4,17 +4,17 @@ Actualizado el 15 de noviembre de 2026 (UTC). Este documento distingue infraestr
 
 ## Estado actual
 
-Validación del 15-nov-2026: revisión **`06e6a6e96102dbbfb4687632feba4a02c338edd6`**, motor 0.3.0, zonas Majes I y Valle de Chilina. CI remoto pasó **101 pruebas API/PostgreSQL**, migraciones, tipos, build y **6 E2E**, incluido R20. [Workflow exitoso](https://github.com/RodrigoAlexander7/C.E.R.E.S/actions/runs/43729718465).
+Validación del 16-nov-2026 (UTC): revisión **`c88dbfb1f2de70e8805196172c5f6bf2a552253d`** (anterior del incremento 16: `c93c1c4b9ceaaeab51dc7a69a01e6c8764f463ab`), motor `ceres-engine-0.5.0`, zonas Majes I (`catalogo-majes-2026-11-15.3`) y Valle de Chilina (`catalogo-chilina-2026-11-15.2`). CI remoto pasó **305 pruebas API/PostgreSQL**, migraciones (`alembic check`), tipos, build y **22 E2E**, incluidos R20, R22 y R23. [Workflow exitoso](https://github.com/RodrigoAlexander7/C.E.R.E.S/actions/runs/43789576251).
 
-Comprobación posterior al despliegue: health `ok` con la revisión esperada, base conectada y ambas zonas; `/app/cuaderno`, `/app/ceres` y `/demo` responden 200. HLS público conserva **5 meses reales en Majes y 3 en Chilina**, con hashes y procedencia. Acceso al cuaderno sin sesión devuelve 401. Se creó una cuenta demo privada autorizada con dos lotes y 16 registros por lote: una campaña declarada y 15 continuaciones simuladas etiquetadas. Ninguna parcela se publica como demo; fuera de piloto, los runs no toman clima ni catálogo de otra zona. Coordenadas y credenciales solo en los archivos locales ignorados y en la cuenta privada.
+Comprobación posterior al despliegue: `/api/v1/health` responde `ok` con `revision: "c88dbfb1f2de70e8805196172c5f6bf2a552253d"`, `database: true`, `llm_configured: true`, `engine_version: "ceres-engine-0.5.0"` y ambas zonas; `/`, `/app`, `/app/cuaderno`, `/app/ceres` y `/demo` responden 200. HLS público conserva **5 meses reales en Majes y 3 en Chilina**, con hashes y procedencia. Acceso al cuaderno sin sesión devuelve 401. Se conserva la cuenta demo privada autorizada con dos lotes y 16 registros por lote: una campaña declarada y 15 continuaciones simuladas etiquetadas. Ninguna parcela se publica como demo; fuera de piloto, los runs no toman clima ni catálogo de otra zona. Coordenadas y credenciales solo en los archivos locales ignorados y en la cuenta privada.
 
-La consulta HLS de esos lotes privados no se ejecutó: requeriría enviar su ubicación a Planetary Computer y queda sujeta a autorización específica del usuario. Las series públicas de demo sí están comprobadas. Los datos de carga y conexión en la VM de la tabla son mediciones históricas; en esta publicación se repitieron aparte `check-llm` y `validar_ceres_real.py` en desarrollo con Gemini real: conexión, extracción, confirmación, memoria y simulación completadas. La última ejecución del asistente clásico aceptó 3/4 respuestas y una terminó en 504; no se declara 4/4 en esa ejecución. No se probó audio humano real.
+En este cierre del incremento 16, `uv run python -m ceres.cli check-llm` en local devolvió 429 por cuota del proyecto de Google AI; la observación visual de fotos de suelo está validada con modelo simulado (40 pruebas unitarias/integración y E2E), quedando la comprobación con Gemini real pendiente de cuota. Los formularios y el motor funcionan sin IA.
 
 **Aplicación publicada:** <https://ceres-f7ctifta45nnk.northcentralus.cloudapp.azure.com>
 
 | Elemento | Estado comprobado |
 |---|---|
-| Versión en servicio | `81920443e69fce4cc22667b907eafba577df12f5` (anterior: `530b761…`) |
+| Versión en servicio | `c88dbfb1f2de70e8805196172c5f6bf2a552253d` (anterior: `c93c1c4…`) |
 | HTTPS | Certificado Let's Encrypt (emisor YE2) para el FQDN, válido hasta el 12-feb-2027, renovación automática por Caddy. HTTP → HTTPS 308; HSTS. |
 | Puertos públicos | Solo 80/443. Desde Internet: 22, 3000, 5432 y 8000 **cerrados** (comprobado desde GitHub y desde fuera). |
 | Base de datos | PostgreSQL 16.15 en red interna Docker, volumen con nombre fijo `ceres_pgdata`; datos conservados entre 4 despliegues y un rollback. |
