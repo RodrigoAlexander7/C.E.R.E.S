@@ -34,7 +34,7 @@
 .top { position: sticky; top: 0; z-index: 20; background: color-mix(in srgb, var(--s-sand) 88%, transparent); backdrop-filter: blur(12px); border-bottom: 1px solid color-mix(in srgb, var(--s-line) 70%, transparent); }
 .topInner { max-width: 760px; margin: 0 auto; padding: 0 16px; height: 56px; display: flex; align-items: center; gap: 10px; }
 .brand { display: flex; align-items: center; gap: 8px; font-weight: 700; color: var(--s-ink); text-decoration: none; }
-.brand svg { width: 26px; height: 26px; }
+.brand svg, .brand img { width: 26px; height: 26px; display: block; flex: none; }
 .topLinks { margin-left: auto; display: flex; gap: 6px; align-items: center; }
 .topLink { color: var(--s-ink-2); text-decoration: none; font-weight: 600; font-size: 0.88rem; padding: 10px 10px; border-radius: 999px; }
 .topLink:hover { background: var(--s-sand-2); }
@@ -374,7 +374,7 @@
   .withSide { padding-left: 248px; }
   .side { display: flex; flex-direction: column; gap: 6px; position: fixed; inset: 0 auto 0 0; width: 248px; z-index: 30; background: #fbf9f3; border-right: 1px solid var(--s-line); padding: 20px 14px; overflow-y: auto; }
   .sideBrand { display: flex; align-items: center; gap: 10px; color: var(--s-ink); text-decoration: none; font-weight: 800; font-size: 1.2rem; margin: 0 6px 18px; }
-  .sideBrand svg { width: 38px; height: 38px; }
+  .sideBrand svg, .sideBrand img { width: 38px; height: 38px; display: block; flex: none; }
   .sideBrand span { display: grid; line-height: 1.1; }
   .sideBrand small { font-weight: 500; font-size: 0.78rem; color: var(--s-muted); }
   .sideLabel { margin: 4px 8px 6px; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--s-muted); }
